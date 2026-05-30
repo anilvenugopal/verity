@@ -1,0 +1,155 @@
+/* ═══════════════════════════════════════════════════════════════════
+   DRAFTWRIGHT — UTILITIES  (Layer 5 of 5)
+
+   Single-purpose helpers. Used SPARINGLY as escape hatches —
+   not as a primary styling vocabulary.
+
+   Rules:
+     - Every utility uses !important (it's the last word)
+     - Every utility is single-purpose (one property)
+     - Naming: short, conventional. .text-center, not .center-aligned-text
+     - If you reach for the same combo of utilities 3+ times, make
+       it a component.
+
+   See css-architecture.md §11 for the "no atomic class soup" rule.
+   ═══════════════════════════════════════════════════════════════════ */
+
+
+/* ─── Display ─── */
+
+.u-hidden        { display: none !important; }
+.u-block         { display: block !important; }
+.u-inline        { display: inline !important; }
+.u-inline-block  { display: inline-block !important; }
+.u-flex          { display: flex !important; }
+.u-inline-flex   { display: inline-flex !important; }
+.u-grid          { display: grid !important; }
+
+
+/* ─── Text alignment ─── */
+
+.u-text-left     { text-align: left !important; }
+.u-text-center   { text-align: center !important; }
+.u-text-right    { text-align: right !important; }
+
+
+/* ─── Text colour (SEMANTIC only — no raw hex) ─── */
+
+.u-text-brand           { color: var(--color-brand) !important; }
+.u-text-brand-emphasis  { color: var(--color-brand-emphasis) !important; }
+.u-text-positive        { color: var(--color-positive) !important; }
+.u-text-negative        { color: var(--color-negative) !important; }
+.u-text-primary         { color: var(--text-primary) !important; }
+.u-text-mid             { color: var(--text-mid) !important; }
+.u-text-faint           { color: var(--text-faint) !important; }
+.u-text-on-dark         { color: var(--text-on-dark-warm) !important; }
+.u-text-on-dark-mid     { color: var(--text-on-dark-mid) !important; }
+
+
+/* ─── Font weight ─── */
+
+.u-fw-normal  { font-weight: var(--fw-normal) !important; }
+.u-fw-medium  { font-weight: var(--fw-medium) !important; }
+.u-fw-semi    { font-weight: var(--fw-semi) !important; }
+.u-fw-bold    { font-weight: var(--fw-bold) !important; }
+
+
+/* ─── Font style ─── */
+
+.u-italic     { font-style: italic !important; }
+.u-no-italic  { font-style: normal !important; }
+
+
+/* ─── Visibility ─── */
+
+.u-invisible  { visibility: hidden !important; }
+.u-sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+
+/* ─── Truncation ─── */
+
+.u-truncate {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.u-clamp-2 {
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+}
+
+.u-clamp-3 {
+  display: -webkit-box !important;
+  -webkit-line-clamp: 3 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+}
+
+
+/* ─── Layout flex helpers (pair with l-cluster sparingly) ─── */
+
+.u-flex-1     { flex: 1 1 0% !important; }
+.u-flex-auto  { flex: 1 1 auto !important; }
+.u-flex-none  { flex: none !important; }
+
+
+/* ─── Margin helpers (single-axis only — for nudge cases) ─── */
+
+.u-mt-auto  { margin-top: auto !important; }
+.u-mb-auto  { margin-bottom: auto !important; }
+.u-ml-auto  { margin-left: auto !important; }
+.u-mr-auto  { margin-right: auto !important; }
+
+
+/* ─── Cursor ─── */
+
+.u-cursor-pointer  { cursor: pointer !important; }
+.u-cursor-default  { cursor: default !important; }
+.u-cursor-na       { cursor: not-allowed !important; }
+
+
+/* ─── Pointer events ─── */
+
+.u-no-events { pointer-events: none !important; }
+
+
+/* ─── User select ─── */
+
+.u-select-none { user-select: none !important; }
+
+
+/* ─── Position ─── */
+
+.u-relative { position: relative !important; }
+.u-absolute { position: absolute !important; }
+.u-fixed    { position: fixed !important; }
+
+
+/* ─── Whitespace ─── */
+
+.u-nowrap   { white-space: nowrap !important; }
+.u-prewrap  { white-space: pre-wrap !important; }
+
+
+/* ─── Mobile / responsive helpers ─── */
+
+@media (max-width: 900px) {
+  .u-mobile-hidden { display: none !important; }
+}
+
+@media (min-width: 901px) {
+  .u-desktop-hidden { display: none !important; }
+}

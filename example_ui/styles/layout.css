@@ -1,0 +1,511 @@
+/* ═══════════════════════════════════════════════════════════════════
+   DRAFTWRIGHT — LAYOUT  (Layer 3 of 5)
+
+   Page-level structure & layout primitives. The "skeleton" of every
+   page lives here. Visual styling beyond positioning belongs in
+   components.css.
+
+   Composition philosophy:
+     - .surface-dark / .surface-light  modify whole regions
+     - .l-* prefix marks layout primitives (stack, cluster, grid)
+     - .app-* prefix marks application-shell layout
+
+   See css-architecture.md §8 for surface composition rationale.
+   ═══════════════════════════════════════════════════════════════════ */
+
+
+/* ═══════════════════════════════════════════════════════════════
+   SURFACE COMPOSITION MODIFIERS
+   ─ Apply to any container; descendant components inherit
+   ─ correct on-surface colours.
+   ═══════════════════════════════════════════════════════════════ */
+
+.surface-dark {
+  background: var(--surface-shell);
+  color: var(--text-on-dark-warm);
+}
+
+.surface-dark-up {
+  background: var(--surface-shell-up);
+  color: var(--text-on-dark-warm);
+}
+
+.surface-light {
+  background: var(--surface-canvas);
+  color: var(--text-primary);
+}
+
+.surface-panel {
+  background: var(--surface-panel);
+  color: var(--text-primary);
+}
+
+.surface-recessed {
+  background: var(--surface-recessed);
+  color: var(--text-primary);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   APP SHELL  (the editor / app frame)
+   ─ topbar (fixed) + body grid + statusbar (fixed)
+   ═══════════════════════════════════════════════════════════════ */
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--surface-shell);
+  overflow: hidden;
+}
+
+.app__topbar {
+  flex-shrink: 0;
+  height: var(--topbar-h);
+  background: var(--surface-shell-up);
+  border-bottom: 1px solid var(--border-dark);
+  z-index: var(--z-sticky);
+}
+
+.app__body {
+  flex: 1;
+  display: flex;
+  min-height: 0;       /* allow children to shrink */
+  overflow: hidden;
+}
+
+.app__statusbar {
+  flex-shrink: 0;
+  height: var(--statusbar-h);
+  background: var(--surface-shell-up);
+  border-top: 1px solid var(--border-dark);
+  z-index: var(--z-status);
+}
+
+
+/* ─── Editor body slots ─── */
+
+.app__dock {
+  flex-shrink: 0;
+  width: var(--dock-rail-w);
+  background: var(--surface-shell-up);
+  border-right: 1px solid var(--border-dark);
+  z-index: var(--z-panel);
+}
+
+.app__dock--right {
+  border-right: none;
+  border-left: 1px solid var(--border-dark);
+}
+
+.app__panel {
+  flex-shrink: 0;
+  width: var(--dock-panel-w);
+  background: var(--surface-panel);
+  border-right: 1px solid var(--border-default);
+  overflow-y: auto;
+  z-index: var(--z-panel);
+}
+
+.app__panel--right {
+  border-right: none;
+  border-left: 1px solid var(--border-default);
+}
+
+.app__canvas {
+  flex: 1;
+  min-width: 0;        /* allow text to wrap inside flex */
+  background: var(--surface-canvas);
+  color: var(--text-primary);
+  overflow-y: auto;
+  position: relative;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   PAGE SHELL  (non-app pages: marketing, auth, settings)
+   ═══════════════════════════════════════════════════════════════ */
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.page__nav {
+  flex-shrink: 0;
+}
+
+.page__main {
+  flex: 1;
+}
+
+.page__footer {
+  flex-shrink: 0;
+}
+
+
+/* ─── Top nav bar ─── sticky page chrome (settings, dashboard, reference) */
+
+.app-nav {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  height: var(--topbar-h);
+  background: var(--surface-shell-up);
+  border-bottom: 1px solid var(--border-dark);
+}
+
+.app-nav__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-right: var(--space-5);
+  border-right: 1px solid var(--border-dark);
+  height: 100%;
+}
+
+.app-nav__crumb {
+  padding: 0 var(--space-4);
+  font-family: var(--font-chrome);
+  font-size: var(--fs-sm);
+  color: var(--text-on-dark-mid);
+}
+
+.app-nav__crumb a {
+  color: var(--text-on-dark-mid);
+}
+
+.app-nav__user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-left: var(--space-4);
+  border-left: 1px solid var(--border-dark);
+  height: 100%;
+  margin-left: auto;
+}
+
+/* Workspace menu trigger (≡) — sits at the left edge, before logo */
+.app-nav__menu {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--topbar-h);
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text-on-dark-mid);
+  cursor: pointer;
+  border-right: 1px solid var(--border-dark);
+}
+
+.app-nav__menu:hover {
+  color: var(--text-on-dark-warm);
+  background: var(--surface-shell);
+}
+
+/* Avatar trigger — wraps avatar in a click target with dropdown affordance */
+.app-nav__avatar {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-3);
+  height: 100%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-on-dark-mid);
+}
+
+.app-nav__avatar:hover { background: var(--surface-shell); color: var(--text-on-dark-warm); }
+
+
+/* ─── Page section (used in marketing) ─── */
+
+.section {
+  padding: var(--space-12) var(--space-9);
+}
+
+.section--compact {
+  padding: var(--space-9) var(--space-9);
+}
+
+.section--cream {
+  background: var(--surface-canvas);
+  color: var(--text-primary);
+}
+
+.section--panel {
+  background: var(--surface-panel);
+  color: var(--text-primary);
+}
+
+.section--shell {
+  background: var(--surface-shell);
+  color: var(--text-on-dark-warm);
+}
+
+.section--shell-up {
+  background: var(--surface-shell-up);
+  color: var(--text-on-dark-warm);
+}
+
+
+/* ─── Auth page layout (centred card) ─── */
+
+.auth-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  background: var(--surface-shell);
+}
+
+.auth-shell__card {
+  width: 100%;
+  max-width: 420px;
+  padding: var(--space-7) var(--space-6);
+}
+
+
+/* ─── Settings page layout (sidebar + content) ─── */
+
+.settings-shell {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: var(--space-7);
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: var(--space-7) var(--space-6);
+}
+
+.settings-shell__nav {
+  border-right: 1px solid var(--border-default);
+  padding-right: var(--space-5);
+}
+
+.settings-shell__main {
+  min-width: 0;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   CONTAINERS  (max-width wrappers)
+   ═══════════════════════════════════════════════════════════════ */
+
+.container {
+  width: 100%;
+  max-width: var(--content-max-w);
+  margin: 0 auto;
+  padding-left: var(--space-6);
+  padding-right: var(--space-6);
+}
+
+.container--narrow {
+  max-width: var(--canvas-max-w);
+}
+
+.container--wide {
+  max-width: var(--hero-content-w);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   CANVAS-INNER  (the writing surface inside .app__canvas)
+   ═══════════════════════════════════════════════════════════════ */
+
+.canvas-inner {
+  max-width: var(--canvas-max-w);
+  margin: 0 auto;
+  padding: var(--space-6) 0 var(--space-10);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   LAYOUT PRIMITIVES  (Every Layout-style)
+   ─ Compose these instead of one-off flex/grid declarations.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── Stack ─── vertical rhythm */
+
+.l-stack {
+  display: flex;
+  flex-direction: column;
+}
+.l-stack > * + * { margin-top: var(--stack-gap, var(--space-4)); }
+
+.l-stack--xs   { --stack-gap: var(--space-1); }
+.l-stack--sm   { --stack-gap: var(--space-2); }
+.l-stack--md   { --stack-gap: var(--space-3); }
+.l-stack--lg   { --stack-gap: var(--space-5); }
+.l-stack--xl   { --stack-gap: var(--space-7); }
+
+
+/* ─── Cluster ─── horizontal flexbox with wrap */
+
+.l-cluster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cluster-gap, var(--space-3));
+}
+
+.l-cluster--xs    { --cluster-gap: var(--space-1); }
+.l-cluster--sm    { --cluster-gap: var(--space-2); }
+.l-cluster--lg    { --cluster-gap: var(--space-5); }
+.l-cluster--start { justify-content: flex-start; }
+.l-cluster--end   { justify-content: flex-end; }
+.l-cluster--center{ justify-content: center; }
+.l-cluster--between { justify-content: space-between; }
+.l-cluster--stretch { align-items: stretch; }
+.l-cluster--top   { align-items: flex-start; }
+.l-cluster--baseline { align-items: baseline; }
+
+
+/* ─── Grid ─── responsive auto-fit grid */
+
+.l-grid {
+  display: grid;
+  gap: var(--grid-gap, var(--space-4));
+  grid-template-columns: repeat(auto-fit, minmax(var(--grid-min, 240px), 1fr));
+}
+
+.l-grid--2col { grid-template-columns: repeat(2, 1fr); }
+.l-grid--3col { grid-template-columns: repeat(3, 1fr); }
+.l-grid--4col { grid-template-columns: repeat(4, 1fr); }
+
+
+/* ─── Sidebar primitive ─── (sidebar + content) */
+
+.l-sidebar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+}
+.l-sidebar > :first-child {
+  flex-basis: var(--sidebar-w, 240px);
+  flex-grow: 1;
+}
+.l-sidebar > :last-child {
+  flex-basis: 0;
+  flex-grow: 999;
+  min-width: 0;
+}
+
+
+/* ─── Spacer ─── pushes things apart */
+
+.l-spacer {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+
+/* ─── Center ─── single-element centering */
+
+.l-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+/* ─── Frame ─── aspect-ratio container */
+
+.l-frame {
+  position: relative;
+  aspect-ratio: var(--frame-ratio, 16 / 9);
+  overflow: hidden;
+}
+.l-frame > * {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   MODAL OVERLAY  (positional shell only; visual = components.css)
+   ═══════════════════════════════════════════════════════════════ */
+
+.l-modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+  background: var(--shadow-overlay);
+  z-index: var(--z-modal);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   STICKY HELPERS
+   ═══════════════════════════════════════════════════════════════ */
+
+.l-sticky-top {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+}
+
+.l-fixed-top {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--z-sticky);
+}
+
+.l-fixed-bottom {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--z-status);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE COLLAPSE (≤ 900px)
+   App is desktop-first; mobile = degraded-graceful per spec.
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 900px) {
+  .app__panel,
+  .app__dock {
+    display: none;
+  }
+
+  .l-grid--2col,
+  .l-grid--3col,
+  .l-grid--4col {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-shell__nav {
+    border-right: none;
+    border-bottom: 1px solid var(--border-default);
+    padding-right: 0;
+    padding-bottom: var(--space-4);
+  }
+
+  .section {
+    padding: var(--space-8) var(--space-5);
+  }
+}

@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Draftwright — Wireframes &amp; Author Journeys</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/tokens.css">
+<link rel="stylesheet" href="styles/base.css">
+<link rel="stylesheet" href="styles/layout.css">
+<link rel="stylesheet" href="styles/components.css">
+<link rel="stylesheet" href="styles/utilities.css">
+<style>
+  body { background: var(--surface-shell); }
+
+  /* ─── Header (dark surface, logo + tagline) ─── */
+  .head { padding: var(--space-9) var(--space-9) var(--space-7); max-width: 1280px; margin: 0 auto; }
+  .head__logo { margin-bottom: var(--space-5); }
+  .head__sub { font-family: var(--font-canvas-display); font-size: var(--fs-xl); color: var(--text-on-dark-mid); line-height: var(--lh-comfy); max-width: 640px; margin-top: var(--space-3); }
+  .head__hint { margin-top: var(--space-5); padding: var(--space-3) var(--space-4); background: var(--surface-shell-up); border-left: 2px solid var(--color-brand); border-radius: 0 var(--radius-md) var(--radius-md) 0; font-family: var(--font-chrome); font-size: var(--fs-sm); color: var(--text-on-dark-mid); }
+  .head__hint code { background: var(--surface-shell); color: var(--color-brand); padding: 0.1em 0.4em; border-radius: var(--radius-xs); font-family: var(--font-mono); font-size: var(--fs-xs); }
+
+  /* ─── Main two-zone: journeys + catalog ─── */
+  .main { max-width: 1280px; margin: 0 auto; padding: 0 var(--space-9) var(--space-9); }
+
+  /* Section header pattern (used for journeys and catalog) */
+  .section-head { display: flex; align-items: baseline; gap: var(--space-3); margin: var(--space-9) 0 var(--space-5); padding-bottom: var(--space-3); border-bottom: 1px solid var(--border-dark); }
+  .section-head__num { font-family: var(--font-chrome); font-size: var(--fs-tag); font-weight: var(--fw-bold); letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; color: var(--color-brand); padding: 4px var(--space-2); background: var(--wash-brand-faint); border-radius: var(--radius-xs); }
+  .section-head__title { font-family: var(--font-canvas-display); font-size: var(--fs-5xl); font-weight: var(--fw-bold); color: var(--text-on-dark-warm); letter-spacing: var(--tracking-tight); line-height: var(--lh-tight); }
+  .section-head__meta { font-family: var(--font-chrome); font-size: var(--fs-sm); color: var(--text-on-dark-faint); margin-left: auto; }
+
+  .zone-eyebrow { font-family: var(--font-chrome); font-size: var(--fs-tag); font-weight: var(--fw-bold); letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; color: var(--color-brand); margin-top: var(--space-9); }
+  .zone-title { font-family: var(--font-canvas-display); font-size: var(--fs-7xl); font-weight: var(--fw-bold); color: var(--text-on-dark-warm); letter-spacing: var(--tracking-tight); line-height: var(--lh-tight); margin-top: var(--space-2); }
+  .zone-sub { font-family: var(--font-canvas-display); font-size: var(--fs-lg); color: var(--text-on-dark-mid); line-height: var(--lh-comfy); margin-top: var(--space-3); max-width: 720px; }
+
+  /* ─── Journey block ─── */
+  .journey { margin-bottom: var(--space-7); padding: var(--space-5); background: var(--surface-shell-up); border: 1px solid var(--border-dark); border-radius: var(--radius-xl); }
+  .journey__name { font-family: var(--font-canvas-display); font-size: var(--fs-2xl); font-weight: var(--fw-bold); color: var(--text-on-dark-warm); margin-bottom: var(--space-2); }
+  .journey__desc { font-family: var(--font-chrome); font-size: var(--fs-sm); color: var(--text-on-dark-mid); line-height: var(--lh-comfy); margin-bottom: var(--space-4); max-width: 720px; }
+  .journey__diagram { background: transparent; padding: var(--space-5) 0; overflow-x: auto; }
+
+  /* Mermaid tweaks (scoped — only affect .mermaid blocks inside this page) */
+  .mermaid svg { max-width: 100%; height: auto; }
+  .mermaid .nodeLabel { font-family: 'DM Sans', system-ui, sans-serif !important; font-size: 13px !important; line-height: 1.25; }
+  .mermaid .nodeLabel b { font-weight: 700; font-size: 14px; }
+  .mermaid .nodeLabel i { display: block; font-style: italic; font-size: 10px; font-weight: 500; opacity: 0.55; margin-top: 4px; letter-spacing: 0.02em; }
+  .mermaid .edgeLabel { font-family: 'DM Sans', system-ui, sans-serif !important; font-size: 11px !important; }
+  .mermaid .edgeLabel,
+  .mermaid .edgeLabel rect,
+  .mermaid .edgeLabel foreignObject { background: var(--surface-shell-up) !important; fill: var(--surface-shell-up) !important; }
+  .mermaid .edgeLabel .nodeLabel,
+  .mermaid .edgeLabel p,
+  .mermaid .edgeLabel span { color: var(--text-on-dark-warm) !important; }
+  .mermaid .cluster-label .nodeLabel { font-family: 'DM Sans', system-ui, sans-serif !important; font-weight: 700 !important; font-size: 11px !important; letter-spacing: 0.06em; text-transform: uppercase; }
+
+  /* ─── Catalog group + cards ─── */
+  .group { margin-top: var(--space-7); }
+  .group__head { display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-4); padding-bottom: var(--space-3); border-bottom: 1px solid var(--border-dark); }
+  .group__num { font-family: var(--font-chrome); font-size: var(--fs-tag); font-weight: var(--fw-bold); letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; color: var(--color-brand); }
+  .group__name { font-family: var(--font-canvas-display); font-size: var(--fs-3xl); font-weight: var(--fw-bold); color: var(--text-on-dark-warm); }
+  .group__count { font-family: var(--font-chrome); font-size: var(--fs-sm); color: var(--text-on-dark-faint); margin-left: auto; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--space-2); }
+
+  .card { position: relative; display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3) var(--space-4) var(--space-3) var(--space-4); border: 1px solid var(--border-dark); border-radius: var(--radius-lg); background: var(--surface-shell-up); text-decoration: none; transition: all var(--dur-fast) var(--ease-linear); }
+  .card:hover { border-color: var(--border-brand); background: var(--wash-brand-faint); text-decoration: none; }
+  .card__name { font-family: var(--font-chrome); font-size: var(--fs-base); font-weight: var(--fw-semi); color: var(--text-on-dark-warm); padding-right: 60px; }
+  .card__meta { font-family: var(--font-chrome); font-size: var(--fs-tag); color: var(--text-on-dark-faint); line-height: var(--lh-comfy); }
+
+  /* Type tag (top-right) */
+  .tag { position: absolute; top: var(--space-2); right: var(--space-2); font-family: var(--font-chrome); font-size: 8.5px; font-weight: var(--fw-bold); letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; padding: 1px 6px; border-radius: var(--radius-pill); }
+  .tag--page      { background: rgba(212, 162, 86, 0.20); color: var(--color-brand); }
+  .tag--modal     { background: rgba(160, 120, 64, 0.20); color: var(--color-brand-emphasis); }
+  .tag--component { background: rgba(92, 138, 74, 0.20); color: var(--color-positive); }
+  .tag--state     { background: rgba(138, 58, 46, 0.20); color: var(--color-negative); }
+
+  /* Cross-link badges (shown under name when entry appears in a journey) */
+  .xref { display: inline-flex; gap: 4px; margin-top: 4px; }
+  .xref__chip { padding: 1px 6px; background: var(--surface-shell); color: var(--text-on-dark-mid); border-radius: var(--radius-xs); font-family: var(--font-mono); font-size: 9px; font-weight: var(--fw-bold); }
+  .xref__chip:hover { background: var(--wash-brand-faint); color: var(--color-brand); }
+
+  /* References footer */
+  .refs { margin-top: var(--space-9); padding-top: var(--space-5); border-top: 1px solid var(--border-dark); display: flex; flex-wrap: wrap; gap: var(--space-5); font-family: var(--font-chrome); font-size: var(--fs-sm); color: var(--text-on-dark-mid); }
+  .refs a { color: var(--color-brand); }
+</style>
+</head>
+<body class="surface-dark">
+
+<!-- ═════════ HEADER ═════════ -->
+<header class="head">
+  <a href="#" class="logo logo--xl head__logo" aria-label="Draftwright">Draftwright</a>
+  <div class="eyebrow"><div class="eyebrow__line"></div><span>Wireframes &amp; Author Journeys</span></div>
+  <p class="head__sub">A walkable reference of every UI surface in Draftwright, plus the journeys that connect them. Built as static HTML — double-click any page link to open.</p>
+  <div class="head__hint">
+    <strong>For engineers:</strong> the deliverable is the CSS architecture in <code>styles/</code>. BEM classes map 1:1 to component variants. See <a href="../css-architecture.md" style="color:var(--color-brand)">css-architecture.md</a> and <a href="../design-system.md" style="color:var(--color-brand)">design-system.md</a>.
+  </div>
+</header>
+
+<main class="main">
+
+<!-- ═════════════════════════════════════════════ -->
+<!-- ZONE 1 — AUTHOR JOURNEYS                       -->
+<!-- ═════════════════════════════════════════════ -->
+
+<div class="zone-eyebrow">Part 1 of 2</div>
+<h1 class="zone-title">Author journeys</h1>
+<p class="zone-sub">Five end-to-end flows showing how authors move through the studio. Click any node to open that wireframe. Pages appearing in journeys also live in the catalog below.</p>
+
+<!-- ─── J1 ─── -->
+<div class="section-head">
+  <span class="section-head__num">J1</span>
+  <h2 class="section-head__title">From sign-up to first article</h2>
+  <span class="section-head__meta">10 stops · ~5 min real time</span>
+</div>
+
+<div class="journey">
+  <div class="journey__name">The new author's first session</div>
+  <p class="journey__desc">Verification happens before any setup. The 3 welcome modals overlay an empty dashboard — each is skippable. After dismissal, a soft toast handles deferred setup (e.g. style training). Sign-up never collects a credit card; Free users <em>bring their own API key</em>.</p>
+  <div class="journey__diagram">
+<pre class="mermaid">
+flowchart LR
+  L("<b>Landing</b><i>page</i>") --> S("<b>Sign up</b><i>page</i>")
+  S -->|email + password| V("<b>Verify email</b><i>page</i>")
+  V -->|6-digit OTP| W1("<b>Welcome 1 · Profile</b><i>modal</i>")
+  W1 -->|next| W2("<b>Welcome 2 · Preferences</b><i>modal</i>")
+  W2 -->|next| W3("<b>Welcome 3 · Style CTA</b><i>modal</i>")
+  W1 -.->|skip| D("<b>Empty dashboard</b><i>page</i>")
+  W2 -.->|skip| D
+  W3 -.->|skip · toast reminds later| D
+  W3 -->|train now| ST("<b>Style training upload</b><i>page</i>")
+  ST --> D
+  D -->|New article| K("<b>Add AI key</b><i>Free tier · page</i>")
+  K --> NA("<b>New-article modal</b><i>modal</i>")
+  NA -->|outline + template + name| ED("<b>Editor · Storm phase</b><i>page</i>")
+  click L "pages/landing.html"
+  click S "pages/sign-up.html"
+  click V "pages/verify-email.html"
+  click W1 "pages/welcome-modal-profile.html"
+  click W2 "pages/welcome-modal-preferences.html"
+  click W3 "pages/welcome-modal-style-cta.html"
+  click ST "pages/style-training-upload.html"
+  click D "pages/article-list.html"
+  click K "pages/ai-keys.html"
+  click NA "pages/modal-new-article.html"
+  click ED "pages/editor-storm.html"
+</pre>
+  </div>
+</div>
+
+<!-- ─── J2 ─── -->
+<div class="section-head">
+  <span class="section-head__num">J2</span>
+  <h2 class="section-head__title">The editor journey</h2>
+  <span class="section-head__meta">6 phases · forks &amp; branches</span>
+</div>
+
+<div class="journey">
+  <div class="journey__name">From a blank canvas to a published article</div>
+  <p class="journey__desc">The 6 phases are the spine. Authors can fork branches, switch templates mid-article, or roll back via checkpoints at any point. The editor itself is one canvas; phases change which panels appear and how the AI behaves.</p>
+  <div class="journey__diagram">
+<pre class="mermaid">
+flowchart LR
+  S("<b>Storm</b><i>page</i>") -->|promote angle| D("<b>Draft</b><i>page</i>")
+  D -->|sections complete| C("<b>Curate</b><i>page</i>")
+  C -->|reviews resolved| P("<b>Polish</b><i>page</i>")
+  P -->|voice match passes| PR("<b>Proof</b><i>page</i>")
+  PR -->|originality + citations OK| PB("<b>Publish</b><i>page</i>")
+  C -.->|fork an alternate| BR("<b>Branch switcher</b><i>modal</i>")
+  BR -.->|new branch| D
+  C -.->|switch template| TS("<b>Switch template</b><i>modal</i>")
+  TS --> C
+  P -.->|compare versions| VP("<b>Version picker</b><i>modal</i>")
+  VP --> P
+  PR -.->|originality check| OR("<b>Originality results</b><i>page</i>")
+  OR --> PR
+  PB -->|push to CMS| EX("<b>Export</b><i>modal</i>")
+  click S "pages/editor-storm.html"
+  click D "pages/editor-draft.html"
+  click C "pages/editor-curate.html"
+  click P "pages/editor-polish.html"
+  click PR "pages/editor-proof.html"
+  click PB "pages/editor-publish.html"
+  click BR "pages/modal-branch-switcher.html"
+  click TS "pages/template-selector.html"
+  click VP "pages/modal-version-picker.html"
+  click OR "pages/originality-results.html"
+  click EX "pages/modal-export.html"
+</pre>
+  </div>
+</div>
+
+<!-- ─── J3 ─── -->
+<div class="section-head">
+  <span class="section-head__num">J3</span>
+  <h2 class="section-head__title">Bringing a reviewer in</h2>
+  <span class="section-head__meta">Collaboration loop</span>
+</div>
+
+<div class="journey">
+  <div class="journey__name">Round-based feedback with AI synthesis</div>
+  <p class="journey__desc">Reviewers operate in a read-only mode and leave proposals. The author resolves them and AI synthesises themes when the round closes. Co-authors (Team tier) can push direct edits via the acceptance modal.</p>
+  <div class="journey__diagram">
+<pre class="mermaid">
+flowchart LR
+  C("<b>Curate phase</b><i>page</i>") -->|open Review panel| RP("<b>Review panel</b><i>component</i>")
+  RP -->|invite| RI("<b>Reviewer invite</b><i>modal</i>")
+  RI -->|email sent| RM("<b>Reviewer mode</b><i>page</i>")
+  RM -->|comment · suggest| RP2("<b>Review panel updates</b><i>component</i>")
+  RP2 -->|close round| RS("<b>Round summary</b><i>modal</i>")
+  RS -->|next round| RP
+  RS -->|approve all| P("<b>Polish phase</b><i>page</i>")
+  RM -.->|co-author push| CA("<b>Co-author acceptance</b><i>modal</i>")
+  CA --> RP2
+  RP -.->|manage roles| PM("<b>Permissions</b><i>modal</i>")
+  PM --> RP
+  click C "pages/editor-curate.html"
+  click RP "pages/panel-review.html"
+  click RI "pages/modal-reviewer-invite.html"
+  click RM "pages/reviewer-mode.html"
+  click RP2 "pages/panel-review.html"
+  click RS "pages/modal-review-round-summary.html"
+  click CA "pages/modal-coauthor-acceptance.html"
+  click PM "pages/modal-permissions.html"
+  click P "pages/editor-polish.html"
+</pre>
+  </div>
+</div>
+
+<!-- ─── J4 ─── -->
+<div class="section-head">
+  <span class="section-head__num">J4</span>
+  <h2 class="section-head__title">Style training &amp; template creation</h2>
+  <span class="section-head__meta">Authoring constraints</span>
+</div>
+
+<div class="journey">
+  <div class="journey__name">Teach the studio your voice and structure</div>
+  <p class="journey__desc">Two parallel learning surfaces: voice (style training) and structure (custom templates). Both feed the AI Director's context. Templates can carry per-section AI directives on Pro+ plans.</p>
+  <div class="journey__diagram">
+<pre class="mermaid">
+flowchart LR
+  S("<b>Settings</b><i>page</i>") -->|Style profile| SP("<b>Style profile editor</b><i>page</i>")
+  SP -->|Add training articles| ST("<b>Style training upload</b><i>page</i>")
+  ST -->|Analysis complete| SP
+  S -->|Templates| TL("<b>Templates list</b><i>page</i>")
+  TL -->|Duplicate system| TE("<b>Template editor</b><i>page</i>")
+  TL -->|New from scratch| TE
+  TE -->|Save| TL
+  TL -->|Use this template| NA("<b>New-article modal</b><i>modal</i>")
+  NA --> ED("<b>Editor · Storm</b><i>page</i>")
+  click S "pages/profile.html"
+  click SP "pages/style-profile-editor.html"
+  click ST "pages/style-training-upload.html"
+  click TL "pages/templates-list.html"
+  click TE "pages/template-editor.html"
+  click NA "pages/modal-new-article.html"
+  click ED "pages/editor-storm.html"
+</pre>
+  </div>
+</div>
+
+<!-- ─── J5 ─── -->
+<div class="section-head">
+  <span class="section-head__num">J5</span>
+  <h2 class="section-head__title">Account, billing &amp; team flows</h2>
+  <span class="section-head__meta">Settings navigation</span>
+</div>
+
+<div class="journey">
+  <div class="journey__name">Where the avatar menu leads</div>
+  <p class="journey__desc">Every settings destination is one click from the avatar menu (top-right of any page) or the workspace menu (≡, top-left). Free-tier users use BYOK; Pro/Team get managed AI with credits.</p>
+  <div class="journey__diagram">
+<pre class="mermaid">
+flowchart LR
+  AM("<b>Avatar menu</b><i>component</i>") -->|Profile| PR("<b>Profile</b><i>page</i>")
+  AM -->|Preferences| PF("<b>Preferences</b><i>page</i>")
+  AM -->|AI keys · Free| AK("<b>AI keys · BYOK</b><i>page</i>")
+  AM -->|Billing| BL("<b>Billing</b><i>page</i>")
+  AM -->|Credits · Pro| CD("<b>Credits dashboard</b><i>page</i>")
+  AM -->|Upgrade plan| UP("<b>Upgrade</b><i>page</i>")
+  CD -->|Buy more| CP("<b>Credit purchase</b><i>modal</i>")
+  CD -->|View ledger| CL("<b>Credit ledger</b><i>modal</i>")
+  UP -->|Become Team admin| TM("<b>Team management</b><i>page</i>")
+  TM -->|Invite member| TI("<b>Team invite</b><i>modal</i>")
+  TM --> TS("<b>Team settings</b><i>page</i>")
+  TM --> TU("<b>Team usage</b><i>page</i>")
+  click AM "pages/component-avatar-menu.html"
+  click PR "pages/profile.html"
+  click PF "pages/preferences.html"
+  click AK "pages/ai-keys.html"
+  click BL "pages/billing.html"
+  click CD "pages/credits-dashboard.html"
+  click UP "pages/upgrade.html"
+  click CP "pages/modal-credit-purchase.html"
+  click CL "pages/modal-credit-ledger.html"
+  click TM "pages/team-management.html"
+  click TI "pages/modal-team-invite.html"
+  click TS "pages/team-settings.html"
+  click TU "pages/team-usage.html"
+</pre>
+  </div>
+</div>
+
+
+<!-- ═════════════════════════════════════════════ -->
+<!-- ZONE 2 — CATALOG                               -->
+<!-- ═════════════════════════════════════════════ -->
+
+<div class="zone-eyebrow">Part 2 of 2</div>
+<h1 class="zone-title">Wireframe catalog</h1>
+<p class="zone-sub">All 78 wireframes, organized by purpose. Type tags: <span class="tag tag--page" style="position:static; display:inline-block">Page</span> a full route · <span class="tag tag--modal" style="position:static; display:inline-block">Modal</span> overlay · <span class="tag tag--component" style="position:static; display:inline-block">Component</span> UI primitive reference · <span class="tag tag--state" style="position:static; display:inline-block">State</span> error / empty / loading variant. The <span class="xref" style="display:inline-flex; vertical-align:middle"><span class="xref__chip">J2</span></span> chips indicate which journey(s) the page appears in.</p>
+
+<!-- ─── 1. Public surfaces ─── -->
+<section class="group">
+  <div class="group__head">
+    <span class="group__num">01</span>
+    <h2 class="group__name">Public surfaces</h2>
+    <span class="group__count">4 wireframes</span>
+  </div>
+  <div class="grid">
+    <a class="card" href="pages/landing.html"><span class="tag tag--page">Page</span><span class="card__name">Landing</span><span class="card__meta">Marketing homepage</span><span class="xref"><span class="xref__chip" data-jump="#j1">J1</span></span></a>
+    <a class="card" href="pages/sign-in.html"><span class="tag tag--page">Page</span><span class="card__name">Sign in</span><span class="card__meta">Email + password · magic link</span></a>
+    <a class="card" href="pages/sign-up.html"><span class="tag tag--page">Page</span><span class="card__name">Sign up</span><span class="card__meta">2-step · email + password</span><span class="xref"><span class="xref__chip" data-jump="#j1">J1</span></span></a>
+    <a class="card" href="pages/verify-email.html"><span class="tag tag--page">Page</span><span class="card__name">Verify email</span><span class="card__meta">6-digit OTP · magic-link alt</span><span class="xref"><span class="xref__chip" data-jump="#j1">J1</span></span></a>
+  </div>
+</section>
+
+<!-- ─── 2. Welcome & onboarding ─── -->
+<section class="group">
+  <div class="group__head">
+    <span class="group__num">02</span>
+    <h2 class="group__name">Welcome &amp; onboarding</h2>
+    <span class="group__count">4 wireframes</span>
+  </div>
+  <div class="grid">
+    <a class="card" href="pages/welcome-modal-profile.html"><span class="tag tag--modal">Modal</span><span class="card__name">Welcome 1 · Profile</span><span class="card__meta">Display name · avatar · bio</span><span class="xref"><span class="xref__chip" data-jump="#j1">J1</span></span></a>
+    <a class="card" href="pages/welcome-modal-preferences.html"><span class="tag tag--modal">Modal</span><span class="card__name">Welcome 2 · Preferences</span><span class="card__meta">Timezone · panels · AI behaviour</span><span class="xref"><span class="xref__chip" data-jump="#j1">J1</span></span></a>
+    <a class="card" href="pages/welcome-modal-style-cta.html"><span class="tag tag--modal">Modal</span><span class="card__name">Welcome 3 · Style CTA</span><span class="card__meta">Train now · skip → toast</span><span class="xref"><span class="xref__chip" data-jump="#j1">J1</span></span></a>
+    <a class="card" href="pages/tour-first-article.html"><span class="tag tag--page">Page</span><span class="card__name">First-article tour</span><span class="card__meta">In-editor spotlight tour</span></a>
+  </div>
+</section>
+
+<!-- ─── 3. Dashboard ─── -->
+<section class="group">
+  <div class="group__head">
+    <span class="group__num">03</span>
+    <h2 class="group__name">Dashboard</h2>
+    <span class="group__count">1 wireframe</span>
+  </div>
+  <div class="grid">
+    <a class="card" href="pages/article-list.html"><span class="tag tag--page">Page</span><span class="card__name">Article list</span><span class="card__meta">All articles · filters · new-article CTA</span><span class="xref"><span class="xref__chip" data-jump="#j1">J1</span></span></a>
+  </div>
+</section>
+
+<!-- ─── 4. Article creation & templates ─── -->
+<section class="group">
+  <div class="group__head">
+    <span class="group__num">04</span>
+    <h2 class="group__name">Article creation &amp; templates</h2>
+    <span class="group__count">5 wireframes</span>
+  </div>
+  <div class="grid">
+    <a class="card" href="pages/modal-new-article.html"><span class="tag tag--modal">Modal</span><span class="card__name">New article</span><span class="card__meta">Outline → AI rec → template → name</span><span class="xref"><span class="xref__chip" data-jump="#j1">J1</span><span class="xref__chip" data-jump="#j4">J4</span></span></a>
+    <a class="card" href="pages/template-selector.html"><span class="tag tag--modal">Modal</span><span class="card__name">Switch template (mid-article)</span><span class="card__meta">List+detail · content-porting preview</span><span class="xref"><span class="xref__chip" data-jump="#j2">J2</span></span></a>
+    <a class="card" href="pages/templates-list.html"><span class="tag tag--page">Page</span><span class="card__name">Templates list</span><span class="card__meta">System + custom · duplicate / new</span><span class="xref"><span class="xref__chip" data-jump="#j4">J4</span></span></a>
+    <a class="card" href="pages/template-editor.html"><span class="tag tag--page">Page</span><span class="card__name">Template editor</span><span class="card__meta">Sections · guidelines · AI directives</span><span class="xref"><span class="xref__chip" data-jump="#j4">J4</span></span></a>
+    <a class="card" href="pages/panel-research.html"><span class="tag tag--component">Component</span><span class="card__name">Research panel</span><span class="card__meta">Drop notes / PDFs / URLs</span></a>
+  </div>
+</section>
+
+<!-- ─── 5. The editor — phase pages ─── -->
+<section class="group">
+  <div class="group__head">
+    <span class="group__num">05</span>
+    <h2 class="group__name">The editor — phase pages</h2>
+    <span class="group__count">8 wireframes</span>
+  </div>
+  <div class="grid">
+    <a class="card" href="pages/editor-storm.html"><span class="tag tag--page">Page</span><span class="card__name">Storm</span><span class="card__meta">Ideation · 2-AI angle proposals</span><span class="xref"><span class="xref__chip" data-jump="#j1">J1</span><span class="xref__chip" data-jump="#j2">J2</span></span></a>
+    <a class="card" href="pages/editor-draft.html"><span class="tag tag--page">Page</span><span class="card__name">Draft</span><span class="card__meta">Prose generation · section by section</span><span class="xref"><span class="xref__chip" data-jump="#j2">J2</span></span></a>
+    <a class="card" href="pages/editor-curate.html"><span class="tag tag--page">Page</span><span class="card__name">Curate</span><span class="card__meta">Review · doc-map · canonical view</span><span class="xref"><span class="xref__chip" data-jump="#j2">J2</span><span class="xref__chip" data-jump="#j3">J3</span></span></a>
+    <a class="card" href="pages/editor-polish.html"><span class="tag tag--page">Page</span><span class="card__name">Polish</span><span class="card__meta">Style match · voice tuning</span><span class="xref"><span class="xref__chip" data-jump="#j2">J2</span><span class="xref__chip" data-jump="#j3">J3</span></span></a>
+    <a class="card" href="pages/editor-proof.html"><span class="tag tag--page">Page</span><span class="card__name">Proof</span><span class="card__meta">Grammar · originality · citations</span><span class="xref"><span class="xref__chip" data-jump="#j2">J2</span></span></a>
+    <a class="card" href="pages/editor-publish.html"><span class="tag tag--page">Page</span><span class="card__name">Publish</span><span class="card__meta">Ready to ship · CMS push</span><span class="xref"><span class="xref__chip" data-jump="#j2">J2</span></span></a>
+    <a class="card" href="pages/editor-focus.html"><span class="tag tag--page">Page</span><span class="card__name">Focus mode</span><span class="card__meta">Canvas only · no panels</span></a>
+    <a class="card" href="pages/editor-preview.html"><span class="tag tag--page">Page</span><span class="card__name">Preview mode</span><span class="card__meta">Rendered article · no missive UI</span></a>
+  </div>
+</section>
+
+<!-- ─── 6. Editor panels ─── -->
+<section class="group">
+  <div class="group__head">
+    <span class="group__num">06</span>
+    <h2 class="group__name">Editor panels</h2>
+    <span class="group__count">11 wireframes</span>
+  </div>
+  <div class="grid">
+    <a class="card" href="pages/panel-document-map.html"><span class="tag tag--component">Component</span><span class="card__name">Document Map</span><span class="card__meta">Sections + missives + progress</span></a>
+    <a class="card" href="pages/panel-ai-director.html"><span class="tag tag--component">Component</span><span class="card__name">AI Director</span><span class="card__meta">Phase · agents · directives</span></a>
+    <a class="card" href="pages/panel-style-profile.html"><span class="tag tag--component">Component</span><span class="card__name">Style Profile</span><span class="card__meta">Voice match · originality · metrics</span></a>
+    <a class="card" href="pages/panel-guidelines.html"><span class="tag tag--component">Component</span><span class="card__name">Guidelines</span><span class="card__meta">Article-scope rules</span></a>
+    <a class="card" href="pages/panel-review.html"><span class="tag tag--component">Component</span><span class="card__name">Review</span><span class="card__meta">Reviewers · sentiment · proposals</span><span class="xref"><span class="xref__chip" data-jump="#j3">J3</span></span></a>
+    <a class="card" href="pages/panel-checkpoints.html"><span class="tag tag--component">Component</span><span class="card__name">Checkpoints</span><span class="card__meta">Manual + auto-saves · restore</span></a>
+    <a class="card" href="pages/panel-quality.html"><span class="tag tag--component">Component</span><span class="card__name">Quality Evaluation</span><span class="card__meta">Composite score · per-check pass/fail</span></a>
+    <a class="card" href="pages/panel-publish.html"><span class="tag tag--component">Component</span><span class="card__name">Publish &amp; Export</span><span class="card__meta">Pre-flight · CMS destinations</span></a>
+    <a class="card" href="pages/panel-search.html"><span class="tag tag--component">Component</span><span class="card__name">Search &amp; Replace</span><span class="card__meta">Literal · regex · semantic</span></a>
+    <a class="card" href="pages/panel-keywords.html"><span class="tag tag--component">Component</span><span class="card__name">Keyword Research</span><span class="card__meta">Ahrefs · Semrush · target tracking</span></a>
+    <a class="card" href="pages/panel-generation-queue.html"><span class="tag tag--component">Component</span><span class="card__name">Generation Queue</span><span class="card__meta">Background AI tasks · cancellation</span></a>
+  </div>
+</section>
+
+<!-- ─── 7. Editor modals ─── -->
+<section class="group">
+  <div class="group__head">
+    <span class="group__num">07</span>
+    <h2 class="group__name">Editor modals</h2>
+    <span class="group__count">7 wireframes</span>
+  </div>
+  <div class="grid">
+    <a class="card" href="pages/modal-shortcuts.html"><span class="tag tag--modal">Modal</span><span class="card__name">Keyboard Shortcuts</span><span class="card__meta">13 shortcuts + anatomy</span></a>
+    <a class="card" href="pages/modal-version-picker.html"><span class="tag tag--modal">Modal</span><span class="card__name">Version Picker</span><span class="card__meta">Side-by-side · diff · timeline rail</span><span class="xref"><span class="xref__chip" data-jump="#j2">J2</span></span></a>
+    <a class="card" href="pages/modal-article-settings.html"><span class="tag tag--modal">Modal</span><span class="card__name">Article Settings</span><span class="card__meta">Phase · template · agents · locks</span></a>
+    <a class="card" href="pages/modal-branch-switcher.html"><span class="tag tag--modal">Modal</span><span class="card__name">Branch Switcher</span><span class="card__meta">Multi-select · compare · fork · switch</span><span class="xref"><span class="xref__chip" data-jump="#j2">J2</span></span></a>
+    <a class="card" href="pages/modal-export.html"><span class="tag tag--modal">Modal</span><span class="card__name">Export</span><span class="card__meta">6 formats · options · async progress</span><span class="xref"><span class="xref__chip" data-jump="#j2">J2</span></span></a>
+    <a class="card" href="pages/modal-deletion-confirm.html"><span class="tag tag--modal">Modal</span><span class="card__name">Deletion Confirm</span><span class="card__meta">Type-to-confirm destructive pattern</span></a>
+    <a class="card" href="pages/modal-quality-baseline.html"><span class="tag tag--modal">Modal</span><span class="card__name">Quality Baseline</span><span class="card__meta">First-snapshot approval</span></a>
+  </div>
+</section>
+
+<!-- ─── 8. Collaboration ─── -->
+<section class="group">
+  <div class="group__head">
+    <span class="group__num">08</span>
+    <h2 class="group__name">Collaboration</h2>
+    <span class="group__count">5 wireframes</span>
+  </div>
+  <div class="grid">
+    <a class="card" href="pages/reviewer-mode.html"><span class="tag tag--page">Page</span><span class="card__name">Reviewer Mode</span><span class="card__meta">Read-only canvas · comment · suggest</span><span class="xref"><span class="xref__chip" data-jump="#j3">J3</span></span></a>
+    <a class="card" href="pages/modal-reviewer-invite.html"><span class="tag tag--modal">Modal</span><span class="card__name">Reviewer Invite</span><span class="card__meta">Emails · role · round · personal note</span><span class="xref"><span class="xref__chip" data-jump="#j3">J3</span></span></a>
+    <a class="card" href="pages/modal-review-round-summary.html"><span class="tag tag--modal">Modal</span><span class="card__name">Review Round Summary</span><span class="card__meta">AI synthesis · themes · next steps</span><span class="xref"><span class="xref__chip" data-jump="#j3">J3</span></span></a>
+    <a class="card" href="pages/modal-coauthor-acceptance.html"><span class="tag tag--modal">Modal</span><span class="card__name">Co-author Acceptance</span><span class="card__meta">Per-change inline diff · batch</span><span class="xref"><span class="xref__chip" data-jump="#j3">J3</span></span></a>
+    <a class="card" href="pages/modal-permissions.html"><span class="tag tag--modal">Modal</span><span class="card__name">Permissions</span><span class="card__meta">Roles · invites · share link</span><span class="xref"><span class="xref__chip" data-jump="#j3">J3</span></span></a>
+  </div>
+</section>
+
+<!-- ─── 9. Style, quality, SEO ─── -->
+<section class="group">
+  <div class="group__head">
+    <span class="group__num">09</span>
+    <h2 class="group__name">Style, quality &amp; SEO</h2>
+    <span class="group__count">5 wireframes</span>
+  </div>
+  <div class="grid">
+    <a class="card" href="pages/style-profile-editor.html"><span class="tag tag--page">Page</span><span class="card__name">Style Profile Editor</span><span class="card__meta">Voice dimensions · avoid · prefer</span><span class="xref"><span class="xref__chip" data-jump="#j4">J4</span></span></a>
+    <a class="card" href="pages/style-training-upload.html"><span class="tag tag--page">Page</span><span class="card__name">Style Training Upload</span><span class="card__meta">Drop zone · per-file progress · approval</span><span class="xref"><span class="xref__chip" data-jump="#j1">J1</span><span class="xref__chip" data-jump="#j4">J4</span></span></a>
+    <a class="card" href="pages/originality-results.html"><span class="tag tag--page">Page</span><span class="card__name">Originality Results</span><span class="card__meta">Per-passage similarity · cited matches</span><span class="xref"><span class="xref__chip" data-jump="#j2">J2</span></span></a>
+    <a class="card" href="pages/seo-integration.html"><span class="tag tag--page">Page</span><span class="card__name">SEO Integration</span><span class="card__meta">Ahrefs · Semrush · GSC · quota</span></a>
+    <a class="card" href="pages/diff-compare.html"><span class="tag tag--page">Page</span><span class="card__name">Diff Compare</span><span class="card__meta">Side-by-side · version picker · branches</span></a>
+  </div>
+</section>
+
+<!-- ─── 10. Team & workspace ─── -->
+<section class="group">
+  <div class="group__head">
+    <span class="group__num">10</span>
+    <h2 class="group__name">Team &amp; workspace</h2>
+    <span class="group__count">4 wireframes</span>
+  </div>
+  <div class="grid">
+    <a class="card" href="pages/team-management.html"><span class="tag tag--page">Page</span><span class="card__name">Team Management</span><span class="card__meta">Members · roles · seats · credits</span><span class="xref"><span class="xref__chip" data-jump="#j5">J5</span></span></a>
+    <a class="card" href="pages/team-settings.html"><span class="tag tag--page">Page</span><span class="card__name">Team Settings</span><span class="card__meta">Profile · billing · defaults</span><span class="xref"><span class="xref__chip" data-jump="#j5">J5</span></span></a>
+    <a class="card" href="pages/modal-team-invite.html"><span class="tag tag--modal">Modal</span><span class="card__name">Team Invite</span><span class="card__meta">Seats consumed · role + allowance</span><span class="xref"><span class="xref__chip" data-jump="#j5">J5</span></span></a>
+    <a class="card" href="pages/team-usage.html"><span class="tag tag--page">Page</span><span class="card__name">Team Usage</span><span class="card__meta">Per-member · per-operation</span><span class="xref"><span class="xref__chip" data-jump="#j5">J5</span></span></a>
+  </div>
+</section>
+
+<!-- ─── 11. Account, billing & AI ─── -->
+<section class="group">
+  <div class="group__head">
+    <span class="group__num">11</span>
+    <h2 class="group__name">Account, billing &amp; AI</h2>
+    <span class="group__count">7 wireframes</span>
+  </div>
+  <div class="grid">
+    <a class="card" href="pages/profile.html"><span class="tag tag--page">Page</span><span class="card__name">Profile</span><span class="card__meta">Identity · locale · account &amp; data</span><span class="xref"><span class="xref__chip" data-jump="#j5">J5</span></span></a>
+    <a class="card" href="pages/preferences.html"><span class="tag tag--page">Page</span><span class="card__name">Preferences</span><span class="card__meta">UI defaults · phase panels · AI behaviour</span><span class="xref"><span class="xref__chip" data-jump="#j5">J5</span></span></a>
+    <a class="card" href="pages/ai-keys.html"><span class="tag tag--page">Page</span><span class="card__name">AI keys (BYOK)</span><span class="card__meta">Free-tier API keys · spending controls</span><span class="xref"><span class="xref__chip" data-jump="#j1">J1</span><span class="xref__chip" data-jump="#j5">J5</span></span></a>
+    <a class="card" href="pages/billing.html"><span class="tag tag--page">Page</span><span class="card__name">Billing</span><span class="card__meta">Plan · credits · invoice history</span><span class="xref"><span class="xref__chip" data-jump="#j5">J5</span></span></a>
+    <a class="card" href="pages/upgrade.html"><span class="tag tag--page">Page</span><span class="card__name">Upgrade</span><span class="card__meta">3-tier comparison · annual / monthly</span><span class="xref"><span class="xref__chip" data-jump="#j5">J5</span></span></a>
+    <a class="card" href="pages/credits-dashboard.html"><span class="tag tag--page">Page</span><span class="card__name">Credits Dashboard</span><span class="card__meta">Balance · usage trend · transactions</span><span class="xref"><span class="xref__chip" data-jump="#j5">J5</span></span></a>
+    <a class="card" href="pages/modal-credit-purchase.html"><span class="tag tag--modal">Modal</span><span class="card__name">Credit Purchase</span><span class="card__meta">4 packs · payment method</span><span class="xref"><span class="xref__chip" data-jump="#j5">J5</span></span></a>
+  </div>
+</section>
+
+<!-- ─── 12. Activity, snippets, integrations, help ─── -->
+<section class="group">
+  <div class="group__head">
+    <span class="group__num">12</span>
+    <h2 class="group__name">Activity, snippets, integrations &amp; help</h2>
+    <span class="group__count">6 wireframes</span>
+  </div>
+  <div class="grid">
+    <a class="card" href="pages/panel-activity.html"><span class="tag tag--component">Component</span><span class="card__name">Activity Timeline</span><span class="card__meta">Per-day · notifications dropdown</span></a>
+    <a class="card" href="pages/panel-snippet-personal.html"><span class="tag tag--component">Component</span><span class="card__name">Personal Snippets</span><span class="card__meta">Reusable blocks · shortcuts</span></a>
+    <a class="card" href="pages/panel-snippet-team.html"><span class="tag tag--component">Component</span><span class="card__name">Team Snippets</span><span class="card__meta">Shared · admin-locked · tier-locked</span></a>
+    <a class="card" href="pages/integrations.html"><span class="tag tag--page">Page</span><span class="card__name">Integrations</span><span class="card__meta">9 services · publishing · SEO · storage</span></a>
+    <a class="card" href="pages/modal-credit-ledger.html"><span class="tag tag--modal">Modal</span><span class="card__name">Credit Ledger</span><span class="card__meta">Paginated history · filter · export</span></a>
+    <a class="card" href="pages/help.html"><span class="tag tag--page">Page</span><span class="card__name">Help &amp; docs</span><span class="card__meta">Searchable · 6 topic groups</span></a>
+  </div>
+</section>
+
+<!-- ─── 13. Component reference ─── -->
+<section class="group">
+  <div class="group__head">
+    <span class="group__num">13</span>
+    <h2 class="group__name">Component reference</h2>
+    <span class="group__count">5 wireframes</span>
+  </div>
+  <div class="grid">
+    <a class="card" href="pages/component-workspace-menu.html"><span class="tag tag--component">Component</span><span class="card__name">Workspace menu (≡)</span><span class="card__meta">Editor nav dropdown · dark surface</span></a>
+    <a class="card" href="pages/component-avatar-menu.html"><span class="tag tag--component">Component</span><span class="card__name">Avatar menu</span><span class="card__meta">Free / Pro / Team variants</span><span class="xref"><span class="xref__chip" data-jump="#j5">J5</span></span></a>
+    <a class="card" href="pages/component-phase-selector.html"><span class="tag tag--component">Component</span><span class="card__name">Phase selector</span><span class="card__meta">Compact dropdown for &lt;1024px</span></a>
+    <a class="card" href="pages/component-status-bar.html"><span class="tag tag--component">Component</span><span class="card__name">Status Bar</span><span class="card__meta">6 phase variants · segment palette</span></a>
+    <a class="card" href="pages/states-tooltip-toast.html"><span class="tag tag--component">Component</span><span class="card__name">Tooltip · Toast · Tier-lock</span><span class="card__meta">3 surface patterns · all variants</span></a>
+  </div>
+</section>
+
+<!-- ─── 14. States ─── -->
+<section class="group">
+  <div class="group__head">
+    <span class="group__num">14</span>
+    <h2 class="group__name">States — empty / loading / errors</h2>
+    <span class="group__count">6 wireframes</span>
+  </div>
+  <div class="grid">
+    <a class="card" href="pages/states-empty-loading.html"><span class="tag tag--state">State</span><span class="card__name">Empty &amp; loading</span><span class="card__meta">Article list · checkpoints · search · skeletons</span></a>
+    <a class="card" href="pages/error-404.html"><span class="tag tag--state">State</span><span class="card__name">404 · Not found</span><span class="card__meta">Page missing</span></a>
+    <a class="card" href="pages/error-403.html"><span class="tag tag--state">State</span><span class="card__name">403 · Forbidden</span><span class="card__meta">Access denied · request access</span></a>
+    <a class="card" href="pages/error-500.html"><span class="tag tag--state">State</span><span class="card__name">500 · Internal error</span><span class="card__meta">Request ID · autosave reassurance</span></a>
+    <a class="card" href="pages/error-rate-limit.html"><span class="tag tag--state">State</span><span class="card__name">429 · Rate limit</span><span class="card__meta">Free-tier cap · quota · upgrade</span></a>
+    <a class="card" href="pages/error-expired-invite.html"><span class="tag tag--state">State</span><span class="card__name">Expired invitation</span><span class="card__meta">Reviewer link expired · re-send</span></a>
+  </div>
+</section>
+
+
+<!-- ═════════ REFERENCES ═════════ -->
+<div class="refs">
+  <span>Reference docs:</span>
+  <a href="../design-system.md">design-system.md</a>
+  <a href="../css-architecture.md">css-architecture.md</a>
+  <a href="../design-preview.html">design-preview.html</a>
+  <a href="README.md">README.md</a>
+</div>
+
+</main>
+
+<!-- ═════════ MERMAID ═════════ -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    securityLevel: 'loose',
+    fontFamily: '"DM Sans", system-ui, sans-serif',
+    flowchart: {
+      curve: 'basis',
+      padding: 16,
+      nodeSpacing: 32,
+      rankSpacing: 56
+    },
+    themeVariables: {
+      primaryColor:        '#FAF6EE',   // node fill — cream card on dark
+      primaryBorderColor:  '#D4A256',   // node border — amber
+      primaryTextColor:    '#1A1614',   // node text — stone
+      secondaryColor:      '#F2EAD7',
+      tertiaryColor:       '#EFE5D0',
+      lineColor:           '#D4A256',   // edges — amber (visible on dark)
+      edgeLabelBackground: '#2C2620',   // edge label bg — dark, matches journey card
+      mainBkg:             '#FAF6EE',
+      nodeBorder:          '#D4A256',
+      clusterBkg:          '#221E1A',
+      clusterBorder:       '#D4A256',
+      textColor:           '#1A1614',
+      titleColor:          '#FAF6EE'
+    }
+  });
+</script>
+
+</body>
+</html>

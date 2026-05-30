@@ -1,0 +1,71 @@
+/* ════════════════════════════════════════════════════════════════
+   SHOWCASE — reference pages for components/panels.
+   Page sits on --surface-canvas (cream-50). Panels inside use the
+   real `.app__panel` element from layout.css — same width, same
+   --surface-panel (cream-100), same border. No invented chrome.
+   ════════════════════════════════════════════════════════════════ */
+
+/* Page wrapper — covers viewport with canvas cream so the dark body bg from base.css doesn't show through. Same trick profile/billing use. */
+.showcase {
+  background: var(--surface-canvas);
+  min-height: calc(100vh - var(--topbar-h));
+  padding: var(--space-7) var(--space-7) var(--space-9);
+}
+
+.showcase__title {
+  font-family: var(--font-canvas-display);
+  font-size: var(--fs-7xl); font-weight: var(--fw-bold);
+  color: var(--text-primary);
+  line-height: var(--lh-tight); letter-spacing: var(--tracking-tight);
+}
+.showcase__sub {
+  font-family: var(--font-canvas-display);
+  font-size: var(--fs-lg); color: var(--text-mid);
+  margin-top: var(--space-2); max-width: 760px;
+}
+.showcase__meta {
+  font-family: var(--font-chrome); font-size: var(--fs-sm);
+  color: var(--text-faint);
+  margin-top: var(--space-3);
+  display: flex; gap: var(--space-5); flex-wrap: wrap;
+}
+.showcase__meta strong { color: var(--text-warm); font-weight: var(--fw-semi); }
+
+.showcase__states {
+  display: grid; gap: var(--space-5);
+  margin-top: var(--space-7);
+  grid-template-columns: repeat(3, auto);
+  justify-content: start;
+  align-items: start;
+}
+.showcase__states--2 { grid-template-columns: repeat(2, auto); }
+
+.showcase__state { display: flex; flex-direction: column; gap: var(--space-3); width: var(--dock-panel-w); }
+.showcase__state-label {
+  font-family: var(--font-chrome); font-size: var(--fs-tag);
+  font-weight: var(--fw-bold); letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase; color: var(--color-brand);
+}
+.showcase__state-caption {
+  font-family: var(--font-chrome); font-size: var(--fs-xs);
+  color: var(--text-faint);
+}
+
+/* Empty-state content rendered inside a real .app__panel */
+.showcase__empty {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center;
+  padding: var(--space-6); min-height: 460px;
+  color: var(--text-mid);
+}
+.showcase__empty-icon { width: 32px; height: 32px; color: var(--text-faint); margin-bottom: var(--space-3); }
+.showcase__empty-title {
+  font-family: var(--font-chrome); font-size: var(--fs-base);
+  font-weight: var(--fw-semi); color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+.showcase__empty-body {
+  font-family: var(--font-chrome); font-size: var(--fs-sm);
+  color: var(--text-mid);
+  max-width: 220px; line-height: var(--lh-comfy);
+}
