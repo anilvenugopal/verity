@@ -1,11 +1,22 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: (template, unversioned) → 1.0.0
-Bump rationale: Initial ratification — placeholder template populated with the first
-  concrete set of governing principles. MINOR/PATCH not applicable to first adoption.
+Version change: 1.1.0 → 1.2.0 (latest amendment)
+History:
+  - (template, unversioned) → 1.0.0 — initial ratification, first concrete principles.
+  - 1.0.0 → 1.1.0 — MINOR: relaxed the Docker Compose standard. Compose is now permitted
+    as a local-dev convenience (was: forbidden outright) provided K8s/Helm remains the
+    source of truth and every component has a clear K8s path. Per product-owner directive
+    2026-05-30.
+  - 1.1.0 → 1.2.0 — MINOR: added Principle VII (Governed Deployment & Reproducible
+    Execution; ADR-0006), a decision-log/analytics tiering + customer-portable-export
+    Technical Standard (ADR-0004/0007), and Development-Workflow deployment + sequencing
+    gates (PCR §6 feature-driven roadmap). Per product-owner directive 2026-05-30.
 
-Modified principles: N/A (initial adoption)
+Modified principles / sections:
+  - 1.1.0: Technical Standards — "Deployment target" bullet amended (Compose for local dev).
+  - 1.2.0: + Principle VII; + Technical Standards "Decision-log & analytics tiering" bullet;
+    + Development Workflow "Deployment gate" and "Sequencing" entries.
 Added principles:
   - I. Spec Precedes Implementation
   - II. Schema Is the Hardened Foundation
@@ -29,8 +40,10 @@ Templates requiring updates:
   - ⚠ .specify/templates/commands/ — directory absent; no command files to reconcile.
 
 Deferred / follow-up TODOs:
-  - specs/pcr/verity_v2_pcr.md is named as authoritative intent but does not yet exist
-    in the repo. Create it (or correct the path) before it can be cited by specs.
+  - specs/pcr/verity_v2_pcr.md exists (v0.2). It predates ADR-0005/binding-grammar on
+    two points the constitution overrides: it states the schema is "carried verbatim"
+    (§1/§9) and that I/O grammar is source_binding/write_target (§1). A PCR refresh to
+    v0.3 SHOULD fold in the hardening decisions; until then the constitution + ADRs govern.
   - specs/schema/verity_schema.sql is named as the canonical hardened schema but
     specs/schema/ is currently empty. The hardened schema must be produced and reviewed
     (per ADR-0005) before downstream implementation begins.
@@ -125,6 +138,25 @@ backlog stays honest.
 binding model under real load before scaling to the full surface, while the explicit
 parity commitment prevents "MVP" from becoming a euphemism for permanent capability loss.
 
+### VII. Governed Deployment & Reproducible Execution
+
+Deployment is mediated by the governance control plane — never out-of-band. Tasks and
+agents ship as **packages** (`.vtx`/`.vax`); each package declares the **harness image(s)**
+it is compatible with **by immutable digest**, and the registry enforces compatibility so
+an incompatible package×image combination cannot be deployed. A package's **lifecycle
+state gates the environment and mode** it may run in: `staging` → non-prod only;
+`shadow`/`challenger` → prod read-only (challenger may A/B); `champion` → any environment,
+live; `deprecated` → locked, any environment, audit/replay only. "Read-only" means the
+harness executes and logs decisions but its Target Bindings are suppressed (no business
+side effects). The platform keeps an insert-only **deployment inventory** of what runs
+where. Together these make any past execution **reproducibly replayable** from its image
+digest, package, and decision log.
+
+**Rationale**: In a regulated setting, "show exactly what ran, and prove nothing else
+could have" is a hard requirement. Governed, compatibility-gated deployment with an
+inventory is what makes it provable; out-of-band deploys or mutable-tag images would make
+the audit trail and the safety rails fiction. (ADR-0002, ADR-0006.)
+
 ## Technical Standards & Constraints
 
 - **Service decomposition**: the system is composed of four services —
@@ -136,10 +168,21 @@ parity commitment prevents "MVP" from becoming a euphemism for permanent capabil
 - **UI stack**: React with TypeScript, built against the Verity design system. The
   visual design is authoritative in `specs/ui/design-system.md` and its sibling examples
   in `specs/ui/`; UI work MUST conform to it.
-- **Deployment target**: Kubernetes via Helm. There are **no Docker Compose
-  assumptions** — local or otherwise; tooling and docs MUST NOT presuppose Compose.
+- **Deployment target**: Kubernetes via Helm is the **source of truth** for all service
+  configuration and the production substrate. Docker Compose is permitted **only as a
+  local-development convenience** and MUST NOT be the source of truth for service config;
+  any service or component introduced for local dev MUST carry a clear, documented path
+  to its K8s/Helm equivalent. Specs and tooling MUST NOT treat Compose as the deployment
+  model or let Compose-only assumptions leak into service design.
 - **Environments**: always use the project-local `.venv`. Dependencies MUST NEVER be
   installed globally.
+- **Decision-log & analytics tiering**: decision and model-invocation logs are
+  append-only and ingested via the governance API's async/batched path (never a
+  synchronous bottleneck on execution). Analytics is a **separate, latency-tolerant read
+  tier** — reports run as jobs — persisted in an **open columnar format (Iceberg/Parquet
+  on object storage)** with a documented **customer-portable export** to external
+  warehouses. The query engine is a tunable; the tiering, append-only model, and
+  portability are not. (ADR-0004, ADR-0007.)
 
 ## Development Workflow & Quality Gates
 
@@ -154,6 +197,13 @@ parity commitment prevents "MVP" from becoming a euphemism for permanent capabil
   (Principle IV); a change that introduces direct DB access from the harness is rejected.
 - **Naming gate**: schema, model, API, and UI identifiers follow the hardened naming
   convention and the binding grammar (Principles II, V).
+- **Deployment gate**: a deploy that bypasses the governance control plane, pins a harness
+  image by mutable tag rather than digest, or violates the lifecycle→environment matrix is
+  rejected (Principle VII; ADR-0006).
+- **Sequencing**: capability work follows the feature-driven, vertical-slice roadmap in
+  PCR §6 (intake → registry/compose → harness/packaging/deploy → decision logging →
+  testing → lifecycle/promotion → prod-like run → compliance → reporting), with the
+  hardened schema as the foundation and infrastructure pulled in per phase (Principle VI).
 - **Plans** must complete the Constitution Check gate in `plan-template.md` against these
   principles before Phase 0 research, and re-check after design.
 
@@ -179,4 +229,4 @@ the plan-template Constitution Check is the standing gate. Complexity or deviati
 the technical standards MUST be justified in the plan's Complexity Tracking and, where
 cross-cutting, backed by an ADR.
 
-**Version**: 1.0.0 | **Ratified**: 2026-05-29 | **Last Amended**: 2026-05-30
+**Version**: 1.2.0 | **Ratified**: 2026-05-29 | **Last Amended**: 2026-05-30
