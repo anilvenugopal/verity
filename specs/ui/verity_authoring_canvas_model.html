@@ -1,0 +1,525 @@
+
+<h2 class="sr-only">Verity agent and task authoring canvas — interactive walkthrough of the authoring model, showing how prompts, tools, bindings, and outputs are composed on a single canvas</h2>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);font-size:14px}
+.wrap{display:flex;flex-direction:column;gap:0}
+.tabs{display:flex;gap:4px;padding:0 0 12px;border-bottom:0.5px solid var(--color-border-tertiary);flex-wrap:wrap}
+.tab{padding:5px 12px;border-radius:var(--border-radius-md);font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-secondary)}
+.tab.on{background:var(--color-text-primary);color:var(--color-background-primary);border-color:transparent}
+.pane{display:none;padding:16px 0 0}
+.pane.on{display:block}
+.shell{display:flex;gap:0;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden;min-height:380px}
+.left-panel{width:200px;flex-shrink:0;background:var(--color-background-secondary);border-right:0.5px solid var(--color-border-tertiary);padding:10px 8px;display:flex;flex-direction:column;gap:2px}
+.right-panel{width:180px;flex-shrink:0;background:var(--color-background-secondary);border-left:0.5px solid var(--color-border-tertiary);padding:10px 8px}
+.canvas{flex:1;background:var(--color-background-primary);padding:16px;display:flex;flex-direction:column;gap:10px;overflow:auto}
+.sec-label{font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-tertiary);padding:8px 4px 4px}
+.nav-item{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:var(--border-radius-md);font-size:12px;color:var(--color-text-secondary);cursor:pointer}
+.nav-item:hover{background:var(--color-background-tertiary);color:var(--color-text-primary)}
+.nav-item.on{background:var(--color-background-info);color:var(--color-text-info);font-weight:500}
+.nav-item i{font-size:14px;flex-shrink:0}
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;border:0.5px solid transparent}
+.b-green{background:var(--color-background-success);color:var(--color-text-success);border-color:var(--color-border-success)}
+.b-blue{background:var(--color-background-info);color:var(--color-text-info);border-color:var(--color-border-info)}
+.b-amber{background:var(--color-background-warning);color:var(--color-text-warning);border-color:var(--color-border-warning)}
+.b-gray{background:var(--color-background-secondary);color:var(--color-text-tertiary);border-color:var(--color-border-tertiary)}
+.b-red{background:var(--color-background-danger);color:var(--color-text-danger);border-color:var(--color-border-danger)}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:10px 12px}
+.card-h{font-size:12px;font-weight:500;color:var(--color-text-primary);display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.card-h i{font-size:14px;color:var(--color-text-tertiary)}
+.mono{font-family:var(--font-mono);font-size:11px;color:var(--color-text-secondary)}
+.row{display:flex;align-items:center;justify-content:space-between;padding:4px 0;font-size:11px;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary)}
+.row:last-child{border-bottom:none}
+.row-lbl{color:var(--color-text-tertiary)}
+.section-card{border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);overflow:hidden}
+.sc-head{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--color-background-secondary);border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px;font-weight:500}
+.sc-head i{font-size:15px;color:var(--color-text-tertiary)}
+.sc-body{padding:8px 12px;display:flex;flex-direction:column;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:3px;font-size:11px;background:var(--color-background-info);color:var(--color-text-info);border:0.5px solid var(--color-border-info);cursor:pointer}
+.chip i{font-size:12px}
+.chip.var-chip{background:var(--color-background-warning);color:var(--color-text-warning);border-color:var(--color-border-warning)}
+.chip.tool-chip{background:var(--color-background-success);color:var(--color-text-success);border-color:var(--color-border-success)}
+.chip.out-chip{background:var(--color-background-danger);color:var(--color-text-danger);border-color:var(--color-border-danger)}
+.connector-line{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--color-text-tertiary)}
+.connector-line::before{content:'';flex:1;height:0.5px;background:var(--color-border-tertiary)}
+.connector-line::after{content:'';flex:1;height:0.5px;background:var(--color-border-tertiary)}
+.map-row{display:flex;align-items:center;gap:6px;font-size:11px}
+.map-src{background:var(--color-background-warning);color:var(--color-text-warning);border:0.5px solid var(--color-border-warning);padding:2px 7px;border-radius:3px;font-family:var(--font-mono)}
+.map-dst{background:var(--color-background-info);color:var(--color-text-info);border:0.5px solid var(--color-border-info);padding:2px 7px;border-radius:3px;font-family:var(--font-mono)}
+.arrow-mid{color:var(--color-text-tertiary);font-size:12px}
+.rpanel-title{font-size:11px;font-weight:500;color:var(--color-text-primary);margin-bottom:8px}
+.rpanel-block{margin-bottom:10px}
+.rpanel-label{font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-tertiary);margin-bottom:4px}
+.mini-stat{text-align:center;padding:8px;background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);margin-bottom:6px}
+.mini-stat-val{font-size:18px;font-weight:500;color:var(--color-text-primary)}
+.mini-stat-lbl{font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.06em}
+.test-row{display:flex;flex-direction:column;gap:6px;padding:10px 12px}
+.test-input{width:100%;padding:5px 8px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);font-size:11px;font-family:var(--font-mono);color:var(--color-text-primary);resize:vertical;min-height:48px}
+.run-btn{display:flex;align-items:center;justify-content:center;gap:5px;padding:6px 12px;border-radius:var(--border-radius-md);font-size:12px;font-weight:500;background:var(--color-text-primary);color:var(--color-background-primary);border:none;cursor:pointer;width:100%}
+.output-block{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:8px 10px;font-size:11px;color:var(--color-text-secondary);font-family:var(--font-mono)}
+.save-suite-btn{display:flex;align-items:center;justify-content:center;gap:5px;padding:5px 10px;border-radius:var(--border-radius-md);font-size:11px;font-weight:500;background:transparent;color:var(--color-text-info);border:0.5px solid var(--color-border-info);cursor:pointer;width:100%;margin-top:4px}
+.breadcrumb{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--color-text-tertiary);margin-bottom:14px}
+.breadcrumb span{color:var(--color-text-secondary)}
+.breadcrumb .sep{color:var(--color-text-tertiary);opacity:.4}
+</style>
+
+<div class="wrap">
+
+<div class="tabs" id="tabs">
+  <button class="tab on" onclick="show('canvas')">Canvas model</button>
+  <button class="tab" onclick="show('agent')">Agent authoring</button>
+  <button class="tab" onclick="show('task')">Task authoring</button>
+  <button class="tab" onclick="show('test')">Test &amp; baseline</button>
+  <button class="tab" onclick="show('perf')">Performance</button>
+</div>
+
+<!-- ════════════════ CANVAS MODEL OVERVIEW ════════════════ -->
+<div id="pane-canvas" class="pane on">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+
+    <div class="card">
+      <div class="card-h"><span><i class="ti ti-x" aria-hidden="true"></i> Old mental model</span></div>
+      <div style="font-size:12px;color:var(--color-text-secondary);line-height:1.6">
+        Canvas = prompt text<br>
+        Tools, config, bindings = afterthoughts<br>
+        Prompt editor is the whole app<br>
+        Agent is just a prompt + some settings
+      </div>
+    </div>
+
+    <div class="card" style="border-color:var(--color-border-info)">
+      <div class="card-h"><span><i class="ti ti-check" aria-hidden="true"></i> Correct mental model</span></div>
+      <div style="font-size:12px;color:var(--color-text-secondary);line-height:1.6">
+        Canvas = the agent or task<br>
+        Prompt is one wired component<br>
+        Tools, config, bindings are peers<br>
+        All composition visible at once
+      </div>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div class="sc-head"><i class="ti ti-layout-columns" aria-hidden="true"></i> Canvas anatomy — what each zone does</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0">
+      <div style="padding:10px 12px;border-right:0.5px solid var(--color-border-tertiary)">
+        <div style="font-size:11px;font-weight:500;color:var(--color-text-primary);margin-bottom:6px">Left panel — library</div>
+        <div style="font-size:11px;color:var(--color-text-secondary);line-height:1.7">
+          Available prompts<br>
+          Available tools<br>
+          Inference configs<br>
+          Data connectors<br>
+          Drag to wire into canvas
+        </div>
+      </div>
+      <div style="padding:10px 12px;border-right:0.5px solid var(--color-border-tertiary)">
+        <div style="font-size:11px;font-weight:500;color:var(--color-text-primary);margin-bottom:6px">Centre canvas — composition</div>
+        <div style="font-size:11px;color:var(--color-text-secondary);line-height:1.7">
+          Input bindings<br>
+          Prompt section (wired)<br>
+          Tool authorisations<br>
+          Output mapping<br>
+          Validation rules
+        </div>
+      </div>
+      <div style="padding:10px 12px">
+        <div style="font-size:11px;font-weight:500;color:var(--color-text-primary);margin-bottom:6px">Right panel — run &amp; inspect</div>
+        <div style="font-size:11px;color:var(--color-text-secondary);line-height:1.7">
+          Test form<br>
+          Live output<br>
+          Decision log<br>
+          Performance stats<br>
+          Save to test suite
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+    <div class="card" style="text-align:center">
+      <i class="ti ti-arrow-down-circle" aria-hidden="true" style="font-size:20px;color:var(--color-text-warning)"></i>
+      <div style="font-size:11px;font-weight:500;margin-top:4px">Input bindings</div>
+      <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:2px">input_data fields<br>connector fetches<br>constants</div>
+    </div>
+    <div class="card" style="text-align:center">
+      <i class="ti ti-file-text" aria-hidden="true" style="font-size:20px;color:var(--color-text-info)"></i>
+      <div style="font-size:11px;font-weight:500;margin-top:4px">Prompt block</div>
+      <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:2px">wired prompt version<br>variables resolved<br>from bindings</div>
+    </div>
+    <div class="card" style="text-align:center">
+      <i class="ti ti-tool" aria-hidden="true" style="font-size:20px;color:var(--color-text-success)"></i>
+      <div style="font-size:11px;font-weight:500;margin-top:4px">Tools</div>
+      <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:2px">authorised tools<br>MCP servers<br>mock mode toggle</div>
+    </div>
+    <div class="card" style="text-align:center">
+      <i class="ti ti-arrow-up-circle" aria-hidden="true" style="font-size:20px;color:var(--color-text-danger)"></i>
+      <div style="font-size:11px;font-weight:500;margin-top:4px">Output mapping</div>
+      <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:2px">field extraction<br>write targets<br>validation schema</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ AGENT AUTHORING ════════════════ -->
+<div id="pane-agent" class="pane">
+  <div class="breadcrumb">
+    <span>Studio</span><span class="sep">/</span>
+    <span>Agents</span><span class="sep">/</span>
+    <span style="color:var(--color-text-primary);font-weight:500">triage_agent</span>
+    <span style="margin-left:auto;display:flex;gap:6px">
+      <span class="badge b-amber">Candidate</span>
+      <span class="badge b-gray">v2.2.0</span>
+    </span>
+  </div>
+
+  <div class="shell">
+    <!-- Left panel: library -->
+    <div class="left-panel">
+      <div class="sec-label">Prompts</div>
+      <div class="nav-item on"><i class="ti ti-file-text" aria-hidden="true"></i>triage_system_prompt v1.5</div>
+      <div class="nav-item"><i class="ti ti-file-text" aria-hidden="true"></i>triage_user_prompt v1.2</div>
+
+      <div class="sec-label">Tools</div>
+      <div class="nav-item"><i class="ti ti-tool" aria-hidden="true"></i>get_submission_context</div>
+      <div class="nav-item"><i class="ti ti-tool" aria-hidden="true"></i>get_loss_history</div>
+      <div class="nav-item"><i class="ti ti-tool" aria-hidden="true"></i>get_appetite_guide</div>
+      <div class="nav-item"><i class="ti ti-tool" aria-hidden="true"></i>flag_for_review</div>
+
+      <div class="sec-label">Config</div>
+      <div class="nav-item"><i class="ti ti-cpu" aria-hidden="true"></i>sonnet-4 · t=0.1</div>
+
+      <div class="sec-label">Delegates</div>
+      <div class="nav-item"><i class="ti ti-robot" aria-hidden="true"></i>appetite_agent</div>
+    </div>
+
+    <!-- Canvas -->
+    <div class="canvas">
+
+      <!-- Input bindings -->
+      <div class="section-card">
+        <div class="sc-head"><i class="ti ti-arrow-down-circle" aria-hidden="true" style="color:var(--color-text-warning)"></i>Input bindings <span class="badge b-amber" style="margin-left:auto">3 bound</span></div>
+        <div class="sc-body">
+          <div class="map-row"><span class="map-src">submission_id</span><span class="arrow-mid">→</span><span class="map-dst">{{submission_ref}}</span><span style="font-size:10px;color:var(--color-text-tertiary);margin-left:auto">input_data.submission_id</span></div>
+          <div class="map-row"><span class="map-src">context</span><span class="arrow-mid">→</span><span class="map-dst">{{submission_context}}</span><span style="font-size:10px;color:var(--color-text-tertiary);margin-left:auto">fetch: edms.get_submission_context</span></div>
+          <div class="map-row"><span class="map-src">lob</span><span class="arrow-mid">→</span><span class="map-dst">{{line_of_business}}</span><span style="font-size:10px;color:var(--color-text-tertiary);margin-left:auto">input_data.lob</span></div>
+        </div>
+      </div>
+
+      <!-- Prompt block -->
+      <div class="section-card">
+        <div class="sc-head"><i class="ti ti-file-text" aria-hidden="true" style="color:var(--color-text-info)"></i>System prompt <span class="mono" style="margin-left:4px">triage_system_prompt · v1.5.0</span>
+          <button style="margin-left:auto;font-size:11px;padding:2px 7px;border-radius:3px;background:transparent;border:0.5px solid var(--color-border-tertiary);cursor:pointer;color:var(--color-text-secondary)">Open editor</button>
+        </div>
+        <div style="padding:8px 12px;font-size:11px;font-family:var(--font-mono);color:var(--color-text-secondary);line-height:1.7;background:var(--color-background-secondary)">
+          You are a triage underwriter assistant for <span class="chip var-chip" style="display:inline-flex;padding:1px 5px;font-size:10px">{{line_of_business}}</span> submissions.<br>
+          Assess <span class="chip var-chip" style="display:inline-flex;padding:1px 5px;font-size:10px">{{submission_ref}}</span> for viability,<br>
+          loss severity, and exclusions using <span class="chip var-chip" style="display:inline-flex;padding:1px 5px;font-size:10px">{{submission_context}}</span>.<br>
+          Return GREEN / AMBER / RED with reasoning.
+          <div style="margin-top:4px;font-size:10px;color:var(--color-text-tertiary)">SHA-256: a3f9c2d1… · 847 tokens · behavioural tier</div>
+        </div>
+      </div>
+
+      <!-- Tools -->
+      <div class="section-card">
+        <div class="sc-head"><i class="ti ti-tool" aria-hidden="true" style="color:var(--color-text-success)"></i>Authorised tools <span class="badge b-green" style="margin-left:auto">4 tools</span>
+          <label style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:400;margin-left:8px"><input type="checkbox" checked> Mock mode</label>
+        </div>
+        <div class="sc-body" style="flex-direction:row;flex-wrap:wrap;gap:6px">
+          <span class="chip tool-chip"><i class="ti ti-tool" aria-hidden="true"></i>get_submission_context</span>
+          <span class="chip tool-chip"><i class="ti ti-tool" aria-hidden="true"></i>get_loss_history</span>
+          <span class="chip tool-chip"><i class="ti ti-tool" aria-hidden="true"></i>get_appetite_guide</span>
+          <span class="chip tool-chip"><i class="ti ti-tool" aria-hidden="true"></i>flag_for_review</span>
+          <span class="chip" style="background:var(--color-background-secondary);color:var(--color-text-tertiary);border-color:var(--color-border-tertiary)"><i class="ti ti-plus" aria-hidden="true"></i>Add tool</span>
+        </div>
+      </div>
+
+      <!-- Delegate agents -->
+      <div class="section-card">
+        <div class="sc-head"><i class="ti ti-robot" aria-hidden="true" style="color:var(--color-text-secondary)"></i>Delegation <span class="badge b-gray" style="margin-left:auto">1 agent</span></div>
+        <div class="sc-body" style="flex-direction:row;gap:6px">
+          <span class="chip"><i class="ti ti-robot" aria-hidden="true"></i>appetite_agent · champion</span>
+          <span class="chip" style="background:var(--color-background-secondary);color:var(--color-text-tertiary);border-color:var(--color-border-tertiary)"><i class="ti ti-plus" aria-hidden="true"></i>Add delegate</span>
+        </div>
+      </div>
+
+      <!-- Output mapping -->
+      <div class="section-card">
+        <div class="sc-head"><i class="ti ti-arrow-up-circle" aria-hidden="true" style="color:var(--color-text-danger)"></i>Output schema &amp; validation</div>
+        <div class="sc-body">
+          <div class="map-row">
+            <span class="map-dst">triage_signal</span><span class="arrow-mid">:</span>
+            <span style="font-size:11px;color:var(--color-text-tertiary)">enum[GREEN, AMBER, RED] · required</span>
+          </div>
+          <div class="map-row">
+            <span class="map-dst">reasoning</span><span class="arrow-mid">:</span>
+            <span style="font-size:11px;color:var(--color-text-tertiary)">string · required · min 50 chars</span>
+          </div>
+          <div class="map-row">
+            <span class="map-dst">confidence</span><span class="arrow-mid">:</span>
+            <span style="font-size:11px;color:var(--color-text-tertiary)">float[0,1] · required</span>
+          </div>
+          <div class="map-row">
+            <span class="map-dst">flags</span><span class="arrow-mid">:</span>
+            <span style="font-size:11px;color:var(--color-text-tertiary)">string[] · optional · write → edms</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right panel: run & inspect -->
+    <div class="right-panel">
+      <div class="rpanel-title">Test run</div>
+
+      <div class="rpanel-block">
+        <div class="rpanel-label">submission_id</div>
+        <input class="test-input" style="min-height:28px" value="SUB-2026-0142">
+      </div>
+      <div class="rpanel-block">
+        <div class="rpanel-label">lob</div>
+        <input class="test-input" style="min-height:28px" value="DO">
+      </div>
+      <div class="rpanel-block">
+        <div class="rpanel-label">Context doc</div>
+        <div style="display:flex;flex-direction:column;gap:3px">
+          <button style="font-size:10px;padding:3px 6px;border-radius:3px;background:transparent;border:0.5px solid var(--color-border-tertiary);cursor:pointer;color:var(--color-text-secondary);text-align:left"><i class="ti ti-upload" aria-hidden="true"></i> Upload file</button>
+          <button style="font-size:10px;padding:3px 6px;border-radius:3px;background:transparent;border:0.5px solid var(--color-border-tertiary);cursor:pointer;color:var(--color-text-secondary);text-align:left"><i class="ti ti-folder" aria-hidden="true"></i> Vault reference</button>
+        </div>
+      </div>
+
+      <button class="run-btn"><i class="ti ti-player-play" aria-hidden="true"></i>Run</button>
+
+      <div style="margin-top:8px">
+        <div class="rpanel-label" style="margin-bottom:4px">Last output</div>
+        <div class="output-block">triage_signal: GREEN<br>confidence: 0.91<br>reasoning: "Clean loss..."</div>
+        <button class="save-suite-btn"><i class="ti ti-bookmark" aria-hidden="true"></i>Save to test suite</button>
+      </div>
+
+      <div style="margin-top:8px">
+        <div class="rpanel-label" style="margin-bottom:4px">Decision log</div>
+        <div style="font-size:10px;color:var(--color-text-info);cursor:pointer"><i class="ti ti-external-link" aria-hidden="true"></i> run_a3f9c2 · 1.2s · 2,841 tok</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ TASK AUTHORING ════════════════ -->
+<div id="pane-task" class="pane">
+  <div class="breadcrumb">
+    <span>Studio</span><span class="sep">/</span>
+    <span>Tasks</span><span class="sep">/</span>
+    <span style="color:var(--color-text-primary);font-weight:500">field_extractor</span>
+    <span style="margin-left:auto;display:flex;gap:6px">
+      <span class="badge b-blue">Staging</span>
+      <span class="badge b-gray">v1.3.0</span>
+    </span>
+  </div>
+
+  <div class="shell">
+    <div class="left-panel">
+      <div class="sec-label">Prompts</div>
+      <div class="nav-item on"><i class="ti ti-file-text" aria-hidden="true"></i>extractor_system v2.1</div>
+
+      <div class="sec-label">Connectors</div>
+      <div class="nav-item"><i class="ti ti-database" aria-hidden="true"></i>edms · get_document</div>
+      <div class="nav-item"><i class="ti ti-database" aria-hidden="true"></i>edms · create_document</div>
+
+      <div class="sec-label">Config</div>
+      <div class="nav-item"><i class="ti ti-cpu" aria-hidden="true"></i>sonnet-4 · t=0.0</div>
+
+      <div class="sec-label">Hooks</div>
+      <div class="nav-item"><i class="ti ti-webhook" aria-hidden="true"></i>post_extract_validate</div>
+    </div>
+
+    <div class="canvas">
+
+      <!-- Source bindings -->
+      <div class="section-card">
+        <div class="sc-head"><i class="ti ti-arrow-down-circle" aria-hidden="true" style="color:var(--color-text-warning)"></i>Source bindings <span style="font-size:10px;color:var(--color-text-tertiary);margin-left:4px">resolve before Claude is called</span></div>
+        <div class="sc-body">
+          <div class="map-row">
+            <span class="map-src">document_ref</span><span class="arrow-mid">→</span>
+            <span class="map-dst">{{document_text}}</span>
+            <span style="font-size:10px;color:var(--color-text-tertiary);margin-left:auto">fetch: edms.get_document_text</span>
+            <span class="badge b-blue" style="margin-left:4px;font-size:9px">content_blocks</span>
+          </div>
+          <div class="map-row">
+            <span class="map-src">doc_type</span><span class="arrow-mid">→</span>
+            <span class="map-dst">{{document_type}}</span>
+            <span style="font-size:10px;color:var(--color-text-tertiary);margin-left:auto">input_data.doc_type</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Prompt -->
+      <div class="section-card">
+        <div class="sc-head"><i class="ti ti-file-text" aria-hidden="true" style="color:var(--color-text-info)"></i>System prompt <span class="mono" style="margin-left:4px">extractor_system · v2.1.0</span>
+          <button style="margin-left:auto;font-size:11px;padding:2px 7px;border-radius:3px;background:transparent;border:0.5px solid var(--color-border-tertiary);cursor:pointer;color:var(--color-text-secondary)">Open editor</button>
+        </div>
+        <div style="padding:8px 12px;font-size:11px;font-family:var(--font-mono);color:var(--color-text-secondary);line-height:1.7;background:var(--color-background-secondary)">
+          Extract structured fields from this <span class="chip var-chip" style="display:inline-flex;padding:1px 5px;font-size:10px">{{document_type}}</span>.<br>
+          Document: <span class="chip var-chip" style="display:inline-flex;padding:1px 5px;font-size:10px">{{document_text}}</span><br>
+          Return JSON matching the output schema.
+        </div>
+      </div>
+
+      <!-- Output schema -->
+      <div class="section-card">
+        <div class="sc-head"><i class="ti ti-arrow-up-circle" aria-hidden="true" style="color:var(--color-text-danger)"></i>Output schema — field extraction config</div>
+        <div style="padding:0 12px">
+          <div class="row"><span class="row-lbl">named_insured</span><span>string · required · exact match</span></div>
+          <div class="row"><span class="row-lbl">policy_limit</span><span>numeric · required · ±5% tolerance</span></div>
+          <div class="row"><span class="row-lbl">effective_date</span><span>date · required · exact match</span></div>
+          <div class="row"><span class="row-lbl">retroactive_date</span><span>date · optional · exact match</span></div>
+          <div class="row"><span class="row-lbl">claims_count</span><span>integer · optional · exact match</span></div>
+        </div>
+      </div>
+
+      <!-- Write targets -->
+      <div class="section-card">
+        <div class="sc-head"><i class="ti ti-send" aria-hidden="true" style="color:var(--color-text-secondary)"></i>Write targets <span style="font-size:10px;color:var(--color-text-tertiary);margin-left:4px">champion only · log-only in staging</span></div>
+        <div class="sc-body">
+          <div class="map-row">
+            <span class="map-dst">output.extracted_fields</span><span class="arrow-mid">→</span>
+            <span style="font-size:11px;color:var(--color-text-tertiary)">edms.update_submission_fields</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hooks -->
+      <div class="section-card">
+        <div class="sc-head"><i class="ti ti-webhook" aria-hidden="true" style="color:var(--color-text-secondary)"></i>Hooks</div>
+        <div class="sc-body">
+          <div class="map-row">
+            <span style="font-size:11px;color:var(--color-text-tertiary);font-weight:500">post_extract</span><span class="arrow-mid">→</span>
+            <span style="font-size:11px;color:var(--color-text-tertiary)">validate confidence ≥ 0.80 or flag for HITL</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right panel -->
+    <div class="right-panel">
+      <div class="rpanel-title">Test run</div>
+
+      <div class="rpanel-block">
+        <div class="rpanel-label">document_ref</div>
+        <div style="display:flex;flex-direction:column;gap:3px">
+          <button style="font-size:10px;padding:3px 6px;border-radius:3px;background:transparent;border:0.5px solid var(--color-border-tertiary);cursor:pointer;color:var(--color-text-secondary);text-align:left"><i class="ti ti-upload" aria-hidden="true"></i> Upload PDF</button>
+          <button style="font-size:10px;padding:3px 6px;border-radius:3px;background:transparent;border:0.5px solid var(--color-border-tertiary);cursor:pointer;color:var(--color-text-success);text-align:left"><i class="ti ti-folder" aria-hidden="true"></i> DOC-20260514-001</button>
+        </div>
+      </div>
+      <div class="rpanel-block">
+        <div class="rpanel-label">doc_type</div>
+        <input class="test-input" style="min-height:28px" value="acord_25">
+      </div>
+
+      <button class="run-btn"><i class="ti ti-player-play" aria-hidden="true"></i>Run</button>
+
+      <div style="margin-top:8px">
+        <div class="rpanel-label" style="margin-bottom:4px">Last output</div>
+        <div class="output-block">named_insured: "Acme"<br>policy_limit: 5000000<br>confidence: 0.94<br>flags: ["complete"]</div>
+        <button class="save-suite-btn"><i class="ti ti-bookmark" aria-hidden="true"></i>Save to test suite</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ TEST & BASELINE ════════════════ -->
+<div id="pane-test" class="pane">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+    <div class="card">
+      <div class="card-h"><i class="ti ti-bookmark" aria-hidden="true"></i> Save to test suite flow</div>
+      <div style="font-size:11px;color:var(--color-text-secondary);line-height:1.8">
+        1. Run entity with test input<br>
+        2. Review output — approve or edit<br>
+        3. <b>Save to test suite</b> — captures input + approved output as baseline<br>
+        4. Baseline output = ground truth annotation<br>
+        5. Future versions run against this baseline<br>
+        6. Metric: exact match / field accuracy / semantic similarity
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><i class="ti ti-shield-check" aria-hidden="true"></i> What gets saved</div>
+      <div style="font-size:11px;color:var(--color-text-secondary);line-height:1.8">
+        <b>input_data</b> — the exact inputs used<br>
+        <b>source mocks</b> — connector responses<br>
+        <b>tool mocks</b> — tool call responses<br>
+        <b>expected_output</b> — the baseline<br>
+        <b>metric_type</b> — how to compare<br>
+        <b>commit message</b> — why this case matters
+      </div>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div class="sc-head"><i class="ti ti-list-check" aria-hidden="true"></i> Test case record — what Studio saves</div>
+    <div style="display:grid;grid-template-columns:120px 1fr;gap:0">
+      <div class="row" style="grid-column:1/-1;font-size:11px;font-weight:500;background:var(--color-background-secondary);padding:6px 12px">triage_agent · test suite · case #14</div>
+      <div style="padding:5px 12px;font-size:11px;color:var(--color-text-tertiary);border-bottom:0.5px solid var(--color-border-tertiary)">name</div>
+      <div style="padding:5px 12px;font-size:11px;border-bottom:0.5px solid var(--color-border-tertiary)">Securities exclusion — Meridian Holdings</div>
+      <div style="padding:5px 12px;font-size:11px;color:var(--color-text-tertiary);border-bottom:0.5px solid var(--color-border-tertiary)">input_data</div>
+      <div style="padding:5px 12px;font-size:11px;font-family:var(--font-mono);border-bottom:0.5px solid var(--color-border-tertiary)">{submission_id: "SUB-2026-0140", lob: "DO"}</div>
+      <div style="padding:5px 12px;font-size:11px;color:var(--color-text-tertiary);border-bottom:0.5px solid var(--color-border-tertiary)">source mock</div>
+      <div style="padding:5px 12px;font-size:11px;font-family:var(--font-mono);border-bottom:0.5px solid var(--color-border-tertiary)">edms.get_submission_context → {acct: "Meridian", …}</div>
+      <div style="padding:5px 12px;font-size:11px;color:var(--color-text-tertiary);border-bottom:0.5px solid var(--color-border-tertiary)">expected_output</div>
+      <div style="padding:5px 12px;font-size:11px;font-family:var(--font-mono);border-bottom:0.5px solid var(--color-border-tertiary)">{triage_signal: "AMBER", confidence: ≥0.80}</div>
+      <div style="padding:5px 12px;font-size:11px;color:var(--color-text-tertiary);border-bottom:0.5px solid var(--color-border-tertiary)">metric_type</div>
+      <div style="padding:5px 12px;font-size:11px;border-bottom:0.5px solid var(--color-border-tertiary)">exact_match on triage_signal · numeric on confidence</div>
+      <div style="padding:5px 12px;font-size:11px;color:var(--color-text-tertiary)">is_adversarial</div>
+      <div style="padding:5px 12px;font-size:11px">true — tests securities exclusion detection</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ PERFORMANCE ════════════════ -->
+<div id="pane-perf" class="pane">
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">
+    <div class="mini-stat"><div class="mini-stat-val">0.94</div><div class="mini-stat-lbl">F1 score</div></div>
+    <div class="mini-stat"><div class="mini-stat-val" style="color:var(--color-text-success)">97%</div><div class="mini-stat-lbl">Pass rate</div></div>
+    <div class="mini-stat"><div class="mini-stat-val">1.4s</div><div class="mini-stat-lbl">Avg duration</div></div>
+    <div class="mini-stat"><div class="mini-stat-val">$0.004</div><div class="mini-stat-lbl">Avg cost</div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div class="section-card">
+      <div class="sc-head"><i class="ti ti-chart-bar" aria-hidden="true"></i> Test suite results — v2.2.0 vs v2.1.0</div>
+      <div style="padding:0 12px">
+        <div class="row"><span class="row-lbl">Total cases</span><span>42</span></div>
+        <div class="row"><span class="row-lbl">Passed</span><span style="color:var(--color-text-success)">40</span></div>
+        <div class="row"><span class="row-lbl">Failed</span><span style="color:var(--color-text-danger)">2</span></div>
+        <div class="row"><span class="row-lbl">F1 (this ver)</span><span>0.94</span></div>
+        <div class="row"><span class="row-lbl">F1 (prev ver)</span><span>0.91 <span style="color:var(--color-text-success)">↑0.03</span></span></div>
+        <div class="row"><span class="row-lbl">Adversarial pass</span><span>8 / 10</span></div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="sc-head"><i class="ti ti-clock" aria-hidden="true"></i> Runtime profile — last 100 prod runs</div>
+      <div style="padding:0 12px">
+        <div class="row"><span class="row-lbl">Avg latency</span><span>1.4s</span></div>
+        <div class="row"><span class="row-lbl">P95 latency</span><span>3.1s</span></div>
+        <div class="row"><span class="row-lbl">Avg input tok</span><span>2,140</span></div>
+        <div class="row"><span class="row-lbl">Avg output tok</span><span>340</span></div>
+        <div class="row"><span class="row-lbl">Override rate</span><span>4.2%</span></div>
+        <div class="row"><span class="row-lbl">HITL rate</span><span style="color:var(--color-text-warning)">8.7%</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:8px;display:flex;gap:8px">
+    <button onclick="sendPrompt('Show me the 2 failing test cases for triage_agent v2.2.0 and explain why they failed')" style="flex:1;padding:7px;border-radius:var(--border-radius-md);font-size:12px;font-weight:500;background:transparent;border:0.5px solid var(--color-border-tertiary);cursor:pointer;color:var(--color-text-secondary)">View failing cases ↗</button>
+    <button onclick="sendPrompt('What does the 8.7% HITL rate on triage_agent suggest about the confidence threshold calibration?')" style="flex:1;padding:7px;border-radius:var(--border-radius-md);font-size:12px;font-weight:500;background:transparent;border:0.5px solid var(--color-border-tertiary);cursor:pointer;color:var(--color-text-secondary)">Analyse HITL rate ↗</button>
+  </div>
+</div>
+
+</div>
+
+<script>
+function show(id){
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.getElementById('pane-'+id).classList.add('on');
+  event.target.classList.add('on');
+}
+</script>

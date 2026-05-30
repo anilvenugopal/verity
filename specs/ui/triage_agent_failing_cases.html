@@ -1,0 +1,226 @@
+
+<h2 class="sr-only">Two failing test cases for triage_agent v2.2.0 with root cause analysis, diff view, and remediation options</h2>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);font-size:14px}
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;border:0.5px solid transparent}
+.b-red{background:var(--color-background-danger);color:var(--color-text-danger);border-color:var(--color-border-danger)}
+.b-amber{background:var(--color-background-warning);color:var(--color-text-warning);border-color:var(--color-border-warning)}
+.b-green{background:var(--color-background-success);color:var(--color-text-success);border-color:var(--color-border-success)}
+.b-gray{background:var(--color-background-secondary);color:var(--color-text-tertiary);border-color:var(--color-border-tertiary)}
+.b-blue{background:var(--color-background-info);color:var(--color-text-info);border-color:var(--color-border-info)}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden;margin-bottom:16px}
+.card-head{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--color-background-secondary);border-bottom:0.5px solid var(--color-border-tertiary)}
+.card-head-title{font-size:13px;font-weight:500;color:var(--color-text-primary)}
+.card-body{padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.label{font-size:10px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-tertiary);margin-bottom:4px}
+.val-block{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:8px 10px;font-size:12px;font-family:var(--font-mono);line-height:1.6}
+.diff-block{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);overflow:hidden}
+.diff-head{display:flex;gap:12px;padding:6px 10px;background:var(--color-background-secondary);border-bottom:0.5px solid var(--color-border-tertiary);font-size:11px;font-weight:500;color:var(--color-text-secondary)}
+.diff-line{display:flex;gap:10px;padding:2px 10px;font-size:11px;font-family:var(--font-mono);line-height:1.7}
+.diff-add{background:var(--color-background-success);color:var(--color-text-success)}
+.diff-del{background:var(--color-background-danger);color:var(--color-text-danger);text-decoration:line-through}
+.diff-ctx{color:var(--color-text-secondary)}
+.diff-gutter{color:var(--color-text-tertiary);min-width:14px;font-size:10px;user-select:none}
+.cause-block{border-left:3px solid var(--color-border-danger);background:var(--color-background-danger);border-radius:0 var(--border-radius-md) var(--border-radius-md) 0;padding:10px 14px}
+.cause-title{font-size:12px;font-weight:500;color:var(--color-text-danger);margin-bottom:4px}
+.cause-body{font-size:12px;color:var(--color-text-secondary);line-height:1.6}
+.fix-block{border-left:3px solid var(--color-border-info);background:var(--color-background-info);border-radius:0 var(--border-radius-md) var(--border-radius-md) 0;padding:10px 14px}
+.fix-title{font-size:12px;font-weight:500;color:var(--color-text-info);margin-bottom:4px}
+.fix-body{font-size:12px;color:var(--color-text-secondary);line-height:1.6}
+.fix-body code{font-family:var(--font-mono);font-size:11px;background:var(--color-background-secondary);padding:1px 5px;border-radius:3px}
+.meta-row{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--color-text-tertiary);flex-wrap:wrap}
+.sep{color:var(--color-border-secondary)}
+.actions{display:flex;gap:6px;margin-top:4px;flex-wrap:wrap}
+.action-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--border-radius-md);font-size:11px;font-weight:500;background:transparent;border:0.5px solid var(--color-border-tertiary);cursor:pointer;color:var(--color-text-secondary)}
+.action-btn:hover{background:var(--color-background-secondary)}
+.action-btn.primary{background:var(--color-text-primary);color:var(--color-background-primary);border-color:transparent}
+.section-divider{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:500;color:var(--color-text-tertiary);margin:4px 0 12px;letter-spacing:.06em;text-transform:uppercase}
+.section-divider::before,.section-divider::after{content:'';flex:1;height:0.5px;background:var(--color-border-tertiary)}
+.mono{font-family:var(--font-mono);font-size:11px}
+.blame-bar{display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:var(--border-radius-md);background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);font-size:11px;color:var(--color-text-secondary)}
+.blame-bar i{color:var(--color-text-tertiary);font-size:13px}
+</style>
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+  <div>
+    <div style="font-size:13px;font-weight:500;color:var(--color-text-primary)">triage_agent · v2.2.0 · failing cases</div>
+    <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:2px">2 of 42 test cases failed · suite run 2026-05-30 09:14 UTC</div>
+  </div>
+  <div style="display:flex;gap:6px">
+    <span class="badge b-green">40 passed</span>
+    <span class="badge b-red">2 failed</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     CASE 1
+═══════════════════════════════════════════ -->
+<div class="section-divider">Case 1 of 2</div>
+
+<div class="card">
+  <div class="card-head">
+    <span class="badge b-red">Failed</span>
+    <span class="card-head-title">Asbestos remediation LLC — run-off D&amp;O</span>
+    <span class="badge b-amber" style="margin-left:auto">Adversarial</span>
+    <span class="badge b-gray">case #07</span>
+  </div>
+  <div class="card-body">
+
+    <div class="meta-row">
+      <i class="ti ti-clock" aria-hidden="true"></i> 0.9s
+      <span class="sep">·</span>
+      <span class="mono">run_f7a2c1</span>
+      <span class="sep">·</span>
+      <span>2,610 tokens</span>
+      <span class="sep">·</span>
+      <span>metric: exact_match on triage_signal</span>
+    </div>
+
+    <div class="row2">
+      <div>
+        <div class="label">Input</div>
+        <div class="val-block">submission_id: "SUB-2026-0133"<br>lob: "DO"<br>named_insured: "Asbestos Remediation LLC"<br>sic_code: "1799"<br>years_in_business: 3<br>prior_claims: 0</div>
+      </div>
+      <div>
+        <div class="label">Context mock (edms)</div>
+        <div class="val-block">industry: "hazardous_materials"<br>run_off: true<br>d_o_retro: "2023-01-01"<br>retroactive_gap: 18<span style="color:var(--color-text-warning)"> ← months</span><br>financials: "thin_margins"<br>prior_acts: "none_disclosed"</div>
+      </div>
+    </div>
+
+    <div class="diff-block">
+      <div class="diff-head">
+        <span>Expected output</span>
+        <span style="margin-left:auto;color:var(--color-text-danger)">vs</span>
+        <span>Actual output</span>
+      </div>
+      <div class="diff-line diff-del"><span class="diff-gutter">−</span><span>triage_signal: <b>RED</b></span></div>
+      <div class="diff-line diff-add"><span class="diff-gutter">+</span><span>triage_signal: <b>AMBER</b></span></div>
+      <div class="diff-line diff-ctx"><span class="diff-gutter"> </span><span>confidence: 0.71 <span style="color:var(--color-text-warning)">(expected ≥ 0.80 — also a soft fail)</span></span></div>
+      <div class="diff-line diff-ctx"><span class="diff-gutter"> </span><span>reasoning: "Hazardous materials sector with run-off policy. Retroactive gap noted</span></div>
+      <div class="diff-line diff-ctx"><span class="diff-gutter"> </span><span>&nbsp;&nbsp;but no prior claims disclosed. Recommend senior review."</span></div>
+    </div>
+
+    <div class="cause-block">
+      <div class="cause-title"><i class="ti ti-alert-triangle" aria-hidden="true"></i> Root cause — prompt regression in v1.5.0</div>
+      <div class="cause-body">
+        The exclusions line in <span class="mono">triage_system_prompt v1.5.0</span> was changed from <span class="mono">"securities, class actions"</span> to add class actions — but the prior text explicitly included <span class="mono">"hazardous materials run-off"</span> as a hard RED trigger. That phrase was present in v1.4.0 and was silently dropped when the exclusion line was restructured. The model in v2.2.0 now sees the 18-month retroactive gap as a flag for AMBER review rather than a disqualifying run-off condition, because the instruction to treat hazardous run-off as unconditionally RED no longer exists in the prompt.
+        <br><br>
+        The confidence of 0.71 (below the 0.80 threshold) is a secondary signal — Claude is uncertain, which is consistent with missing authoritative instruction on this edge case. In v2.1.0 the same input produced RED at 0.94 confidence.
+      </div>
+    </div>
+
+    <div class="blame-bar">
+      <i class="ti ti-git-commit" aria-hidden="true"></i>
+      Blame: <span class="mono">triage_system_prompt v1.5.0</span> · authored by <b>J. Morris</b> · 2026-05-28 · "Add class actions to exclusions list"
+      <span style="margin-left:auto;font-size:10px;color:var(--color-text-danger)">content_hash changed · prior hash covered this case</span>
+    </div>
+
+    <div class="fix-block">
+      <div class="fix-title"><i class="ti ti-bulb" aria-hidden="true"></i> Remediation</div>
+      <div class="fix-body">
+        Restore the hazardous materials run-off rule in the exclusions list. The corrected line should read:<br>
+        <code>- Exclusions: sanctions, securities, class actions, hazardous materials run-off</code><br><br>
+        This is a prompt-only fix — no agent version wiring change required. Create <code>triage_system_prompt v1.5.1</code>, wire it into <code>triage_agent v2.2.1</code>, and re-run the full test suite before promoting to candidate. Also add a targeted adversarial case for run-off policies with thin financials to prevent regression.
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="action-btn primary" onclick="sendPrompt('Open triage_system_prompt v1.5.0 in the prompt editor and show me the diff against v1.4.0 focused on the exclusions block')"><i class="ti ti-edit" aria-hidden="true"></i> Open prompt diff</button>
+      <button class="action-btn" onclick="sendPrompt('Create triage_system_prompt v1.5.1 that restores hazardous materials run-off as a hard RED trigger and preserves the class actions addition')"><i class="ti ti-plus" aria-hidden="true"></i> Create v1.5.1</button>
+      <button class="action-btn" onclick="sendPrompt('Add an adversarial test case for triage_agent that covers hazardous materials run-off with thin financials, expected RED')"><i class="ti ti-bookmark" aria-hidden="true"></i> Add regression case</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     CASE 2
+═══════════════════════════════════════════ -->
+<div class="section-divider">Case 2 of 2</div>
+
+<div class="card">
+  <div class="card-head">
+    <span class="badge b-red">Failed</span>
+    <span class="card-head-title">Meridian Capital Advisors — investment advisor D&amp;O</span>
+    <span class="badge b-gray" style="margin-left:auto">Standard</span>
+    <span class="badge b-gray">case #19</span>
+  </div>
+  <div class="card-body">
+
+    <div class="meta-row">
+      <i class="ti ti-clock" aria-hidden="true"></i> 1.6s
+      <span class="sep">·</span>
+      <span class="mono">run_b3d8e2</span>
+      <span class="sep">·</span>
+      <span>3,140 tokens</span>
+      <span class="sep">·</span>
+      <span>metric: exact_match on triage_signal</span>
+    </div>
+
+    <div class="row2">
+      <div>
+        <div class="label">Input</div>
+        <div class="val-block">submission_id: "SUB-2026-0129"<br>lob: "DO"<br>named_insured: "Meridian Capital Advisors"<br>sic_code: "6282"<br>years_in_business: 12<br>prior_claims: 2</div>
+      </div>
+      <div>
+        <div class="label">Context mock (edms)</div>
+        <div class="val-block">industry: "investment_advisory"<br>aum: 240000000<br>sec_registrant: true<br>prior_claim_type: <span style="color:var(--color-text-warning)">"class_action"</span><br>settlement_amount: 1800000<br>loss_ratio: 0.74<br>years_since_claim: 2</div>
+      </div>
+    </div>
+
+    <div class="diff-block">
+      <div class="diff-head">
+        <span>Expected output</span>
+        <span style="margin-left:auto;color:var(--color-text-danger)">vs</span>
+        <span>Actual output</span>
+      </div>
+      <div class="diff-line diff-del"><span class="diff-gutter">−</span><span>triage_signal: <b>RED</b></span></div>
+      <div class="diff-line diff-add"><span class="diff-gutter">+</span><span>triage_signal: <b>AMBER</b></span></div>
+      <div class="diff-line diff-ctx"><span class="diff-gutter"> </span><span>confidence: 0.83</span></div>
+      <div class="diff-line diff-ctx"><span class="diff-gutter"> </span><span>reasoning: "Investment advisor with prior class action settlement. SEC registrant with</span></div>
+      <div class="diff-line diff-ctx"><span class="diff-gutter"> </span><span>&nbsp;&nbsp;elevated loss ratio. Recommend underwriter review given prior exposure."</span></div>
+    </div>
+
+    <div class="cause-block">
+      <div class="cause-title"><i class="ti ti-alert-triangle" aria-hidden="true"></i> Root cause — new exclusion created ambiguity, not clarity</div>
+      <div class="cause-body">
+        This failure is the <em>inverse</em> of case 1. The addition of <span class="mono">"class actions"</span> to the exclusions list in v1.5.0 was intended to flag submissions where the named insured faces active class action exposure. However, Meridian's prior claim <em>was</em> a class action that has already settled — it is historical, not active. The prompt does not distinguish between "currently subject to class action" and "previously settled a class action." The model, seeing "class actions" in the exclusions block and "class_action" in the prior claim context, concludes this is an AMBER flag rather than a RED disqualifier — because it cannot determine whether the rule applies to historical or current exposure.
+        <br><br>
+        The baseline (RED) was set when v1.5.0 was the candidate — the annotator's expectation was RED because the loss ratio of 0.74 combined with a 2-year-old class action settlement in investment advisory is a hard decline by appetite policy. The model at 0.83 confidence is not uncertain — it has formed a considered view — but that view is wrong because the exclusion rule is underspecified.
+      </div>
+    </div>
+
+    <div class="blame-bar">
+      <i class="ti ti-git-commit" aria-hidden="true"></i>
+      Blame: <span class="mono">triage_system_prompt v1.5.0</span> · authored by <b>J. Morris</b> · 2026-05-28 · "Add class actions to exclusions list"
+      <span style="margin-left:auto;font-size:10px;color:var(--color-text-danger)">same commit as case 1 · two failure modes from one prompt change</span>
+    </div>
+
+    <div class="fix-block">
+      <div class="fix-title"><i class="ti ti-bulb" aria-hidden="true"></i> Remediation</div>
+      <div class="fix-body">
+        The exclusion needs temporal precision. The corrected instruction should distinguish active from historical exposure:<br>
+        <code>- Exclusions: sanctions, securities, active class actions, hazardous materials run-off</code><br>
+        <code>- Flag (not exclude): prior settled class actions within 5 years with loss ratio &gt; 0.65</code><br><br>
+        This separates the hard-RED exclusion (active class action) from the AMBER-then-senior-escalation path (historical settlement + adverse loss ratio). The second rule should be added as a standalone instruction block, not appended to the exclusions list — mixing rules and flags in a single list is what caused the ambiguity in the first place. Also update the inference config: the model should be instructed to reason about temporal context before applying exclusion rules.
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="action-btn primary" onclick="sendPrompt('Rewrite the exclusions and flagging block for triage_system_prompt v1.5.1 to distinguish active class actions (hard RED) from prior settled class actions with adverse loss ratio (escalation path)')"><i class="ti ti-edit" aria-hidden="true"></i> Rewrite exclusions block</button>
+      <button class="action-btn" onclick="sendPrompt('Show me all test cases in the triage_agent suite that involve prior claims or class action history, so I can check for other cases that might be affected by this ambiguity')"><i class="ti ti-search" aria-hidden="true"></i> Find related cases</button>
+      <button class="action-btn" onclick="sendPrompt('What is the appetite policy rule for investment advisors with prior class action settlements and loss ratio above 0.65?')"><i class="ti ti-file-description" aria-hidden="true"></i> Check appetite policy</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- Summary -->
+<div style="background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:12px 14px">
+  <div style="font-size:12px;font-weight:500;color:var(--color-text-primary);margin-bottom:6px">Summary — both failures trace to the same commit</div>
+  <div style="font-size:12px;color:var(--color-text-secondary);line-height:1.7">
+    <span class="mono" style="color:var(--color-text-primary)">triage_system_prompt v1.5.0</span>, commit "Add class actions to exclusions list" by J. Morris on 2026-05-28, introduced two failure modes simultaneously: it dropped an existing hard-RED rule (hazardous materials run-off) and added a new rule without temporal scoping (class actions). The fix is a single prompt revision — <span class="mono">v1.5.1</span> — that restores the dropped rule and adds precision to the new one. Both cases should be added to the adversarial suite before v2.2.1 is promoted to staging.
+  </div>
+</div>

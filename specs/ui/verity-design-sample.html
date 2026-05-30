@@ -1,0 +1,1586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verity Design System — Color & Component Sample</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+
+/* ═══════════════════════════════════════════════════════════════
+   VERITY v2 — DESIGN SYSTEM TOKENS
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+
+  /* ── Primitive surfaces ────────────────────────────────────── */
+  /* Palantir Foundry register: cool neutral near-white. No warm tint. */
+  --c-off-white:        #FAFBFC;   /* page background — lighter, almost pure white */
+  --c-surface-0:        #FAFBFC;   /* page background */
+  --c-surface-1:        #FFFFFF;   /* card / panel — pure white lifts off bg */
+  --c-surface-2:        #F3F4F6;   /* recessed / input bg */
+  --c-surface-3:        #E9EBF0;   /* hover on surface-1 */
+  --c-surface-nav:      #EBEDF2;   /* topbar / nav — visibly darker than canvas */
+
+  /* ── Dark surface primitives (dark mode) ──────────────────── */
+  --c-dark-0:           #1C1C1E;   /* page shell */
+  --c-dark-1:           #242426;   /* sidebar / panel */
+  --c-dark-2:           #2C2C2F;   /* card / elevated */
+  --c-dark-3:           #343438;   /* hover / input bg */
+  --c-dark-border:      #3A3A3E;   /* borders on dark */
+  --c-dark-border-faint:#2E2E32;   /* hairline dividers */
+
+  /* ── Border primitives ─────────────────────────────────────── */
+  --c-border:           #DDE1E7;   /* default border on light — cool neutral */
+  --c-border-faint:     rgba(0,0,0,0.05); /* hairline on light */
+  --c-border-strong:    #C2C8D4;   /* emphasis border */
+
+  /* ── Text primitives ───────────────────────────────────────── */
+  --c-text-900:         #111827;   /* primary — near-black, cool */
+  --c-text-700:         #374151;   /* secondary */
+  --c-text-500:         #6B7280;   /* tertiary / placeholder */
+  --c-text-300:         #9CA3AF;   /* disabled / ghost */
+
+  /* ── Slate blue — the brand accent ─────────────────────────── */
+  /* One hue, disciplined. Never bright. */
+  --c-blue-900:         #1D3557;   /* deepest — headings, brand marks */
+  --c-blue-700:         #2C4E7E;   /* primary interactive — buttons, links */
+  --c-blue-600:         #3B6091;   /* hover state */
+  --c-blue-500:         #4A72A4;   /* secondary interactive */
+  --c-blue-200:         #C5D5E8;   /* wash / badge bg */
+  --c-blue-100:         #E0EAF4;   /* faint wash */
+  --c-blue-050:         #EEF4FA;   /* very faint tint */
+
+  /* ── Muted green — positive / success / champion ───────────── */
+  --c-green-700:        #2D6A4F;   /* text, icon on light */
+  --c-green-600:        #3A7D5C;   /* label / badge text */
+  --c-green-500:        #4A9470;   /* border accent */
+  --c-green-200:        #C4DDD3;   /* badge bg */
+  --c-green-100:        #DCF0E8;   /* wash */
+  --c-green-050:        #EDF7F3;   /* faint tint */
+
+  /* ── Muted red — negative / error / deprecated ─────────────── */
+  --c-red-700:          #7A2233;   /* text, icon on light */
+  --c-red-600:          #8F2B3D;   /* label / badge text */
+  --c-red-500:          #A63D52;   /* border accent */
+  --c-red-200:          #DFC0C7;   /* badge bg */
+  --c-red-100:          #F0D8DC;   /* wash */
+  --c-red-050:          #F8ECEE;   /* faint tint */
+
+  /* ── Muted amber — warning / caution ───────────────────────── */
+  --c-amber-700:        #7A5020;   /* text, icon on light */
+  --c-amber-600:        #8F6128;   /* label / badge text */
+  --c-amber-500:        #A87334;   /* border accent */
+  --c-amber-200:        #DECCAE;   /* badge bg */
+  --c-amber-100:        #EFE0C4;   /* wash */
+  --c-amber-050:        #F7EFE0;   /* faint tint */
+
+  /* ── Semantic mappings — what components reference ──────────── */
+  --color-brand:          var(--c-blue-700);
+  --color-brand-hover:    var(--c-blue-600);
+  --color-brand-faint:    var(--c-blue-050);
+  --color-brand-wash:     var(--c-blue-100);
+  --color-brand-border:   var(--c-blue-200);
+
+  --color-positive:       var(--c-green-700);
+  --color-positive-bg:    var(--c-green-050);
+  --color-positive-wash:  var(--c-green-100);
+  --color-positive-border:var(--c-green-200);
+
+  --color-negative:       var(--c-red-700);
+  --color-negative-bg:    var(--c-red-050);
+  --color-negative-wash:  var(--c-red-100);
+  --color-negative-border:var(--c-red-200);
+
+  --color-warning:        var(--c-amber-700);
+  --color-warning-bg:     var(--c-amber-050);
+  --color-warning-wash:   var(--c-amber-100);
+  --color-warning-border: var(--c-amber-200);
+
+  --surface-page:         var(--c-surface-0);
+  --surface-panel:        var(--c-surface-1);
+  --surface-recessed:     var(--c-surface-2);
+  --surface-hover:        var(--c-surface-3);
+  --surface-nav:          var(--c-surface-nav);   /* topbar + sidebar bg */
+
+  --border-default:       var(--c-border);
+  --border-faint:         var(--c-border-faint);
+  --border-strong:        var(--c-border-strong);
+
+  --text-primary:         var(--c-text-900);
+  --text-secondary:       var(--c-text-700);
+  --text-tertiary:        var(--c-text-500);
+  --text-disabled:        var(--c-text-300);
+
+  /* ── Typography ─────────────────────────────────────────────── */
+  --font-ui:   "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", "Cascadia Code", "Consolas", monospace;
+
+  /* ── Spacing scale ──────────────────────────────────────────── */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-7:  32px;
+  --space-8:  40px;
+  --space-9:  48px;
+
+  /* ── Radius scale ───────────────────────────────────────────── */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-pill: 999px;
+
+  /* ── Shadows ─────────────────────────────────────────────────── */
+  --shadow-sm:  0 1px 2px rgba(24,24,26,0.06), 0 1px 1px rgba(24,24,26,0.04);
+  --shadow-md:  0 2px 6px rgba(24,24,26,0.08), 0 1px 2px rgba(24,24,26,0.05);
+  --shadow-lg:  0 4px 16px rgba(24,24,26,0.10), 0 2px 4px rgba(24,24,26,0.06);
+
+  /* ── Focus ring ─────────────────────────────────────────────── */
+  --ring-focus: 0 0 0 3px rgba(44, 78, 126, 0.22);
+
+  /* ── Motion ─────────────────────────────────────────────────── */
+  --dur-fast:   120ms;
+  --dur-base:   180ms;
+  --ease-out:   cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Dark mode overrides ─────────────────────────────────────── */
+.dark {
+  /* Canvas is mid-dark, not black — gives sidebar somewhere to go */
+  --surface-page:         #1A1D23;   /* main canvas — slightly blue-tinted dark */
+  --surface-panel:        #22262F;   /* cards — a clear step up from canvas */
+  --surface-recessed:     #161920;   /* inputs, recessed areas — step down */
+  --surface-hover:        #2A2F3A;   /* hover state */
+  --surface-nav:          #13151A;   /* topbar + sidebar — darkest, clear contrast */
+
+  --border-default:       #343B4A;   /* visible but not harsh */
+  --border-faint:         rgba(255,255,255,0.05);
+  --border-strong:        #4A5266;
+
+  /* Text — high contrast, readable */
+  --text-primary:         #E8EBF0;   /* near-white, slight blue cast */
+  --text-secondary:       #9BA3B8;   /* clearly readable mid-tone */
+  --text-tertiary:        #636B80;   /* subtle but findable */
+  --text-disabled:        #434A5C;
+
+  /* Brand — lifted for dark bg legibility */
+  --color-brand:          #7AA3D4;   /* slate blue lifted to pass contrast */
+  --color-brand-hover:    #8FB5E0;
+  --color-brand-faint:    rgba(122,163,212,0.10);
+  --color-brand-wash:     rgba(122,163,212,0.16);
+  --color-brand-border:   rgba(122,163,212,0.30);
+
+  /* Semantic colors — all lifted ~20% for dark bg readability */
+  --color-positive:       #5DA882;   /* readable green */
+  --color-positive-bg:    rgba(93,168,130,0.10);
+  --color-positive-wash:  rgba(93,168,130,0.16);
+  --color-positive-border:rgba(93,168,130,0.30);
+
+  --color-negative:       #C47A88;
+  --color-negative-bg:    rgba(196,122,136,0.10);
+  --color-negative-wash:  rgba(196,122,136,0.16);
+  --color-negative-border:rgba(196,122,136,0.30);
+
+  --color-warning:        #C4A06A;
+  --color-warning-bg:     rgba(196,160,106,0.10);
+  --color-warning-wash:   rgba(196,160,106,0.16);
+  --color-warning-border: rgba(196,160,106,0.30);
+
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.30);
+  --shadow-md:  0 2px 8px rgba(0,0,0,0.40);
+  --shadow-lg:  0 4px 20px rgba(0,0,0,0.50);
+  --ring-focus: 0 0 0 3px rgba(122,163,212,0.30);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   BASE RESET
+   ═══════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  background: var(--surface-page);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+:focus { outline: none; }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   SHOWCASE LAYOUT
+   ═══════════════════════════════════════════════════════════════ */
+
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 40px 80px;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 48px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.page-header__left { display: flex; flex-direction: column; gap: 6px; }
+
+.wordmark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-ui);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.wordmark__dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--color-brand);
+}
+
+.wordmark__sub {
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.mode-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--dur-fast), color var(--dur-fast);
+}
+.mode-toggle:hover { background: var(--surface-hover); color: var(--text-primary); }
+.mode-toggle svg { width: 14px; height: 14px; }
+
+.section {
+  margin-bottom: 52px;
+}
+
+.section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 20px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-faint);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   COLOR SWATCHES
+   ═══════════════════════════════════════════════════════════════ */
+
+.swatch-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.swatch-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 80px;
+}
+
+.swatch {
+  width: 80px; height: 44px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-faint);
+}
+
+.swatch-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  letter-spacing: 0.02em;
+}
+
+.swatch-hex {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-disabled);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   TYPOGRAPHY
+   ═══════════════════════════════════════════════════════════════ */
+
+.type-row {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.type-sample {
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+}
+
+.type-meta {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-disabled);
+  letter-spacing: 0.05em;
+  min-width: 130px;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+}
+
+.t-hero   { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; color: var(--text-primary); }
+.t-title  { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; color: var(--text-primary); }
+.t-h3     { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+.t-body   { font-size: 14px; font-weight: 400; line-height: 1.6; color: var(--text-primary); }
+.t-label  { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+.t-caption{ font-size: 11px; font-weight: 400; color: var(--text-tertiary); letter-spacing: 0.01em; }
+.t-eyebrow{ font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); }
+.t-mono   { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   BUTTONS
+   ═══════════════════════════════════════════════════════════════ */
+
+.btn-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast), box-shadow var(--dur-fast);
+  text-decoration: none;
+}
+
+/* Size variants */
+.btn--sm  { padding: 5px 10px; font-size: 12px; }
+.btn--md  { padding: 7px 14px; }
+.btn--lg  { padding: 9px 18px; font-size: 14px; }
+
+/* Primary */
+.btn--primary {
+  background: var(--color-brand);
+  color: #FFFFFF;
+  box-shadow: var(--shadow-sm);
+}
+.btn--primary:hover { background: var(--color-brand-hover); box-shadow: var(--shadow-md); }
+
+/* Secondary — dark bg, white text */
+.btn--secondary {
+  background: #1F2937;
+  color: #FFFFFF;
+  border: 1px solid #374151;
+  box-shadow: var(--shadow-sm);
+}
+.btn--secondary:hover { background: #111827; border-color: #4B5563; }
+
+/* Ghost — subtle, same dark treatment */
+.btn--ghost {
+  background: #374151;
+  color: #F9FAFB;
+  border: 1px solid #4B5563;
+}
+.btn--ghost:hover { background: #1F2937; }
+
+/* Danger — dark red bg, white text */
+.btn--danger {
+  background: #7A2233;
+  color: #FFFFFF;
+  border: 1px solid #661B2A;
+}
+.btn--danger:hover { background: #661B2A; }
+
+/* Positive — dark green bg, white text */
+.btn--positive {
+  background: #2D6A4F;
+  color: #FFFFFF;
+  border: 1px solid #255C43;
+}
+.btn--positive:hover { background: #255C43; }
+
+.btn:disabled { opacity: 0.38; cursor: not-allowed; }
+
+/* Icon button */
+.btn--icon {
+  padding: 6px;
+  border-radius: var(--radius-md);
+}
+.btn--icon svg { width: 15px; height: 15px; }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   LIFECYCLE STATE BADGES
+   ═══════════════════════════════════════════════════════════════ */
+
+.badge-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);  /* rounded rect, not pill */
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+
+.badge__dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Lifecycle states — all muted, no candy */
+.badge--draft {
+  background: var(--surface-panel);
+  color: var(--text-tertiary);
+  border-color: var(--border-default);
+}
+.badge--draft .badge__dot { background: var(--text-disabled); }
+
+.badge--candidate {
+  background: var(--color-brand-faint);
+  color: var(--color-brand);
+  border-color: var(--color-brand-border);
+}
+.badge--candidate .badge__dot { background: var(--color-brand); }
+
+.badge--staging {
+  background: var(--color-brand-wash);
+  color: var(--c-blue-900);
+  border-color: var(--color-brand-border);
+}
+.badge--staging .badge__dot { background: var(--c-blue-700); }
+
+.badge--shadow {
+  background: var(--surface-recessed);
+  color: var(--text-secondary);
+  border-color: var(--border-default);
+}
+.badge--shadow .badge__dot { background: var(--text-tertiary); }
+
+.badge--challenger {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  border-color: var(--color-warning-border);
+}
+.badge--challenger .badge__dot { background: var(--color-warning); }
+
+.badge--champion {
+  background: var(--color-positive-bg);
+  color: var(--color-positive);
+  border-color: var(--color-positive-border);
+}
+.badge--champion .badge__dot { background: var(--color-positive); }
+
+.badge--deprecated {
+  background: #EAECF0;
+  color: #4B5563;
+  border-color: #D1D5DB;
+}
+.badge--deprecated .badge__dot { background: #9CA3AF; }
+
+/* Materiality tier */
+.badge--high {
+  background: var(--color-negative-bg);
+  color: var(--color-negative);
+  border-color: var(--color-negative-border);
+}
+.badge--medium {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  border-color: var(--color-warning-border);
+}
+.badge--low {
+  background: var(--surface-panel);
+  color: var(--text-tertiary);
+  border-color: var(--border-default);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   CARDS
+   ═══════════════════════════════════════════════════════════════ */
+
+.card-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+
+.card {
+  background: var(--surface-panel);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--dur-base) var(--ease-out), border-color var(--dur-fast);
+}
+.card:hover { box-shadow: var(--shadow-md); border-color: var(--border-strong); }
+
+.card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.card__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.card__sub {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+  font-family: var(--font-mono);
+}
+
+.card__meta {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-faint);
+  display: flex;
+  gap: 14px;
+}
+
+.card__meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   DECISION LOG ROW
+   ═══════════════════════════════════════════════════════════════ */
+
+.log-table {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--surface-panel);
+}
+
+.log-table__header {
+  display: grid;
+  grid-template-columns: 160px 120px 1fr 100px 80px;
+  padding: 10px 16px;
+  background: var(--surface-recessed);
+  border-bottom: 1px solid var(--border-default);
+  gap: 16px;
+}
+
+.log-table__col-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.log-row {
+  display: grid;
+  grid-template-columns: 160px 120px 1fr 100px 80px;
+  padding: 12px 16px;
+  gap: 16px;
+  border-bottom: 1px solid var(--border-faint);
+  align-items: center;
+  transition: background var(--dur-fast);
+  cursor: pointer;
+}
+.log-row:last-child { border-bottom: none; }
+.log-row:hover { background: var(--surface-recessed); }
+
+.log-row__id {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-brand);
+  font-weight: 500;
+}
+
+.log-row__entity {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.log-row__summary {
+  font-size: 12px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.log-row__time {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   INPUTS
+   ═══════════════════════════════════════════════════════════════ */
+
+.input-row { display: flex; flex-direction: column; gap: 12px; max-width: 440px; }
+
+.form-field { display: flex; flex-direction: column; gap: 5px; }
+
+.form-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.input {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--text-primary);
+  transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
+}
+.input:focus { border-color: var(--color-brand); box-shadow: var(--ring-focus); outline: none; }
+.input::placeholder { color: var(--text-disabled); }
+
+.input--mono { font-family: var(--font-mono); font-size: 12px; }
+
+.input-hint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.input-error-text {
+  font-size: 11px;
+  color: var(--color-negative);
+}
+
+.input--error {
+  border-color: var(--color-negative-border);
+  background: var(--color-negative-bg);
+}
+.input--error:focus { box-shadow: 0 0 0 3px rgba(122,34,51,0.15); }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   CALLOUT BANNERS
+   ═══════════════════════════════════════════════════════════════ */
+
+.callout-col { display: flex; flex-direction: column; gap: 8px; }
+
+.callout {
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  border-left: 3px solid transparent;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.callout__icon { flex-shrink: 0; margin-top: 1px; width: 15px; height: 15px; }
+.callout__body { color: var(--text-secondary); }
+.callout__title { font-weight: 600; margin-bottom: 2px; }
+
+.callout--info {
+  background: var(--color-brand-wash);
+  border-color: var(--color-brand);
+  color: var(--c-blue-900);
+}
+.callout--info .callout__body { color: var(--c-blue-900); }
+
+.callout--success {
+  background: var(--color-positive-wash);
+  border-color: var(--color-positive);
+}
+.callout--success .callout__body { color: var(--c-green-700); }
+
+.callout--warning {
+  background: var(--color-warning-wash);
+  border-color: var(--color-warning);
+}
+.callout--warning .callout__body { color: var(--c-amber-700); }
+
+.callout--error {
+  background: var(--color-negative-wash);
+  border-color: var(--color-negative);
+}
+.callout--error .callout__body { color: var(--c-red-700); }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   APP CHROME SAMPLE
+   ═══════════════════════════════════════════════════════════════ */
+
+.chrome-sample {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  height: 44px;
+  background: var(--surface-nav);   /* visibly darker than page canvas */
+  border-bottom: 1px solid var(--border-default);
+  gap: 12px;
+}
+
+.topbar__logo {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+
+.topbar__logo-mark {
+  width: 22px; height: 22px;
+  border-radius: var(--radius-sm);
+  background: var(--color-brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.topbar__logo-mark svg { width: 12px; height: 12px; color: #fff; }
+
+.topbar__nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 8px;
+}
+
+.topbar__nav-item {
+  padding: 5px 10px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: background var(--dur-fast), color var(--dur-fast);
+}
+.topbar__nav-item:hover { background: var(--surface-recessed); color: var(--text-primary); }
+.topbar__nav-item.is-active {
+  background: var(--color-brand-faint);
+  color: var(--color-brand);
+  font-weight: 500;
+}
+
+.topbar__right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+.avatar {
+  width: 28px; height: 28px;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand-wash);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-brand);
+  flex-shrink: 0;
+}
+
+.app-body {
+  display: flex;
+  height: 320px;
+}
+
+.sidebar {
+  width: 200px;
+  flex-shrink: 0;
+  background: var(--surface-nav);   /* matches topbar — unified nav chrome */
+  border-right: 1px solid var(--border-default);
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar__section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-disabled);
+  padding: 8px 8px 4px;
+  margin-top: 8px;
+}
+
+.sidebar__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--dur-fast), color var(--dur-fast);
+}
+.sidebar__item:hover { background: var(--surface-hover); color: var(--text-primary); }
+.sidebar__item.is-active {
+  background: var(--color-brand-faint);
+  color: var(--color-brand);
+  font-weight: 500;
+}
+.sidebar__item svg { width: 14px; height: 14px; flex-shrink: 0; opacity: 0.7; }
+.sidebar__item.is-active svg { opacity: 1; }
+
+.main-content {
+  flex: 1;
+  padding: 20px 24px;
+  overflow-y: auto;
+  background: var(--surface-page);
+}
+
+.main-content__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.main-content__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.mini-stat-row { display: flex; gap: 10px; margin-bottom: 16px; }
+
+.mini-stat {
+  flex: 1;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+}
+
+.mini-stat__value {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.mini-stat__label {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.mini-stat__delta {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--color-positive);
+  margin-top: 1px;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   DIFF SAMPLE (for prompt diff view)
+   ═══════════════════════════════════════════════════════════════ */
+
+.diff-block {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.7;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.diff-block__header {
+  padding: 8px 14px;
+  background: var(--surface-recessed);
+  border-bottom: 1px solid var(--border-default);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  display: flex;
+  gap: 16px;
+}
+
+.diff-block__header span { display: flex; align-items: center; gap: 5px; }
+
+.diff-line {
+  display: flex;
+  gap: 12px;
+  padding: 1px 14px;
+  color: var(--text-secondary);
+}
+
+.diff-line--add {
+  background: var(--color-positive-bg);
+  color: var(--c-green-700);
+}
+
+.diff-line--del {
+  background: var(--color-negative-bg);
+  color: var(--text-tertiary);
+  text-decoration: line-through;
+}
+
+.diff-gutter {
+  color: var(--text-disabled);
+  user-select: none;
+  min-width: 16px;
+  font-size: 10px;
+  padding-top: 1px;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   DARK MODE TOGGLE TRANSITION
+   ═══════════════════════════════════════════════════════════════ */
+
+body { transition: background var(--dur-base), color var(--dur-base); }
+.card, .log-table, .chrome-sample, .diff-block, .input, .callout, .badge {
+  transition: background var(--dur-base), border-color var(--dur-base), color var(--dur-base);
+}
+
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ── Header ── -->
+  <header class="page-header">
+    <div class="page-header__left">
+      <div class="wordmark">
+        <div class="wordmark__dot"></div>
+        Verity
+      </div>
+      <div class="wordmark__sub">Design System — Color &amp; Component Sample</div>
+    </div>
+    <button class="mode-toggle btn" onclick="toggleMode()" id="mode-btn">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      Light mode
+    </button>
+  </header>
+
+
+  <!-- ── Color Palette ── -->
+  <section class="section">
+    <div class="section-label">Color palette</div>
+
+    <div style="display:flex; flex-direction:column; gap:20px;">
+
+      <div>
+        <div style="font-size:11px;font-weight:500;color:var(--text-tertiary);margin-bottom:10px;">Surfaces &amp; Neutrals</div>
+        <div class="swatch-row">
+          <div class="swatch-group"><div class="swatch" style="background:#F7F8FA; border-color:#DDE1E7;"></div><div class="swatch-label">Off-white / Canvas</div><div class="swatch-hex">#F7F8FA</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#FFFFFF; border-color:#DDE1E7;"></div><div class="swatch-label">White / Card</div><div class="swatch-hex">#FFFFFF</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#F0F2F5; border-color:#DDE1E7;"></div><div class="swatch-label">Recessed / Input</div><div class="swatch-hex">#F0F2F5</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#E8EAED; border-color:#DDE1E7;"></div><div class="swatch-label">Hover</div><div class="swatch-hex">#E8EAED</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#DDE1E7;"></div><div class="swatch-label">Border default</div><div class="swatch-hex">#DDE1E7</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#1A1D23; border-color:#3A3A3E;"></div><div class="swatch-label">Dark / Shell</div><div class="swatch-hex">#1A1D23</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#22262F; border-color:#3A3A3E;"></div><div class="swatch-label">Dark / Panel</div><div class="swatch-hex">#22262F</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#2A2F3A; border-color:#3A3A3E;"></div><div class="swatch-label">Dark / Card</div><div class="swatch-hex">#2A2F3A</div></div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:11px;font-weight:500;color:var(--text-tertiary);margin-bottom:10px;">Slate Blue — Brand &amp; Interactive</div>
+        <div class="swatch-row">
+          <div class="swatch-group"><div class="swatch" style="background:#1D3557;"></div><div class="swatch-label">Blue 900 / Deep</div><div class="swatch-hex">#1D3557</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#2C4E7E;"></div><div class="swatch-label">Blue 700 / Brand</div><div class="swatch-hex">#2C4E7E</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#3B6091;"></div><div class="swatch-label">Blue 600 / Hover</div><div class="swatch-hex">#3B6091</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#4A72A4;"></div><div class="swatch-label">Blue 500</div><div class="swatch-hex">#4A72A4</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#C5D5E8;"></div><div class="swatch-label">Blue 200 / Wash</div><div class="swatch-hex">#C5D5E8</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#E0EAF4;"></div><div class="swatch-label">Blue 100 / Faint</div><div class="swatch-hex">#E0EAF4</div></div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:11px;font-weight:500;color:var(--text-tertiary);margin-bottom:10px;">Muted Green — Positive / Champion / Success</div>
+        <div class="swatch-row">
+          <div class="swatch-group"><div class="swatch" style="background:#2D6A4F;"></div><div class="swatch-label">Green 700</div><div class="swatch-hex">#2D6A4F</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#3A7D5C;"></div><div class="swatch-label">Green 600</div><div class="swatch-hex">#3A7D5C</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#4A9470;"></div><div class="swatch-label">Green 500</div><div class="swatch-hex">#4A9470</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#C4DDD3;"></div><div class="swatch-label">Green 200 / Badge</div><div class="swatch-hex">#C4DDD3</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#DCF0E8;"></div><div class="swatch-label">Green 100 / Wash</div><div class="swatch-hex">#DCF0E8</div></div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:11px;font-weight:500;color:var(--text-tertiary);margin-bottom:10px;">Muted Red — Negative / Deprecated / Error</div>
+        <div class="swatch-row">
+          <div class="swatch-group"><div class="swatch" style="background:#7A2233;"></div><div class="swatch-label">Red 700</div><div class="swatch-hex">#7A2233</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#8F2B3D;"></div><div class="swatch-label">Red 600</div><div class="swatch-hex">#8F2B3D</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#A63D52;"></div><div class="swatch-label">Red 500</div><div class="swatch-hex">#A63D52</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#DFC0C7;"></div><div class="swatch-label">Red 200 / Badge</div><div class="swatch-hex">#DFC0C7</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#F0D8DC;"></div><div class="swatch-label">Red 100 / Wash</div><div class="swatch-hex">#F0D8DC</div></div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:11px;font-weight:500;color:var(--text-tertiary);margin-bottom:10px;">Muted Amber — Warning / Challenger</div>
+        <div class="swatch-row">
+          <div class="swatch-group"><div class="swatch" style="background:#7A5020;"></div><div class="swatch-label">Amber 700</div><div class="swatch-hex">#7A5020</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#8F6128;"></div><div class="swatch-label">Amber 600</div><div class="swatch-hex">#8F6128</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#A87334;"></div><div class="swatch-label">Amber 500</div><div class="swatch-hex">#A87334</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#DECCAE;"></div><div class="swatch-label">Amber 200 / Badge</div><div class="swatch-hex">#DECCAE</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#EFE0C4;"></div><div class="swatch-label">Amber 100 / Wash</div><div class="swatch-hex">#EFE0C4</div></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ── Typography ── -->
+  <section class="section">
+    <div class="section-label">Typography — IBM Plex Sans + IBM Plex Mono</div>
+    <div class="type-row">
+      <div class="type-sample"><span class="type-meta">28 / 600 / −0.02em</span><span class="t-hero">Governance platform for AI systems</span></div>
+      <div class="type-sample"><span class="type-meta">20 / 600 / −0.01em</span><span class="t-title">Agent Registry</span></div>
+      <div class="type-sample"><span class="type-meta">15 / 600</span><span class="t-h3">Decision Log</span></div>
+      <div class="type-sample"><span class="type-meta">14 / 400 / lh 1.6</span><span class="t-body">Every AI decision is logged with full provenance — prompts, parameters, outputs, and tool calls — enabling complete audit trails for regulatory compliance.</span></div>
+      <div class="type-sample"><span class="type-meta">13 / 500</span><span class="t-label">Champion version · triage_agent</span></div>
+      <div class="type-sample"><span class="type-meta">11 / 400</span><span class="t-caption">Promoted 14 May 2026 by Sarah Chen · claude-sonnet-4</span></div>
+      <div class="type-sample"><span class="type-meta">10 / 600 / caps</span><span class="t-eyebrow">Materiality tier</span></div>
+      <div class="type-sample"><span class="type-meta">12 / mono</span><span class="t-mono">agent_version_id: a3f9c2d1-88b4-4e7f-...</span></div>
+    </div>
+  </section>
+
+
+  <!-- ── Lifecycle badges ── -->
+  <section class="section">
+    <div class="section-label">Lifecycle state badges</div>
+    <div class="badge-row" style="margin-bottom:16px;">
+      <span class="badge badge--draft"><span class="badge__dot"></span>Draft</span>
+      <span class="badge badge--candidate"><span class="badge__dot"></span>Candidate</span>
+      <span class="badge badge--staging"><span class="badge__dot"></span>Staging</span>
+      <span class="badge badge--shadow"><span class="badge__dot"></span>Shadow</span>
+      <span class="badge badge--challenger"><span class="badge__dot"></span>Challenger</span>
+      <span class="badge badge--champion"><span class="badge__dot"></span>Champion</span>
+      <span class="badge badge--deprecated"><span class="badge__dot"></span>Deprecated</span>
+    </div>
+    <div class="badge-row">
+      <span class="badge badge--high">High materiality</span>
+      <span class="badge badge--medium">Medium materiality</span>
+      <span class="badge badge--low">Low materiality</span>
+    </div>
+  </section>
+
+
+  <!-- ── Buttons ── -->
+  <section class="section">
+    <div class="section-label">Buttons</div>
+    <div class="btn-row" style="margin-bottom:12px;">
+      <button class="btn btn--primary btn--md">Promote to champion</button>
+      <button class="btn btn--secondary btn--md">View history</button>
+      <button class="btn btn--ghost btn--md">Cancel</button>
+      <button class="btn btn--positive btn--md">Accept</button>
+      <button class="btn btn--danger btn--md">Deprecate</button>
+      <button class="btn btn--primary btn--md" disabled>Disabled</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn--primary btn--sm">Promote</button>
+      <button class="btn btn--secondary btn--sm">Clone</button>
+      <button class="btn btn--ghost btn--sm">Compare</button>
+      <button class="btn btn--primary btn--lg">Run validation suite</button>
+    </div>
+  </section>
+
+
+  <!-- ── Callouts ── -->
+  <section class="section">
+    <div class="section-label">Callouts &amp; alerts</div>
+    <div class="callout-col">
+      <div class="callout callout--info">
+        <svg class="callout__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div class="callout__body"><div class="callout__title">Integrity check passed</div>SHA-256 of all bundle files matches manifest. Container cleared to execute.</div>
+      </div>
+      <div class="callout callout--success">
+        <svg class="callout__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <div class="callout__body"><div class="callout__title">Promoted to champion</div>triage_agent v2.2.0 is now live. Prior champion v2.1.0 deprecated.</div>
+      </div>
+      <div class="callout callout--warning">
+        <svg class="callout__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><triangle points="10.29 3.86 1.82 18 22.18 18"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/><polygon points="10.29 3.86 1.82 18 22.18 18"/></svg>
+        <div class="callout__body"><div class="callout__title">Quota threshold reached</div>Application spend has reached 87% of the monthly budget. Enforcement kicks in at 100%.</div>
+      </div>
+      <div class="callout callout--error">
+        <svg class="callout__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+        <div class="callout__body"><div class="callout__title">Integrity violation — run aborted</div>SHA-256 mismatch detected on prompts/system.txt. Bundle may have been tampered with.</div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ── Cards ── -->
+  <section class="section">
+    <div class="section-label">Entity cards</div>
+    <div class="card-row">
+
+      <div class="card">
+        <div class="card__header">
+          <div>
+            <div class="card__title">triage_agent</div>
+            <div class="card__sub">agent · v2.2.0</div>
+          </div>
+          <span class="badge badge--champion"><span class="badge__dot"></span>Champion</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">Assesses D&amp;O submissions for viability, severity, and exclusions. Returns GREEN / AMBER / RED triage with reasoning.</div>
+        <div class="card__meta">
+          <span class="card__meta-item"><span style="color:var(--text-disabled);font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;">Tier</span>&nbsp;<span class="badge badge--high" style="padding:1px 6px;font-size:10px;">High</span></span>
+          <span class="card__meta-item" style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary);">claude-sonnet-4 · t=0.1</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card__header">
+          <div>
+            <div class="card__title">document_classifier</div>
+            <div class="card__sub">task · v1.3.0</div>
+          </div>
+          <span class="badge badge--challenger"><span class="badge__dot"></span>Challenger</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">Classifies uploaded documents into ACORD form types, loss runs, financials, and supporting materials.</div>
+        <div class="card__meta">
+          <span class="card__meta-item"><span style="color:var(--text-disabled);font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;">Tier</span>&nbsp;<span class="badge badge--medium" style="padding:1px 6px;font-size:10px;">Medium</span></span>
+          <span class="card__meta-item" style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary);">classification · f1 0.94</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card__header">
+          <div>
+            <div class="card__title">triage_system_prompt</div>
+            <div class="card__sub">prompt · v1.5.0</div>
+          </div>
+          <span class="badge badge--draft"><span class="badge__dot"></span>Draft</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">Behavioural system prompt for the triage agent. Governs assessment logic, exclusion handling, and output structure.</div>
+        <div class="card__meta">
+          <span class="card__meta-item" style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary);">behavioural · 847 tokens</span>
+          <span class="card__meta-item" style="font-size:10px;color:var(--text-tertiary);">cloned from v1.4</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ── Decision log table ── -->
+  <section class="section">
+    <div class="section-label">Decision log — compact table</div>
+    <div class="log-table">
+      <div class="log-table__header">
+        <span class="log-table__col-label">Run ID</span>
+        <span class="log-table__col-label">Entity</span>
+        <span class="log-table__col-label">Summary</span>
+        <span class="log-table__col-label">Status</span>
+        <span class="log-table__col-label">Time</span>
+      </div>
+      <div class="log-row">
+        <span class="log-row__id">run_a3f9c2</span>
+        <span class="log-row__entity">triage_agent</span>
+        <span class="log-row__summary">SUB-2026-0142 · Acme Dynamics D&amp;O · GREEN — low risk, clean loss history</span>
+        <span><span class="badge badge--champion" style="font-size:10px;padding:2px 7px;">complete</span></span>
+        <span class="log-row__time">14:32:07</span>
+      </div>
+      <div class="log-row">
+        <span class="log-row__id">run_b8d4e1</span>
+        <span class="log-row__entity">field_extractor</span>
+        <span class="log-row__summary">SUB-2026-0141 · TechFlow Industries · 18 fields extracted, 2 low confidence</span>
+        <span><span class="badge badge--challenger" style="font-size:10px;padding:2px 7px;">complete</span></span>
+        <span class="log-row__time">14:28:44</span>
+      </div>
+      <div class="log-row">
+        <span class="log-row__id">run_c2a7f3</span>
+        <span class="log-row__entity">triage_agent</span>
+        <span class="log-row__summary">SUB-2026-0140 · Meridian Holdings GL · AMBER — securities exposure noted</span>
+        <span><span class="badge badge--warning" style="font-size:10px;padding:2px 7px;background:var(--color-warning-bg);color:var(--color-warning);border:1px solid var(--color-warning-border);">HITL</span></span>
+        <span class="log-row__time">14:11:19</span>
+      </div>
+      <div class="log-row">
+        <span class="log-row__id">run_d5c8a2</span>
+        <span class="log-row__entity">appetite_agent</span>
+        <span class="log-row__summary">SUB-2026-0139 · Atlas Corp · integrity violation — bundle hash mismatch</span>
+        <span><span class="badge badge--deprecated" style="font-size:10px;padding:2px 7px;">failed</span></span>
+        <span class="log-row__time">14:03:55</span>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ── Inputs ── -->
+  <section class="section">
+    <div class="section-label">Form inputs</div>
+    <div class="input-row">
+      <div class="form-field">
+        <label class="form-label">Agent name</label>
+        <input class="input" type="text" placeholder="e.g. triage_agent" value="triage_agent">
+        <span class="input-hint">Unique identifier. Lowercase, underscores only.</span>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Entity UUID</label>
+        <input class="input input--mono" type="text" placeholder="uuid" value="a3f9c2d1-88b4-4e7f-b3c2-4d8e1a7f2c9b">
+      </div>
+      <div class="form-field">
+        <label class="form-label" style="color:var(--color-negative);">Version label <span style="font-weight:400;font-size:11px;">(already exists)</span></label>
+        <input class="input input--error input--mono" type="text" value="2.1.0">
+        <span class="input-error-text">Version 2.1.0 already exists for this agent.</span>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ── Prompt diff ── -->
+  <section class="section">
+    <div class="section-label">Prompt diff — v1.4 → v1.5.0</div>
+    <div class="diff-block">
+      <div class="diff-block__header">
+        <span>triage_system_prompt</span>
+        <span style="margin-left:auto;color:var(--color-positive);">+2</span>
+        <span style="color:var(--color-negative);">−1</span>
+      </div>
+      <div style="padding:8px 0;">
+        <div class="diff-line"><span class="diff-gutter"> </span><span>You are a triage underwriter assistant.</span></div>
+        <div class="diff-line"><span class="diff-gutter"> </span><span>&nbsp;</span></div>
+        <div class="diff-line"><span class="diff-gutter"> </span><span>Assess each D&amp;O submission for:</span></div>
+        <div class="diff-line"><span class="diff-gutter"> </span><span>- Named insured viability</span></div>
+        <div class="diff-line"><span class="diff-gutter"> </span><span>- Loss history severity</span></div>
+        <div class="diff-line diff-line--del"><span class="diff-gutter">−</span><span>- Exclusions: sanctions, securities</span></div>
+        <div class="diff-line diff-line--add"><span class="diff-gutter">+</span><span>- Exclusions: sanctions, securities,</span></div>
+        <div class="diff-line diff-line--add"><span class="diff-gutter">+</span><span>&nbsp;&nbsp;class actions</span></div>
+        <div class="diff-line"><span class="diff-gutter"> </span><span>&nbsp;</span></div>
+        <div class="diff-line"><span class="diff-gutter"> </span><span>Return: GREEN / AMBER / RED with reasoning.</span></div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ── App chrome sample ── -->
+  <section class="section">
+    <div class="section-label">App chrome — shell preview</div>
+    <div class="chrome-sample">
+      <div class="topbar">
+        <div class="topbar__logo">
+          <div class="topbar__logo-mark">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          Verity
+        </div>
+        <nav class="topbar__nav">
+          <div class="topbar__nav-item is-active">Registry</div>
+          <div class="topbar__nav-item">Decisions</div>
+          <div class="topbar__nav-item">Validation</div>
+          <div class="topbar__nav-item">Compliance</div>
+        </nav>
+        <div class="topbar__right">
+          <button class="btn btn--secondary btn--sm">+ New agent</button>
+          <div class="avatar">SC</div>
+        </div>
+      </div>
+      <div class="app-body">
+        <div class="sidebar">
+          <div class="sidebar__section-label">Governance</div>
+          <div class="sidebar__item is-active">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+            Agents
+          </div>
+          <div class="sidebar__item">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Tasks
+          </div>
+          <div class="sidebar__item">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Prompts
+          </div>
+          <div class="sidebar__section-label">Runtime</div>
+          <div class="sidebar__item">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Runs
+          </div>
+          <div class="sidebar__item">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+            Decision log
+          </div>
+        </div>
+        <div class="main-content">
+          <div class="main-content__header">
+            <span class="main-content__title">Agent Registry</span>
+            <button class="btn btn--primary btn--sm">+ New agent</button>
+          </div>
+          <div class="mini-stat-row">
+            <div class="mini-stat">
+              <div class="mini-stat__value">12</div>
+              <div class="mini-stat__label">Agents</div>
+              <div class="mini-stat__delta">↑ 2 this week</div>
+            </div>
+            <div class="mini-stat">
+              <div class="mini-stat__value">7</div>
+              <div class="mini-stat__label">Champions</div>
+            </div>
+            <div class="mini-stat">
+              <div class="mini-stat__value">3</div>
+              <div class="mini-stat__label">In staging</div>
+            </div>
+            <div class="mini-stat">
+              <div class="mini-stat__value" style="color:var(--color-warning);">2</div>
+              <div class="mini-stat__label">Needs review</div>
+            </div>
+          </div>
+          <div style="font-size:12px;color:var(--text-tertiary);padding:16px 0;text-align:center;border:1px dashed var(--border-default);border-radius:var(--radius-md);">
+            Agent cards would render here — same card pattern as above
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Dark mode showcase ── -->
+  <section class="section">
+    <div class="section-label">Dark mode — component appearance</div>
+    <div style="background:#1A1D23; border-radius:12px; padding:32px; display:flex; flex-direction:column; gap:28px;">
+
+      <!-- Badges in dark -->
+      <div>
+        <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.30);margin-bottom:12px;">Lifecycle state badges</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;background:#1E2A3A;color:#6B93C4;border:1px solid rgba(107,147,196,0.28)"><span style="width:5px;height:5px;border-radius:50%;background:#6B93C4;flex-shrink:0;"></span>Draft</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;background:rgba(107,147,196,0.12);color:#7BA5D4;border:1px solid rgba(107,147,196,0.28)"><span style="width:5px;height:5px;border-radius:50%;background:#7BA5D4;flex-shrink:0;"></span>Candidate</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;background:rgba(107,147,196,0.18);color:#8FBAE0;border:1px solid rgba(107,147,196,0.35)"><span style="width:5px;height:5px;border-radius:50%;background:#8FBAE0;flex-shrink:0;"></span>Staging</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.40);border:1px solid rgba(255,255,255,0.10)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,0.30);flex-shrink:0;"></span>Shadow</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;background:rgba(196,160,106,0.10);color:#C4A06A;border:1px solid rgba(196,160,106,0.28)"><span style="width:5px;height:5px;border-radius:50%;background:#C4A06A;flex-shrink:0;"></span>Challenger</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;background:rgba(106,175,138,0.10);color:#6AAF8A;border:1px solid rgba(106,175,138,0.28)"><span style="width:5px;height:5px;border-radius:50%;background:#6AAF8A;flex-shrink:0;"></span>Champion</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.35);border:1px solid rgba(255,255,255,0.08)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,0.25);flex-shrink:0;"></span>Deprecated</span>
+        </div>
+      </div>
+
+      <!-- Buttons in dark -->
+      <div>
+        <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.30);margin-bottom:12px;">Buttons</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <button style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:none;border-radius:6px;font-family:'IBM Plex Sans',system-ui;font-size:13px;font-weight:500;cursor:pointer;background:#2C4E7E;color:#FFFFFF;">Promote to champion</button>
+          <button style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:6px;font-family:'IBM Plex Sans',system-ui;font-size:13px;font-weight:500;cursor:pointer;background:#374151;color:#F9FAFB;border:1px solid #4B5563;">View history</button>
+          <button style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:6px;font-family:'IBM Plex Sans',system-ui;font-size:13px;font-weight:500;cursor:pointer;background:#374151;color:#F9FAFB;border:1px solid #4B5563;">Clone</button>
+          <button style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:6px;font-family:'IBM Plex Sans',system-ui;font-size:13px;font-weight:500;cursor:pointer;background:#2D6A4F;color:#FFFFFF;border:none;">Accept</button>
+          <button style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:6px;font-family:'IBM Plex Sans',system-ui;font-size:13px;font-weight:500;cursor:pointer;background:#7A2233;color:#FFFFFF;border:none;">Deprecate</button>
+        </div>
+      </div>
+
+      <!-- Cards in dark -->
+      <div>
+        <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.30);margin-bottom:12px;">Entity cards</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;">
+
+          <div style="background:#22262F;border:1px solid #343B4A;border-radius:8px;padding:20px;box-shadow:0 2px 6px rgba(0,0,0,0.28);">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;">
+              <div>
+                <div style="font-size:14px;font-weight:600;color:#F0EFED;letter-spacing:-0.01em;">triage_agent</div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#9BA3B8;margin-top:2px;">agent · v2.2.0</div>
+              </div>
+              <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;background:rgba(106,175,138,0.10);color:#6AAF8A;border:1px solid rgba(106,175,138,0.28)"><span style="width:5px;height:5px;border-radius:50%;background:#6AAF8A;flex-shrink:0;"></span>Champion</span>
+            </div>
+            <div style="font-size:12px;color:#9BA3B8;line-height:1.5;">Assesses D&amp;O submissions for viability, severity, and exclusions. Returns GREEN / AMBER / RED triage with reasoning.</div>
+            <div style="font-size:10px;color:#636B80;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.07);font-family:'IBM Plex Mono',monospace;">claude-sonnet-4 · t=0.1</div>
+          </div>
+
+          <div style="background:#22262F;border:1px solid #343B4A;border-radius:8px;padding:20px;box-shadow:0 2px 6px rgba(0,0,0,0.28);">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;">
+              <div>
+                <div style="font-size:14px;font-weight:600;color:#F0EFED;letter-spacing:-0.01em;">triage_system_prompt</div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#9BA3B8;margin-top:2px;">prompt · v1.5.0</div>
+              </div>
+              <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.35);border:1px solid rgba(255,255,255,0.08)"><span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,0.25);flex-shrink:0;"></span>Draft</span>
+            </div>
+            <div style="font-size:12px;color:#9BA3B8;line-height:1.5;">Behavioural system prompt for the triage agent. Governs assessment logic, exclusion handling, and output structure.</div>
+            <div style="font-size:10px;color:#636B80;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.07);font-family:'IBM Plex Mono',monospace;">behavioural · 847 tokens · cloned from v1.4</div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Callouts in dark -->
+      <div>
+        <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.30);margin-bottom:12px;">Callouts</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;gap:12px;padding:12px 16px;border-radius:6px;border-left:3px solid rgba(107,147,196,0.6);background:rgba(107,147,196,0.10);font-size:13px;line-height:1.5;">
+            <div style="color:#C8CDD8;"><span style="font-weight:600;color:#A8C8E8;">Integrity check passed</span> — SHA-256 of all bundle files matches manifest. Container cleared to execute.</div>
+          </div>
+          <div style="display:flex;gap:12px;padding:12px 16px;border-radius:6px;border-left:3px solid rgba(106,175,138,0.6);background:rgba(106,175,138,0.10);font-size:13px;line-height:1.5;">
+            <div style="color:#C8CDD8;"><span style="font-weight:600;color:#6AAF8A;">Promoted to champion</span> — triage_agent v2.2.0 is now live.</div>
+          </div>
+          <div style="display:flex;gap:12px;padding:12px 16px;border-radius:6px;border-left:3px solid rgba(196,160,106,0.6);background:rgba(196,160,106,0.10);font-size:13px;line-height:1.5;">
+            <div style="color:#C8CDD8;"><span style="font-weight:600;color:#C4A06A;">Quota threshold reached</span> — Spend at 87% of monthly budget.</div>
+          </div>
+          <div style="display:flex;gap:12px;padding:12px 16px;border-radius:6px;border-left:3px solid rgba(196,122,136,0.6);background:rgba(196,122,136,0.10);font-size:13px;line-height:1.5;">
+            <div style="color:#C8CDD8;"><span style="font-weight:600;color:#C47A88;">Integrity violation — run aborted</span> — SHA-256 mismatch on prompts/system.txt.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- App chrome in dark -->
+      <div>
+        <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.30);margin-bottom:12px;">App shell chrome</div>
+        <div style="border:1px solid #343B4A;border-radius:10px;overflow:hidden;">
+          <!-- topbar -->
+          <div style="display:flex;align-items:center;padding:0 16px;height:44px;background:#13151A;border-bottom:1px solid #343B4A;gap:12px;">
+            <div style="display:flex;align-items:center;gap:7px;font-size:14px;font-weight:600;color:#F0EFED;letter-spacing:-0.01em;flex-shrink:0;">
+              <div style="width:22px;height:22px;border-radius:4px;background:#2C4E7E;display:flex;align-items:center;justify-content:center;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </div>
+              Verity
+            </div>
+            <nav style="display:flex;align-items:center;gap:2px;margin-left:8px;">
+              <div style="padding:5px 10px;border-radius:6px;font-size:13px;font-weight:500;background:rgba(107,147,196,0.12);color:#6B93C4;">Registry</div>
+              <div style="padding:5px 10px;border-radius:6px;font-size:13px;color:#9BA3B8;cursor:pointer;">Decisions</div>
+              <div style="padding:5px 10px;border-radius:6px;font-size:13px;color:#9BA3B8;cursor:pointer;">Validation</div>
+              <div style="padding:5px 10px;border-radius:6px;font-size:13px;color:#9BA3B8;cursor:pointer;">Compliance</div>
+            </nav>
+            <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+              <button style="display:inline-flex;align-items:center;padding:5px 10px;border-radius:6px;font-family:'IBM Plex Sans',system-ui;font-size:12px;font-weight:500;cursor:pointer;background:#374151;color:#F9FAFB;border:1px solid #4B5563;">+ New agent</button>
+              <div style="width:28px;height:28px;border-radius:50%;background:rgba(107,147,196,0.20);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#6B93C4;">SC</div>
+            </div>
+          </div>
+          <!-- body -->
+          <div style="display:flex;height:280px;">
+            <!-- sidebar -->
+            <div style="width:200px;flex-shrink:0;background:#13151A;border-right:1px solid #343B4A;padding:12px 8px;display:flex;flex-direction:column;gap:2px;">
+              <div style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.22);padding:8px 8px 4px;margin-top:4px;">Governance</div>
+              <div style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;font-size:13px;background:rgba(107,147,196,0.12);color:#6B93C4;font-weight:500;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                Agents
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;font-size:13px;color:#9BA3B8;cursor:pointer;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;flex-shrink:0;opacity:0.5;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                Tasks
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;font-size:13px;color:#9BA3B8;cursor:pointer;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;flex-shrink:0;opacity:0.5;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Prompts
+              </div>
+              <div style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.22);padding:8px 8px 4px;margin-top:8px;">Runtime</div>
+              <div style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;font-size:13px;color:#9BA3B8;cursor:pointer;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;flex-shrink:0;opacity:0.5;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Runs
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;font-size:13px;color:#9BA3B8;cursor:pointer;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;flex-shrink:0;opacity:0.5;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+                Decision log
+              </div>
+            </div>
+            <!-- main -->
+            <div style="flex:1;padding:20px 24px;overflow-y:auto;background:#1A1D23;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                <span style="font-size:16px;font-weight:600;color:#F0EFED;letter-spacing:-0.01em;">Agent Registry</span>
+                <button style="padding:5px 10px;border-radius:6px;font-family:'IBM Plex Sans',system-ui;font-size:12px;font-weight:500;cursor:pointer;background:#2C4E7E;color:#FFFFFF;border:none;">+ New agent</button>
+              </div>
+              <div style="display:flex;gap:10px;margin-bottom:16px;">
+                <div style="flex:1;background:#22262F;border:1px solid #343B4A;border-radius:6px;padding:10px 12px;">
+                  <div style="font-size:20px;font-weight:600;letter-spacing:-0.02em;color:#F0EFED;">12</div>
+                  <div style="font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:#636B80;margin-top:2px;">Agents</div>
+                </div>
+                <div style="flex:1;background:#22262F;border:1px solid #343B4A;border-radius:6px;padding:10px 12px;">
+                  <div style="font-size:20px;font-weight:600;letter-spacing:-0.02em;color:#6AAF8A;">7</div>
+                  <div style="font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:#636B80;margin-top:2px;">Champions</div>
+                </div>
+                <div style="flex:1;background:#22262F;border:1px solid #343B4A;border-radius:6px;padding:10px 12px;">
+                  <div style="font-size:20px;font-weight:600;letter-spacing:-0.02em;color:#6B93C4;">3</div>
+                  <div style="font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:#636B80;margin-top:2px;">In staging</div>
+                </div>
+                <div style="flex:1;background:#22262F;border:1px solid #343B4A;border-radius:6px;padding:10px 12px;">
+                  <div style="font-size:20px;font-weight:600;letter-spacing:-0.02em;color:#C4A06A;">2</div>
+                  <div style="font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:#636B80;margin-top:2px;">Needs review</div>
+                </div>
+              </div>
+              <!-- mini decision log in dark -->
+              <div style="border:1px solid #343B4A;border-radius:8px;overflow:hidden;background:#22262F;">
+                <div style="display:grid;grid-template-columns:130px 130px 1fr 90px;padding:8px 14px;background:#2A2F3A;border-bottom:1px solid #343B4A;gap:12px;">
+                  <span style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#636B80;">Run ID</span>
+                  <span style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#636B80;">Entity</span>
+                  <span style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#636B80;">Summary</span>
+                  <span style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#636B80;">Status</span>
+                </div>
+                <div style="display:grid;grid-template-columns:130px 130px 1fr 90px;padding:10px 14px;gap:12px;border-bottom:1px solid rgba(255,255,255,0.04);align-items:center;">
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6B93C4;font-weight:500;">run_a3f9c2</span>
+                  <span style="font-size:12px;font-weight:500;color:#F0EFED;">triage_agent</span>
+                  <span style="font-size:12px;color:rgba(240,239,237,0.50);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">SUB-2026-0142 · Acme D&O · GREEN — clean loss history</span>
+                  <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;background:rgba(106,175,138,0.10);color:#6AAF8A;border:1px solid rgba(106,175,138,0.28)">Complete</span>
+                </div>
+                <div style="display:grid;grid-template-columns:130px 130px 1fr 90px;padding:10px 14px;gap:12px;align-items:center;">
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6B93C4;font-weight:500;">run_c2a7f3</span>
+                  <span style="font-size:12px;font-weight:500;color:#F0EFED;">triage_agent</span>
+                  <span style="font-size:12px;color:rgba(240,239,237,0.50);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">SUB-2026-0140 · Meridian · AMBER — securities exposure</span>
+                  <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;background:rgba(196,160,106,0.10);color:#C4A06A;border:1px solid rgba(196,160,106,0.28)">HITL</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

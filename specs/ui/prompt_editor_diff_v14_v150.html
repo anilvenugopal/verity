@@ -1,0 +1,338 @@
+
+<h2 class="sr-only">Prompt editor showing triage_system_prompt v1.5.0 with inline diff against v1.4.0, blame gutters, and a focused view on the exclusions block where two failures were introduced.</h2>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);font-size:13px}
+.editor-shell{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;gap:8px;padding:0 12px;height:40px;background:var(--color-background-secondary);border-bottom:0.5px solid var(--color-border-tertiary);flex-shrink:0}
+.tb-title{font-size:12px;font-weight:500;color:var(--color-text-primary)}
+.tb-sub{font-size:11px;color:var(--color-text-tertiary);font-family:var(--font-mono)}
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;border:0.5px solid transparent}
+.b-red{background:var(--color-background-danger);color:var(--color-text-danger);border-color:var(--color-border-danger)}
+.b-amber{background:var(--color-background-warning);color:var(--color-text-warning);border-color:var(--color-border-warning)}
+.b-gray{background:var(--color-background-secondary);color:var(--color-text-tertiary);border-color:var(--color-border-tertiary)}
+.b-blue{background:var(--color-background-info);color:var(--color-text-info);border-color:var(--color-border-info)}
+.body{display:flex;min-height:0;flex:1}
+.left-rail{width:180px;flex-shrink:0;background:var(--color-background-secondary);border-right:0.5px solid var(--color-border-tertiary);padding:8px 0;overflow-y:auto}
+.rail-section{font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-tertiary);padding:8px 10px 4px}
+.rail-item{display:flex;align-items:center;justify-content:space-between;padding:5px 10px;font-size:11px;color:var(--color-text-secondary);cursor:pointer;gap:4px}
+.rail-item:hover{background:var(--color-background-tertiary)}
+.rail-item.active{background:var(--color-background-primary);color:var(--color-text-primary);font-weight:500;border-right:2px solid var(--color-text-info)}
+.rail-item i{font-size:13px;flex-shrink:0;color:var(--color-text-tertiary)}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.diff-toolbar{display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--color-background-secondary);border-bottom:0.5px solid var(--color-border-tertiary);font-size:11px;flex-wrap:wrap}
+.diff-toolbar .seg{color:var(--color-text-tertiary)}
+.diff-stat{display:flex;align-items:center;gap:3px;font-size:11px;font-weight:500}
+.del-stat{color:var(--color-text-danger)}
+.add-stat{color:var(--color-text-success)}
+.editor-scroll{overflow-y:auto;flex:1}
+.block{display:flex;border-bottom:0.5px solid var(--color-border-tertiary)}
+.block:last-child{border-bottom:none}
+.block.highlighted{outline:2px solid var(--color-border-warning);outline-offset:-2px;border-radius:0}
+.gutter{width:48px;flex-shrink:0;padding:10px 6px;display:flex;flex-direction:column;gap:2px;cursor:pointer;background:var(--color-background-secondary);border-right:0.5px solid var(--color-border-tertiary)}
+.blame-bar{width:4px;border-radius:2px;flex-shrink:0;min-height:20px}
+.gutter-ln{font-size:10px;color:var(--color-text-tertiary);font-family:var(--font-mono);line-height:1.5;text-align:right;padding-right:4px}
+.block-content{flex:1;padding:10px 12px;min-width:0}
+.block-kind-label{font-size:10px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-tertiary);margin-bottom:5px;display:flex;align-items:center;gap:5px}
+.block-kind-label i{font-size:12px}
+.prose-text{font-size:12px;color:var(--color-text-secondary);line-height:1.7;white-space:pre-wrap;font-family:var(--font-mono)}
+.diff-line{display:flex;gap:8px;padding:1px 6px;border-radius:3px;margin:1px 0;font-size:12px;font-family:var(--font-mono);line-height:1.65;align-items:flex-start}
+.diff-line.del{background:var(--color-background-danger);color:var(--color-text-danger)}
+.diff-line.add{background:var(--color-background-success);color:var(--color-text-success)}
+.diff-line.ctx{color:var(--color-text-secondary)}
+.diff-gutter{min-width:12px;font-size:10px;color:var(--color-text-tertiary);flex-shrink:0;user-select:none;padding-top:1px}
+.diff-text{flex:1;word-break:break-all}
+.inline-del{background:var(--color-background-danger);color:var(--color-text-danger);text-decoration:line-through;border-radius:2px;padding:0 2px}
+.inline-add{background:var(--color-background-success);color:var(--color-text-success);border-radius:2px;padding:0 2px}
+.var-chip{display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:3px;font-size:10px;background:var(--color-background-warning);color:var(--color-text-warning);border:0.5px solid var(--color-border-warning);vertical-align:middle}
+.blame-tooltip{background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:8px 10px;margin:4px 0 0;font-size:11px;display:none}
+.blame-tooltip.show{display:block}
+.blame-tooltip .bt-author{font-weight:500;color:var(--color-text-primary)}
+.blame-tooltip .bt-meta{color:var(--color-text-tertiary);margin-top:1px}
+.blame-tooltip .bt-msg{color:var(--color-text-secondary);margin-top:3px;font-style:italic}
+.right-panel{width:190px;flex-shrink:0;border-left:0.5px solid var(--color-border-tertiary);padding:10px;background:var(--color-background-secondary);overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+.rp-title{font-size:11px;font-weight:500;color:var(--color-text-primary);margin-bottom:6px}
+.rp-label{font-size:10px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-tertiary);margin-bottom:4px}
+.stat-row{display:flex;justify-content:space-between;font-size:11px;color:var(--color-text-secondary);padding:3px 0;border-bottom:0.5px solid var(--color-border-tertiary)}
+.stat-row:last-child{border-bottom:none}
+.hash-val{font-family:var(--font-mono);font-size:10px;color:var(--color-text-tertiary);word-break:break-all;margin-top:3px;line-height:1.5}
+.action-btn{display:flex;align-items:center;gap:5px;padding:6px 10px;border-radius:var(--border-radius-md);font-size:11px;font-weight:500;background:transparent;border:0.5px solid var(--color-border-secondary);cursor:pointer;color:var(--color-text-secondary);width:100%;margin-bottom:4px}
+.action-btn.primary{background:var(--color-text-primary);color:var(--color-background-primary);border-color:transparent}
+.action-btn i{font-size:13px}
+.focus-banner{display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--color-background-warning);border-bottom:0.5px solid var(--color-border-warning);font-size:11px;color:var(--color-text-warning)}
+.focus-banner i{font-size:14px;flex-shrink:0}
+</style>
+
+<div class="editor-shell">
+
+  <div class="topbar">
+    <i class="ti ti-file-text" aria-hidden="true" style="font-size:15px;color:var(--color-text-tertiary)"></i>
+    <span class="tb-title">triage_system_prompt</span>
+    <span class="tb-sub">v1.5.0</span>
+    <span class="badge b-amber" style="margin-left:4px">Candidate</span>
+    <div style="display:flex;align-items:center;gap:5px;margin-left:auto">
+      <span style="font-size:11px;color:var(--color-text-tertiary)">Diff vs</span>
+      <span class="badge b-gray">v1.4.0</span>
+      <span style="font-size:11px;color:var(--color-text-success);margin-left:8px">+2</span>
+      <span style="font-size:11px;color:var(--color-text-danger)">−2</span>
+      <button style="padding:3px 8px;border-radius:var(--border-radius-md);font-size:11px;border:0.5px solid var(--color-border-secondary);background:transparent;cursor:pointer;color:var(--color-text-secondary);margin-left:8px"><i class="ti ti-copy" aria-hidden="true"></i></button>
+      <button style="padding:3px 8px;border-radius:var(--border-radius-md);font-size:11px;border:0.5px solid var(--color-border-secondary);background:transparent;cursor:pointer;color:var(--color-text-secondary)"><i class="ti ti-download" aria-hidden="true"></i></button>
+    </div>
+  </div>
+
+  <div class="focus-banner">
+    <i class="ti ti-alert-triangle" aria-hidden="true"></i>
+    Showing diff focused on exclusions block · 2 of 4 changed lines caused test failures · scroll down to see the full diff
+  </div>
+
+  <div class="body">
+
+    <div class="left-rail">
+      <div class="rail-section">Blocks</div>
+      <div class="rail-item"><i class="ti ti-align-left" aria-hidden="true"></i><span>Role statement</span><span class="badge b-gray" style="font-size:9px">1</span></div>
+      <div class="rail-item"><i class="ti ti-list" aria-hidden="true"></i><span>Assessment criteria</span><span class="badge b-gray" style="font-size:9px">2</span></div>
+      <div class="rail-item active"><i class="ti ti-ban" aria-hidden="true"></i><span>Exclusions</span><span class="badge b-red" style="font-size:9px">2 issues</span></div>
+      <div class="rail-item"><i class="ti ti-list" aria-hidden="true"></i><span>Output format</span><span class="badge b-gray" style="font-size:9px">4</span></div>
+      <div class="rail-item"><i class="ti ti-list" aria-hidden="true"></i><span>Confidence rules</span><span class="badge b-gray" style="font-size:9px">5</span></div>
+
+      <div class="rail-section" style="margin-top:6px">Version history</div>
+      <div class="rail-item"><i class="ti ti-git-commit" aria-hidden="true"></i><span>v1.5.0 · today</span></div>
+      <div class="rail-item"><i class="ti ti-git-commit" aria-hidden="true"></i><span>v1.4.0 · 12d ago</span></div>
+      <div class="rail-item"><i class="ti ti-git-commit" aria-hidden="true"></i><span>v1.3.1 · 28d ago</span></div>
+      <div class="rail-item"><i class="ti ti-git-commit" aria-hidden="true"></i><span>v1.3.0 · 34d ago</span></div>
+
+      <div class="rail-section" style="margin-top:6px">Blame key</div>
+      <div style="padding:4px 10px;display:flex;flex-direction:column;gap:5px">
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--color-text-secondary)"><div style="width:10px;height:10px;border-radius:2px;background:#185FA5;flex-shrink:0"></div>J. Morris · v1.5.0</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--color-text-secondary)"><div style="width:10px;height:10px;border-radius:2px;background:#3B6D11;flex-shrink:0"></div>S. Chen · v1.4.0</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--color-text-secondary)"><div style="width:10px;height:10px;border-radius:2px;background:#854F0B;flex-shrink:0"></div>A. Patel · v1.3.1</div>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="editor-scroll">
+
+        <!-- Block 1: Role statement — unchanged -->
+        <div class="block" id="b1">
+          <div class="gutter" onclick="toggleBlame('blame1')" title="Click for blame info">
+            <div style="display:flex;gap:2px;margin-bottom:3px">
+              <div class="blame-bar" style="background:#3B6D11"></div>
+            </div>
+            <div class="gutter-ln">1</div>
+            <div class="gutter-ln">2</div>
+            <div class="gutter-ln">3</div>
+          </div>
+          <div class="block-content">
+            <div class="block-kind-label"><i class="ti ti-align-left" aria-hidden="true"></i>Prose · role statement <span class="badge b-gray" style="font-size:9px;margin-left:auto">unchanged</span></div>
+            <div class="prose-text">You are a triage underwriter assistant for <span class="var-chip"><i class="ti ti-braces" aria-hidden="true" style="font-size:10px"></i>line_of_business</span> submissions.
+
+Assess each submission against Verity appetite guidelines and return a structured triage signal.</div>
+            <div class="blame-tooltip" id="blame1">
+              <div class="bt-author">S. Chen</div>
+              <div class="bt-meta">v1.4.0 · 12 days ago · a3f9c2d</div>
+              <div class="bt-msg">"Initial behavioural prompt — role statement and LOB binding"</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Block 2: Assessment criteria — unchanged -->
+        <div class="block" id="b2">
+          <div class="gutter" onclick="toggleBlame('blame2')" title="Click for blame info">
+            <div style="display:flex;gap:2px;margin-bottom:3px">
+              <div class="blame-bar" style="background:#3B6D11"></div>
+            </div>
+            <div class="gutter-ln">4</div>
+            <div class="gutter-ln">5</div>
+            <div class="gutter-ln">6</div>
+            <div class="gutter-ln">7</div>
+            <div class="gutter-ln">8</div>
+          </div>
+          <div class="block-content">
+            <div class="block-kind-label"><i class="ti ti-list" aria-hidden="true"></i>List · assessment criteria <span class="badge b-gray" style="font-size:9px;margin-left:auto">unchanged</span></div>
+            <div class="prose-text">Assess each submission for:
+1. Named insured viability and years in business
+2. Loss history severity and loss ratio trend
+3. Financial stability indicators
+4. Exclusions and disqualifying conditions</div>
+            <div class="blame-tooltip" id="blame2">
+              <div class="bt-author">S. Chen</div>
+              <div class="bt-meta">v1.4.0 · 12 days ago · a3f9c2d</div>
+              <div class="bt-msg">"Assessment criteria list — stable across versions"</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Block 3: EXCLUSIONS — CHANGED, highlighted -->
+        <div class="block highlighted" id="b3">
+          <div class="gutter" onclick="toggleBlame('blame3')" title="Click for blame info — this block changed in v1.5.0" style="background:var(--color-background-warning);cursor:pointer">
+            <div style="display:flex;gap:2px;margin-bottom:3px">
+              <div class="blame-bar" style="background:#185FA5"></div>
+              <div class="blame-bar" style="background:#3B6D11;opacity:.35"></div>
+            </div>
+            <div class="gutter-ln" style="color:var(--color-text-warning)">9</div>
+            <div class="gutter-ln" style="color:var(--color-text-warning)">10</div>
+            <div class="gutter-ln" style="color:var(--color-text-warning)">11</div>
+            <div class="gutter-ln" style="color:var(--color-text-warning)">12</div>
+            <div class="gutter-ln" style="color:var(--color-text-warning)">13</div>
+            <div class="gutter-ln" style="color:var(--color-text-warning)">14</div>
+            <div class="gutter-ln" style="color:var(--color-text-warning)">15</div>
+            <div class="gutter-ln" style="color:var(--color-text-warning)">16</div>
+          </div>
+          <div class="block-content">
+            <div class="block-kind-label" style="color:var(--color-text-warning)">
+              <i class="ti ti-ban" aria-hidden="true"></i>List · exclusions
+              <span class="badge b-red" style="margin-left:auto">2 failures traced here</span>
+              <span class="badge b-blue" style="margin-left:4px">J. Morris · v1.5.0</span>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:1px">
+              <div class="diff-line ctx"><span class="diff-gutter"> </span><span class="diff-text">Apply the following rules before scoring:</span></div>
+
+              <div class="diff-line ctx"><span class="diff-gutter"> </span><span class="diff-text">&nbsp;</span></div>
+
+              <div class="diff-line ctx"><span class="diff-gutter"> </span><span class="diff-text">Hard RED — decline immediately:</span></div>
+
+              <div class="diff-line del">
+                <span class="diff-gutter">−</span>
+                <span class="diff-text">- Sanctions exposure (OFAC / SDN)</span>
+              </div>
+              <div class="diff-line del">
+                <span class="diff-gutter">−</span>
+                <span class="diff-text">- Securities fraud or active SEC investigation</span>
+              </div>
+              <div class="diff-line del" style="position:relative">
+                <span class="diff-gutter">−</span>
+                <span class="diff-text">- Hazardous materials run-off policy with &lt; 5yr retroactive coverage <span style="font-size:10px;background:var(--color-background-danger);padding:1px 4px;border-radius:2px;margin-left:4px">← DROPPED in v1.5.0 · caused case #07 failure</span></span>
+              </div>
+              <div class="diff-line del">
+                <span class="diff-gutter">−</span>
+                <span class="diff-text">- Named insured with prior criminal conviction of officers</span>
+              </div>
+
+              <div class="diff-line add">
+                <span class="diff-gutter">+</span>
+                <span class="diff-text">- Sanctions exposure (OFAC / SDN)</span>
+              </div>
+              <div class="diff-line add">
+                <span class="diff-gutter">+</span>
+                <span class="diff-text">- Securities fraud or active SEC investigation</span>
+              </div>
+              <div class="diff-line add" style="position:relative">
+                <span class="diff-gutter">+</span>
+                <span class="diff-text">- Class actions (securities <span class="inline-add">or class action litigation</span>) <span style="font-size:10px;background:var(--color-background-success);padding:1px 4px;border-radius:2px;margin-left:4px">← ADDED · underspecified, caused case #19 failure</span></span>
+              </div>
+              <div class="diff-line add">
+                <span class="diff-gutter">+</span>
+                <span class="diff-text">- Named insured with prior criminal conviction of officers</span>
+              </div>
+
+              <div class="diff-line ctx"><span class="diff-gutter"> </span><span class="diff-text">&nbsp;</span></div>
+              <div class="diff-line ctx"><span class="diff-gutter"> </span><span class="diff-text">AMBER — senior underwriter review required:</span></div>
+              <div class="diff-line ctx"><span class="diff-gutter"> </span><span class="diff-text">- Loss ratio above 0.65 in trailing 3 years</span></div>
+              <div class="diff-line ctx"><span class="diff-gutter"> </span><span class="diff-text">- Named insured &lt; 3 years trading</span></div>
+            </div>
+
+            <div class="blame-tooltip show" id="blame3">
+              <div class="bt-author">J. Morris <span style="font-size:10px;color:var(--color-text-danger);margin-left:4px">← author of both failures</span></div>
+              <div class="bt-meta">v1.5.0 · 2026-05-28 · b8d4e17 · SHA changed: f2a9c1 → 3e7b8d</div>
+              <div class="bt-msg">"Add class actions to exclusions list"</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Block 4: Output format — unchanged -->
+        <div class="block" id="b4">
+          <div class="gutter" onclick="toggleBlame('blame4')" title="Click for blame info">
+            <div style="display:flex;gap:2px;margin-bottom:3px">
+              <div class="blame-bar" style="background:#854F0B"></div>
+            </div>
+            <div class="gutter-ln">17</div>
+            <div class="gutter-ln">18</div>
+            <div class="gutter-ln">19</div>
+            <div class="gutter-ln">20</div>
+            <div class="gutter-ln">21</div>
+          </div>
+          <div class="block-content">
+            <div class="block-kind-label"><i class="ti ti-braces" aria-hidden="true"></i>Code · output schema <span class="badge b-gray" style="font-size:9px;margin-left:auto">unchanged</span></div>
+            <div class="prose-text" style="font-family:var(--font-mono);font-size:11px">Return JSON:
+{
+  "triage_signal": "GREEN" | "AMBER" | "RED",
+  "confidence": 0.0–1.0,
+  "reasoning": "string, min 50 chars"
+}</div>
+            <div class="blame-tooltip" id="blame4">
+              <div class="bt-author">A. Patel</div>
+              <div class="bt-meta">v1.3.1 · 34 days ago · 7c2a1f8</div>
+              <div class="bt-msg">"Formalise output schema as JSON code block"</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Block 5: Confidence rules — unchanged -->
+        <div class="block" id="b5">
+          <div class="gutter" onclick="toggleBlame('blame5')" title="Click for blame info">
+            <div style="display:flex;gap:2px;margin-bottom:3px">
+              <div class="blame-bar" style="background:#3B6D11"></div>
+            </div>
+            <div class="gutter-ln">22</div>
+            <div class="gutter-ln">23</div>
+            <div class="gutter-ln">24</div>
+          </div>
+          <div class="block-content">
+            <div class="block-kind-label"><i class="ti ti-list" aria-hidden="true"></i>List · confidence rules <span class="badge b-gray" style="font-size:9px;margin-left:auto">unchanged</span></div>
+            <div class="prose-text">Confidence below 0.80 must trigger HITL flag.
+Do not guess on exclusion applicability — if uncertain, flag for review.
+State your reasoning before giving the signal.</div>
+            <div class="blame-tooltip" id="blame5">
+              <div class="bt-author">S. Chen</div>
+              <div class="bt-meta">v1.4.0 · 12 days ago · a3f9c2d</div>
+              <div class="bt-msg">"Add confidence threshold and HITL trigger rule"</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Right panel -->
+    <div class="right-panel">
+      <div>
+        <div class="rp-label">Change summary</div>
+        <div style="font-size:11px;color:var(--color-text-secondary);line-height:1.6;margin-top:2px">"Add class actions to exclusions list"</div>
+        <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">J. Morris · 2026-05-28<br>b8d4e17</div>
+      </div>
+
+      <div>
+        <div class="rp-label">Content hash</div>
+        <div class="hash-val">v1.4.0: f2a9c1d8…<br>v1.5.0: 3e7b8d04…<br><span style="color:var(--color-text-warning)">1 block changed</span></div>
+      </div>
+
+      <div>
+        <div class="rp-label">Diff stats</div>
+        <div style="border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);overflow:hidden">
+          <div class="stat-row" style="padding:4px 8px"><span>Blocks changed</span><span>1 of 5</span></div>
+          <div class="stat-row" style="padding:4px 8px"><span>Lines deleted</span><span style="color:var(--color-text-danger)">−4</span></div>
+          <div class="stat-row" style="padding:4px 8px"><span>Lines added</span><span style="color:var(--color-text-success)">+4</span></div>
+          <div class="stat-row" style="padding:4px 8px"><span>Net token Δ</span><span style="color:var(--color-text-success)">+6</span></div>
+          <div class="stat-row" style="padding:4px 8px"><span>Test failures</span><span style="color:var(--color-text-danger)">2</span></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="rp-label" style="margin-bottom:6px">Actions</div>
+        <button class="action-btn primary" onclick="sendPrompt('Create triage_system_prompt v1.5.1 that restores hazardous materials run-off as a hard RED trigger and adds temporal scoping to the class actions rule')"><i class="ti ti-plus" aria-hidden="true"></i>Create v1.5.1 fix</button>
+        <button class="action-btn" onclick="sendPrompt('Show me who reviewed the v1.5.0 promotion from draft to candidate and what evidence they marked as reviewed')"><i class="ti ti-shield-check" aria-hidden="true"></i>View approval record</button>
+        <button class="action-btn" onclick="sendPrompt('Show all test suite cases that cover the exclusions block for triage_agent')"><i class="ti ti-list-check" aria-hidden="true"></i>Related test cases</button>
+        <button class="action-btn" onclick="sendPrompt('What is the full compiled output of triage_system_prompt v1.4.0 for comparison?')"><i class="ti ti-file-text" aria-hidden="true"></i>View v1.4.0 full text</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function toggleBlame(id) {
+  const el = document.getElementById(id);
+  if(el) el.classList.toggle('show');
+}
+</script>
