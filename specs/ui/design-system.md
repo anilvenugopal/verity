@@ -407,6 +407,8 @@ Borderless rows with `--border-faint` dividers. Column headers use the eyebrow p
 
 Verity uses an **apps-based navigation model**, not a monolithic nav tree. Each major capability (Intake, Studio, Registry, Runs, Compliance, Settings) is an independent app. Users pin apps, access recent apps, and search via a command palette.
 
+> **Reference implementation:** `specs/ui/verity-nav-framework.html` — the canonical illustration of the apps-based model (left rail, sidebar, topbar, app launcher, command palette).
+
 ### Left rail
 
 The leftmost column (48px wide). Contains:
@@ -663,6 +665,10 @@ The canvas is the **agent or task** — not the prompt. The prompt is one wired 
 Old mental model: canvas = prompt text, everything else = settings panel
 Correct model:    canvas = entity composition, prompt = one section of it
 ```
+
+> **Reference implementation:** `specs/ui/verity-agent-studio.html` — the current, stronger
+> agent-compose experience and the canonical reference for this section. The earlier
+> `specs/ui/verity_authoring_canvas_model.html` is a superseded sketch.
 
 ### Canvas anatomy
 
@@ -993,3 +999,16 @@ verity-v2/
 **PCR:** `specs/pcr/verity_v2_pcr.md` — architectural intent and open decisions.
 
 **CLAUDE.md:** project root — standing instructions for Claude Code on every session.
+
+**Canonical example files** (`specs/ui/`):
+
+| File | Illustrates | Section |
+|------|-------------|---------|
+| `verity-design-sample.html` | Approved colors, components, app chrome (light + dark) | §3–§6 |
+| `verity-nav-framework.html` | Apps-based navigation model | §7 |
+| `verity-homepage.html` | Homepage / getting-started state | §8 |
+| `verity-agent-studio.html` | **Agent/task compose** — current authoring-canvas reference | §10 |
+| `prompt-editor-v2.jsx` | Prompt block editor prototype | §9 |
+| `verity-intake-wireframe.html` | **Intake flow** — early-iteration UX; reference for the Intake feature spec | §7 (Intake app) |
+| `verity_authoring_canvas_model.html` | Earlier authoring-canvas sketch (superseded by `verity-agent-studio.html`) | §10 |
+| `triage_agent_failing_cases.html` | Pragmatic triage view | §13 |
