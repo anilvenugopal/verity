@@ -287,6 +287,31 @@ warehouse**. The pipeline shape — canonical append-only log → columnar proje
 portable export — is committed; the query engine is an open decision. See
 [[0007-decision-log-scale-and-portable-analytics]] (extends [[0004-storage-architecture]]).
 
+### 3.9 Compliance model: regulatory → canonical → controls & evidence
+
+v2 replaces v1's `canonical requirement → Verity feature` mapping with a **three-axis,
+two-bridge** model ([[0008-compliance-control-evidence-model]]). **Regulatory frameworks
+and their citable provisions** (left) map many-to-many — by **minimum tier** — to a
+**stable center axis of canonical requirements**; canonical requirements are grouped into
+**governance domains** and decomposed into cumulative **tier ladders**; each requirement
+binds, per tier and per lifecycle phase, to **controls** (type, phase, enforcement action)
+and **evidence specifications** (right). New regulations insert by mapping provisions onto
+existing canonical requirements without restructuring the center, and without duplicating
+obligations.
+
+Controls enforce at **four lifecycle phases**, each landing on existing v2 machinery:
+**design-time** (intake/compose), **deploy-time** (the governed-deployment gate,
+[[0006-packages-and-governed-deployment]]), **static/model controls** (the champion
+package at rest), and **execution controls** (the runtime harness). Controls block
+non-compliant activity at the point of occurrence; evidence is an append-only audit fact;
+every **exception** is a first-class audit record (waived tier, affected requirement,
+named approver, compensating controls, expiry). From **intake** onward the platform
+resolves the applicable canonical requirements and drives the required controls/evidence
+through the asset's lifecycle, and **maturity is scored per governance domain** (normalized
+across variable tier ladders). The canonical vocabulary is largely carried over from the
+data-governance platform; the model *around* it is the change. Governance is
+**continuous**, not periodic.
+
 ---
 
 ## 4. Spec-Driven Development Methodology
@@ -404,8 +429,8 @@ Each phase delivers a demonstrable, deployable increment. No phase depends on a 
 **Gate:** Submit a run → dispatched via NATS → executed on an owned/shared container → live events stream to the UI → decision logged → visible in `execution_run_current`. Demo-ready.
 
 ### Phase 8 — Compliance Framework
-**Deliverable:** Regulatory mappings (SR 11-7, NAIC, CO SB21-169, NIST RMF, ISO 42001); model cards; attestations; quotas; compliance-evidence views over the lifecycle/approval primitives built earlier.  
-**Gate:** A champion's full compliance dossier (intake → approvals → validation → decision log) is assembled and exportable. Demo-ready.
+**Deliverable:** The three-axis compliance metamodel ([[0008-compliance-control-evidence-model]]) — regulatory frameworks/provisions, canonical requirements + governance domains + tier ladders, controls (per phase) and evidence specifications, with the regulatory mappings (SR 11-7, NAIC, CO SB21-169, NIST RMF, ISO 42001); design/deploy/static/execution control enforcement wired to the phases built in earlier phases; append-only evidence + first-class exceptions; per-domain maturity scoring.  
+**Gate:** A champion's compliance dossier assembles from controls + captured evidence (not features): every applicable canonical requirement shows its tier, the enforcing controls per phase, the evidence on record, and any registered exceptions; per-domain maturity is scored and exportable. Demo-ready.
 
 ### Phase 9 — Reporting / Analytics
 **Deliverable:** Tier-2 columnar analytics (open Iceberg/Parquet substrate), reporting jobs, and **customer-portable warehouse export** ([[0007-decision-log-scale-and-portable-analytics]]).  

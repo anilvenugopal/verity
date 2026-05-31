@@ -1,7 +1,7 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.1.0 → 1.2.0 (latest amendment)
+Version change: 1.2.0 → 1.3.0 (latest amendment)
 History:
   - (template, unversioned) → 1.0.0 — initial ratification, first concrete principles.
   - 1.0.0 → 1.1.0 — MINOR: relaxed the Docker Compose standard. Compose is now permitted
@@ -12,11 +12,16 @@ History:
     Execution; ADR-0006), a decision-log/analytics tiering + customer-portable-export
     Technical Standard (ADR-0004/0007), and Development-Workflow deployment + sequencing
     gates (PCR §6 feature-driven roadmap). Per product-owner directive 2026-05-30.
+  - 1.2.0 → 1.3.0 — MINOR: added Principle VIII (Continuous, Control-and-Evidence-Based
+    Compliance; ADR-0008) and a Development-Workflow "Compliance gate". Per product-owner
+    directive 2026-05-30.
 
 Modified principles / sections:
   - 1.1.0: Technical Standards — "Deployment target" bullet amended (Compose for local dev).
   - 1.2.0: + Principle VII; + Technical Standards "Decision-log & analytics tiering" bullet;
     + Development Workflow "Deployment gate" and "Sequencing" entries.
+  - 1.3.0: + Principle VIII (compliance as controls + evidence, continuous, phase-enforced);
+    + Development Workflow "Compliance gate".
 Added principles:
   - I. Spec Precedes Implementation
   - II. Schema Is the Hardened Foundation
@@ -157,6 +162,29 @@ could have" is a hard requirement. Governed, compatibility-gated deployment with
 inventory is what makes it provable; out-of-band deploys or mutable-tag images would make
 the audit trail and the safety rails fiction. (ADR-0002, ADR-0006.)
 
+### VIII. Continuous, Control-and-Evidence-Based Compliance
+
+Compliance is expressed as **controls and evidence**, not product features, and is
+enforced **continuously** across the asset lifecycle — never periodically at review
+cycles. Regulatory provisions map (many-to-many, by minimum tier) to a **stable center
+axis of canonical requirements**; each canonical requirement belongs to one or more
+**governance domains** and defines a cumulative **tier ladder**; each requirement binds,
+per tier and per lifecycle phase, to **controls** (each with an enforcement action) and
+**evidence specifications**. Controls enforce at four phases — **design-time, deploy-time,
+static/model, and execution** — and block non-compliant activity at the point of
+occurrence. Every **exception** is a first-class, append-only audit record (waived tier,
+affected requirement, named approver, compensating controls, expiry). From **intake**
+onward, the platform resolves which canonical requirements apply and drives the required
+controls and evidence through the asset's life; maturity is scored per domain, normalized
+across variable tier ladders.
+
+**Rationale**: Examiners ask for the control and the evidence, not a feature list. A
+stable canonical center lets frameworks and controls evolve independently while
+obligations stay rationalized and de-duplicated; continuous, phase-based enforcement with
+audited exceptions is what makes "controlled non-compliance" a defensible position. The
+four phases map onto intake/compose, the deployment gate (Principle VII), the champion
+package, and the runtime harness. (ADR-0008.)
+
 ## Technical Standards & Constraints
 
 - **Service decomposition**: the system is composed of four services —
@@ -200,6 +228,10 @@ the audit trail and the safety rails fiction. (ADR-0002, ADR-0006.)
 - **Deployment gate**: a deploy that bypasses the governance control plane, pins a harness
   image by mutable tag rather than digest, or violates the lifecycle→environment matrix is
   rejected (Principle VII; ADR-0006).
+- **Compliance gate**: an AI asset cannot advance to a lifecycle state whose required
+  controls — for the canonical requirements applicable at its governance domains and tier —
+  are unmet or lack captured evidence, unless a valid, unexpired exception is registered
+  (Principle VIII; ADR-0008).
 - **Sequencing**: capability work follows the feature-driven, vertical-slice roadmap in
   PCR §6 (intake → registry/compose → harness/packaging/deploy → decision logging →
   testing → lifecycle/promotion → prod-like run → compliance → reporting), with the
@@ -229,4 +261,4 @@ the plan-template Constitution Check is the standing gate. Complexity or deviati
 the technical standards MUST be justified in the plan's Complexity Tracking and, where
 cross-cutting, backed by an ADR.
 
-**Version**: 1.2.0 | **Ratified**: 2026-05-29 | **Last Amended**: 2026-05-30
+**Version**: 1.3.0 | **Ratified**: 2026-05-29 | **Last Amended**: 2026-05-30
