@@ -193,3 +193,180 @@ Prioritized review checklist for the human reviewer (ADR-0005 reviewed-artifact 
 ```
 
 Relevant source files inspected: `/home/avenugopal/projects/verity/specs/schema/naming-conventions.md` (confirms `account_user` example and bare `uuidv7()` mandate), and the eight ADRs under `/home/avenugopal/projects/verity/specs/adrs/`.
+
+
+---
+
+# Re-verification after C9 + assembly (2026-05-31)
+
+## Capability-loss re-check (incl. testing)
+
+I have everything needed. I've verified the testing subsystem field-by-field and confirmed the dispositions of all v1 objects. Here is my final analysis.
+
+---
+
+# NO-SILENT-CAPABILITY-LOSS RE-CHECK (incl. testing/validation subsystem)
+
+## C9 (testing/GT/validation subsystem): **CLOSED — confirmed.**
+
+Every v1 testing-subsystem table, column, and CHECK-enum is present in the assembled `validation` section, dispositioned with no silent loss. Field-by-field:
+
+| v1 object | v2 disposition | OK |
+|---|---|---|
+| `test_suite` (all cols) | `governance.test_suite`; `created_by`→`created_by_user_id` (soft ref), `active`→`active` kept, `suite_type` kept | ✅ |
+| `test_case` (all cols) | `governance.test_case`; all cols incl. `applies_to_versions`/`excludes_versions`/`is_adversarial`/`tags`/`metric_config` | ✅ |
+| `test_case_mock` (incl. `mock_kind` CHECK, `call_order`) | `governance.test_case_mock`; CHECK→`governance.mock_kind` enum | ✅ |
+| `test_execution_log` (all cols) | `runtime.test_execution_log` (Tier-2); `suite_id`→`test_suite_id`; all metric/output cols kept; powers `analytics.v_validation_result` (C10) | ✅ |
+| `ground_truth_dataset` (all cols incl. iaa_*, labeling_guide_*, `superseded_by`) | `governance.ground_truth_dataset`; `superseded_by`→`superseded_by_dataset_id`, `created_by`→`created_by_user_id` | ✅ |
+| `ground_truth_record` + `ground_truth_record_mock` | carried verbatim (`dataset_id`→`ground_truth_dataset_id`, `record_id`→`ground_truth_record_id`) | ✅ |
+| `ground_truth_annotation` (incl. `chk_human_fields`/`chk_llm_fields`, `judge_prompt_version_id`) | `governance.ground_truth_annotation`; v1 hard FK on `judge_prompt_version_id`→soft ref; both CHECKs preserved; gains `uq_…_authoritative_per_record` (v1 was app-enforced) | ✅ |
+| `validation_run` (all ~25 cols incl. cohens_kappa, confusion_matrix, fairness_*, sme_*, thresholds_*) | `runtime.validation_run`; `status` varchar→`validation_run_status` enum; `run_by`→`run_by_user_id`, `sme_reviewed_by`→`sme_reviewed_by_user_id` | ✅ |
+| `validation_record_result` (incl. `match_type`, `field_results`) | `runtime.validation_record_result`; `match_type`→`validation_match_type` enum | ✅ |
+| `evaluation_run` (all cols) | `runtime.evaluation_run`; `evaluation_type`→`evaluation_type` enum | ✅ |
+| `model_card` (all cols) | `governance.model_card`; `lifecycle_state`→`card_state` (`model_card_state` enum, deliberately distinct from `lifecycle_state`); `validated_by`/`approved_by`→`*_user_id`; `validation_run_id` v1 FK→soft ref | ✅ |
+| `metric_threshold` (incl. nullable-`field_name` UNIQUE) | `governance.metric_threshold`; v1 UNIQUE split into two partial unique indexes | ✅ |
+| `field_extraction_config` (`field_type`/`match_type`/`tolerance_unit` CHECKs, task-only CHECK) | `governance.field_extraction_config`; three CHECK→enums; task-only CHECK preserved | ✅ |
+| `description_similarity_log` (incl. generated `flagged`) | `runtime.description_similarity_log`; generated col preserved | ✅ |
+| `incident` (all cols, `severity`/`status`) | `governance.incident`; `severity`→`incident_severity`, `status`→`incident_status` enums; `rollback_approved_by`→`*_user_id` | ✅ |
+| `platform_settings` (`key`/`value` reserved words, `input_type`) | `governance.platform_settings`; `key`→`setting_key`, `value`→`setting_value`, `input_type`→`setting_input_type` enum | ✅ |
+| v1 free-text CHECK enums (gt_*, mock_kind, etc.) | all promoted/carried as `governance.*` enums in the enum block | ✅ |
+| `analytics.v_validation_result` source | re-pointed to `runtime.test_execution_log` (C10 closed) | ✅ |
+
+C9 is **CLOSED**. No v1 testing/GT/validation table, column, CHECK-enum, or the dependent analytics view is dropped without an explicit, reasoned disposition.
+
+## All other v1 objects: dispositioned (no silent loss)
+
+Spot-checked the rest of `schema.sql` + intake + compliance + compliance_views against the assembled SQL and `v1-to-v2-mapping.md`. All accounted for: registry tables (agent/task/prompt/versions/tool/mcp_server/data_connector/bindings/delegation/application/application_entity), decisions/model/model_price/invocation-log/hitl_override, runs/quotas, approval_record→promotion, compliance left/center axis, reporting L2–L5, intake. Compliance `feature_plane`/`feature_capability`/`feature`/`requirement_feature_link` are explicit **DROP-with-reason** (ADR-0008 replaces the feature axis with controls/evidence). `requirement_coverage`/`regulatory_framework`/etc. and all 12 `analytics.v_*` views + `entity_consumers` + `execution_context` are **DEFER** to their owning domains, vocabulary retained.
+
+## NOT-yet-present / NOT-dispositioned findings (flag for reviewer)
+
+These are NOT in C9. They are genuine gaps where a v1 capability is referenced by the assembly but no owning v2 section defines it, or a soft-ref is left dangling:
+
+1. **`runtime.execution_context` — no owning section defines it.** v1 has a real table (`runtime.execution_context`: `application_id` FK, `context_ref`, `context_type`, `metadata`, `uq_app_context`). The mapping marks it **DEFER** ("hardened in the runtime-context/application domain"), but **no assembled section in this batch creates it.** The `runs_quotas` section explicitly **DROPPED** the FK (S8) and downgraded `execution_run.execution_context_id` to an app-validated soft pointer; `agent_decision_log.execution_context_id` is likewise a soft ref. So the v1 `execution_context` **table, its columns, and `uq_app_context` are currently NOT present and only conditionally dispositioned** (DEFER to a domain not in this set). If no later domain materializes it, this is a silent capability loss (loss of the business-grouping registry + its uniqueness guarantee). **Action: confirm an owning domain is scheduled, or reinstate the table + deferred FKs.**
+
+2. **`compliance.requirement_coverage` table — DEFER but no owner present here.** The `coverage_level` enum is preserved, but the **table itself** (1:1 coverage prose: `coverage_level`/`rationale`/`customer_actions`/`reviewed_by`/`last_reviewed_at`) is deferred to "the analytics-mart domain" which is not in this assembly. Vocabulary retained, but the table/columns are NOT present. **Action: confirm the analytics-mart domain will define it.**
+
+3. **`analytics` logical-mart views (12) + `governance.entity_consumers` — DEFER, none present.** `v_entity_version`, `v_application_entity`, `v_lifecycle_event`, `v_decision`, `v_override`, `v_intake`, `v_intake_requirement`, `v_intake_approval`, `v_intake_active_estimate`, `v_intake_actuals`, `v_intake_cost_drift`, plus `entity_consumers`. All deferred to the analytics-mart/views domain (not in this batch). Only `v_validation_result` (C10), `v_model_invocation_cost`, the `*_current` projection views, and run/exception/maturity views are present. **Action: confirm the analytics-views domain is scheduled; otherwise these reporting capabilities are lost.**
+
+4. **`mcp_server.transport` lost its closed value set.** v1 documents `stdio | sse | http`; assembled `governance.mcp_server.transport` is bare `text` (S3 "open text"), while `tool.transport` became the `tool_transport` enum (`python_inprocess/mcp/http`). This is an intentional S3 disposition (documented "open"), so **not a silent loss**, but note the v1 `sse` value has no representation in `tool_transport` — acceptable per the mapping, flagging for awareness.
+
+5. **Deferred-FK section does not re-add `hitl_override.created_by_user_id` → identity.** The decisions section says this FK "is emitted in the deferred-FK section (E4)", but the deferred-FK section emits FKs for deployment/harness/package/intake/app_team but **omits `fk_hitl_override_created_by_user`**. The column exists (soft ref), so no column loss, but the promised FK is missing. Similarly the deferred section does not re-add `inference_config.model_id → model` or `agent_version_tool`/`source_binding`/`target_binding` owner FKs — those were explicitly designed as soft refs, so only the `hitl_override` one is an inconsistency vs. its own stated intent. **Action: add `fk_hitl_override_created_by_user` to the deferred section, or update the decisions-section comment.**
+
+### Summary
+- **C9 (testing/validation): CLOSED.** Full no-silent-loss confirmed at the column/CHECK/enum/view level.
+- **Remaining undispositioned-in-this-batch:** `runtime.execution_context` (table + uq, only conditionally deferred — highest risk), `compliance.requirement_coverage` (table), the 12 `analytics.v_*` views + `entity_consumers` (deferred, no owner in batch). These are DEFERs whose owning domains are not part of the assembled set — they become silent losses only if those domains never land.
+- **One inconsistency:** the `hitl_override.created_by_user_id` deferred FK is promised but not emitted.
+
+Relevant files: `/home/avenugopal/projects/verity/specs/schema/10-validation.sql`, `/home/avenugopal/projects/verity/specs/schema/07-runs_quotas.sql` (execution_context DROP/S8), `/home/avenugopal/projects/verity/specs/schema/v1-to-v2-mapping.md` (lines 221, 135, 145, 65).
+
+## Structural / load-order lint (assembled)
+
+Let me reason through this carefully. The key issue is that two sections **redeclare enums** that the consolidated ENUM block already emits.
+
+## STRUCTURAL & LOAD-ORDER LINT FINDINGS
+
+### 1. DUPLICATE ENUM DEFINITIONS (duplicate-object → load failure)
+
+The consolidated `===== ENUMS =====` block explicitly states it emits every enum "EXACTLY ONCE" and that "Tables are NOT emitted here." But two later sections **re-issue `CREATE TYPE`** for enums already created in the ENUM block. Postgres `CREATE TYPE` is not idempotent → these are hard load failures.
+
+**A. `entities` section re-creates 18 enums already in the ENUM block.** The entities section header claims shared enums are "NOT created here," but its body actually runs `CREATE TYPE` for all of these (all `governance.*`), every one a duplicate of the ENUM block:
+- `lifecycle_state`, `deployment_channel`, `capability_type`, `trust_level`, `data_classification`, `entity_type`, `governance_tier`, `api_role`, `metric_type`, `run_purpose`, `version_change_type`, `decision_log_detail`, `tool_transport`, `source_kind`, `source_payload_kind`, `target_kind`, `binding_owner_kind`
+
+Each collides with the identical `CREATE TYPE` in the ENUM block → **18 duplicate-object failures.**
+
+**B. `testing` (validation) section re-creates 17 enums already in the ENUM block.** The ENUM block's "OWNER: validation" group already emits all of these; the testing section's `---- ENUM TYPES ----` block re-issues every one:
+- `gt_dataset_status`, `gt_quality_tier`, `gt_source_type`, `gt_annotator_type`, `mock_kind`, `validation_run_status`, `validation_match_type`, `extraction_field_type`, `extraction_match_type`, `tolerance_unit`, `incident_severity`, `incident_status`, `evaluation_type`, `model_card_state`, `setting_input_type`
+
+→ **15 duplicate-object failures** (the testing block lists 15 `CREATE TYPE`s; all duplicates).
+
+**C. `reporting` section re-creates 6 enums already in the ENUM block.** The ENUM block's "OWNER: reporting" group emits these; the reporting section re-issues:
+- `analytics.mart_field_semantic_type`, `analytics.evidence_field_role`, `analytics.evidence_field_aggregation`, `compliance.report_kind`, `compliance.report_run_status`, `compliance.embedding_runtime`
+
+→ **6 duplicate-object failures.**
+
+**D. `decisions` section re-creates 4 enums already in the ENUM block.** The ENUM block's "OWNER: decisions" group emits `decision_status`, `invocation_status`, `model_status`, `currency_code`; the decisions section body re-issues all 4.
+
+→ **4 duplicate-object failures.**
+
+> Net: every domain section that "owns" enums re-emits them, but the ENUM block already emitted the union. **Either the ENUM block or the per-section `CREATE TYPE`s must be dropped.** As assembled, the build dies at the first entities `CREATE TYPE governance.lifecycle_state`. (intake/auth/compliance/packages_deploy/lifecycle_approvals/runs_quotas correctly do NOT redeclare — only `lifecycle_approvals` adds `versioned_entity_type`, which is NOT in the ENUM block, so that one is correct and unique.)
+
+### 2. DUPLICATE TABLES
+
+No table is defined more than once. The single-owner reconciliation (B9/B10/B11/B13/B14/B15) is internally consistent: `account_user`/grants/`auth_event` only in auth; `model`/`model_price` only in decisions; `application`/intake objects only in intake; `package`/`harness_image`/`deployment` only in packages_deploy; `run_dispatch_outbox` only in runs_quotas (runtime schema). **No duplicate tables flagged.**
+
+### 3. FORWARD-REFERENCE INLINE FKs (target table in a LATER section)
+
+Load order given: auth(10) → ... → intake(13) → compliance(14) → reporting(15) → packages_deploy(16) → lifecycle_approvals(17) → runs_quotas(18) → testing. Within the SQL, the only place a forward inline FK would fault is when an inline `REFERENCES` points at a table created later. I checked each inline FK:
+
+- **`lifecycle_approvals` is the load-order hazard.** Its section header asserts it "loads at step 17, AFTER intake (13) and packages_deploy (16), so every cross-section FK target already exists." Its inline FKs:
+  - `fk_lifecycle_event_approval_request → governance.approval_request` — **BROKEN, but not a forward ref: it's a missing object.** Per the `intake` section report, `approval_request.status` was redesigned to `approval_request_status_event` + `approval_request_current` view, and intake "drops several base-table columns… anything keying on `approval_request.status`." The intake section is delivered as a *file reference only* (`/tmp/intake_section.sql`), so I cannot confirm a table literally named `governance.approval_request` still exists. If intake renamed/replaced it, these two FKs (`fk_lifecycle_event_approval_request`, `fk_promotion_approval_request`) reference a **non-existent table → load failure.** Flag for reviewer: confirm `governance.approval_request` survives in intake as an FK-able table.
+  - `fk_promotion_package → governance.package` — OK (packages_deploy step 16 < 17).
+  - `champion_assignment.fk_champion_assignment_promotion → governance.promotion` (intra-section, defined just above) — OK.
+
+- **No other inline FK is a forward reference.** `entities.agent_version → inference_config` (same section, earlier), `decisions.model_price → model` (same section), `compliance` bridges → compliance left-axis tables (same section, declared earlier per its note), `reporting → compliance.canonical_requirement` (compliance 14 < 15, OK), `packages_deploy` intra-section FKs OK, `runs_quotas → runtime.agent_decision_log` — **see note below.**
+
+- **`runs_quotas` inline FK to `runtime.agent_decision_log` is a CROSS-SCHEMA MISMATCH.** `execution_run_completion`/`execution_run_error` declare inline `fk_*_decision FOREIGN KEY (decision_log_id) REFERENCES runtime.agent_decision_log`. But the `decisions` section creates the table as **`governance.agent_decision_log`**, not `runtime.agent_decision_log`. The target `runtime.agent_decision_log` **does not exist anywhere** → load failure (and a naming inconsistency). The testing section makes the same wrong assumption in comments ("soft ref → runtime.agent_decision_log") but uses no FK there, so testing is safe; runs_quotas is not. **Flag: 2 inline FKs reference a non-existent `runtime.agent_decision_log`.**
+
+### 4. TABLES WITHOUT A PRIMARY KEY
+
+Every base table has a named `pk_*` PRIMARY KEY. Partition children (`auth_event_2026_05/06`, `agent_decision_log_2026_05/06`, `model_invocation_log_2026_05/06`, `evidence_2026_05/06`, `report_run_log_2026_05/06`) inherit the parent composite PK — correct. **No tables without a PK.**
+
+### 5. UNNAMED CONSTRAINTS
+
+All PK/FK/UQ/CHECK constraints use explicit `CONSTRAINT pk_/fk_/uq_/ck_` names. The only unnamed-but-acceptable objects are indexes (`uq_*` partial unique *indexes*, e.g. `uq_model_price_open_per_model`, `uq_ground_truth_annotation_authoritative_per_record`, `uq_metric_threshold_aggregate/per_field`) — these are `CREATE UNIQUE INDEX`, which is the correct idiom for partial uniqueness and is "named." **No unnamed table constraints flagged.**
+
+### 6. MISSING TIER-2 PARTITIONS (current = 2026-05, next = 2026-06)
+
+Every RANGE-partitioned Tier-2 table ships **both** `_2026_05` and `_2026_06` partitions:
+- `governance.auth_event` → 05 + 06 ✓
+- `governance.agent_decision_log` → 05 + 06 ✓
+- `governance.model_invocation_log` → 05 + 06 ✓
+- `compliance.evidence` → 05 + 06 ✓
+- `compliance.report_run_log` → 05 + 06 ✓
+
+`runtime.test_execution_log`, `validation_run`, `evaluation_run`, `description_similarity_log` (testing) are Tier-2 append-only but use **BRIN on a non-partitioned table** (no `PARTITION BY`), so no partitions are required — consistent with their DDL. **No missing current/next-month partitions.** (Minor: comments in compliance/reporting say "today is 2026-05-31"/"today 2026-05" — cosmetic, coverage is correct.)
+
+### 7. NAMING-CONVENTION VIOLATIONS
+
+- **`compliance.exception` — reserved word as a table name.** `EXCEPTION` is a SQL/PL/pgSQL reserved word. `CREATE TABLE compliance.exception` and every unqualified reference will need quoting; this is a naming-convention hazard. **Flag (compliance section).**
+- **PK-includes-partition-key pattern** (`pk_auth_event (auth_event_id, created_at)`, etc.) is intentional and correct for RANGE partitioning — not a violation.
+- Surrogate PK = `<table>_id uuid DEFAULT uuidv7()`, `snake_case`, schema-qualified, `ix_/brin_/fk_/uq_/ck_/pk_` prefixes — **all conformant** across sections. `provider_model_id` rename (decisions) correctly avoids the `<table>_id` surrogate collision.
+- No other casing/prefix violations detected.
+
+---
+
+## SUMMARY (most severe first)
+
+| # | Severity | Object | Section | Issue |
+|---|----------|--------|---------|-------|
+| 1 | **LOAD FAILURE** | 18 `governance.*` enums (lifecycle_state, deployment_channel, capability_type, trust_level, data_classification, entity_type, governance_tier, api_role, metric_type, run_purpose, version_change_type, decision_log_detail, tool_transport, source_kind, source_payload_kind, target_kind, binding_owner_kind) | **entities** | Duplicate `CREATE TYPE` — all already emitted in ENUM block |
+| 2 | **LOAD FAILURE** | 15 `governance.*` enums (gt_dataset_status, gt_quality_tier, gt_source_type, gt_annotator_type, mock_kind, validation_run_status, validation_match_type, extraction_field_type, extraction_match_type, tolerance_unit, incident_severity, incident_status, evaluation_type, model_card_state, setting_input_type) | **testing** | Duplicate `CREATE TYPE` — already in ENUM block |
+| 3 | **LOAD FAILURE** | 6 enums (analytics.mart_field_semantic_type, evidence_field_role, evidence_field_aggregation, compliance.report_kind, report_run_status, embedding_runtime) | **reporting** | Duplicate `CREATE TYPE` — already in ENUM block |
+| 4 | **LOAD FAILURE** | 4 enums (decision_status, invocation_status, model_status, currency_code) | **decisions** | Duplicate `CREATE TYPE` — already in ENUM block |
+| 5 | **LOAD FAILURE** | `fk_execution_run_completion_decision`, `fk_execution_run_error_decision` | **runs_quotas** | Inline FK targets `runtime.agent_decision_log`, which does not exist — decisions creates it as `governance.agent_decision_log`. Cross-schema target mismatch |
+| 6 | **LIKELY LOAD FAILURE / forward-ref** | `fk_lifecycle_event_approval_request`, `fk_promotion_approval_request` | **lifecycle_approvals** | Reference `governance.approval_request`; intake redesigned approval to event+`_current` view and "drops base-table columns keying on approval_request.status." Reviewer must confirm a literal FK-able `governance.approval_request` table still exists in intake (delivered only as `/tmp/intake_section.sql`) |
+| 7 | **NAMING** | `compliance.exception` (+ `exception_current`, all FKs to it) | **compliance** | Table named with reserved word `EXCEPTION`; requires quoting everywhere — convention hazard |
+
+**No findings** for: duplicate tables; tables without a PK; unnamed table constraints; missing current/next-month Tier-2 partitions.
+
+**Root cause of #1–#4:** the ENUM block emits the deduplicated union of all enums "exactly once," but the entities/decisions/reporting/testing sections still carry their original per-section `CREATE TYPE` statements. The assembly must emit enums from **exactly one** place — keep the consolidated ENUM block and strip the `CREATE TYPE` statements from those four sections (auth, intake, compliance, packages_deploy, runs_quotas, and lifecycle_approvals already do this correctly; lifecycle_approvals' lone `versioned_entity_type` is the only correct per-section enum and is NOT a duplicate).
+
+---
+
+# Assembly resolution (2026-05-31)
+
+The consolidated `verity_schema.sql` was deterministically reconstructed from the trusted
+sources (the agent assembly returned two unusable sections). Status of the review gate:
+
+**Resolved**
+- **C9** — testing/validation/GT/model-card/incident/settings domain hardened (`10-validation.sql`); no-silent-loss closed (36 mapping rows; C10 source `runtime.test_execution_log` present).
+- **C1–C4 (#1–#4)** — duplicate `CREATE TYPE` removed (49 dups, incl. a comment-`;`-hidden `compliance.control_phase`); 83 unique enums, 0 duplicates.
+- **#5** — `runtime.agent_decision_log` / `model_invocation_log` FK targets re-pointed to the `governance.*` tables that actually own them.
+- **#6** — `governance.approval_request` present (intake recovered in full from the agent's `/tmp` output); its 6 FKs resolve.
+- **#7** — reserved-word table `compliance.exception` → `compliance.compliance_exception` (+ `_current` view, all refs).
+- Intake (19 tables/9 views) and the full compliance metamodel (all axes — the agent had emitted only the right axis) recovered; 0 duplicate tables/views.
+
+**Remaining (not load-blocking; for human review before acceptance)**
+- **S4** — add `control UNIQUE(control_id, phase)` and make `requirement_control` FK composite `(control_id, phase)` (full compliance domain taken from `04-compliance.sql`, which predates this tightening).
+- **S1–S3, S5–S9** — the original Should-fix items (FR-018 attribution uniformity, loose-text→enum promotions, `execution_context` ownership, etc.).
+- **Load test** — not executed (no PostgreSQL 18 in this environment). A real `psql` load is required to confirm; the per-domain fragments `01-..10-*.sql` remain as provenance.
