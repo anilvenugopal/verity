@@ -1,0 +1,25 @@
+-- =====================================================================
+-- verity_schema.sql — Verity v2 canonical schema (ADR-0005 hardened)
+-- Status: DRAFT — NOT YET RUNNABLE, NOT YET ACCEPTED.
+-- =====================================================================
+--
+-- The per-domain files 01-..09-*.sql are OVERLAPPING AUTHORING FRAGMENTS,
+-- not independent modules. Concatenating / \i-ing them verbatim FAILS:
+-- duplicate CREATE TYPE / CREATE TABLE across domains, conflicting enum
+-- member sets, and forward cross-domain FK references.
+--
+-- Before this becomes the runnable canonical artifact, the review gate in
+-- ASSEMBLY-AND-VERIFICATION.md must be cleared:
+--   1. Close every Critical item (C1–C11) — incl. C9: the ground-truth /
+--      testing / validation / model-card / incident / platform-settings
+--      subsystem (4 enums + 17 v1 tables) has NO v2 home yet (a
+--      no-silent-capability-loss gap; ADR-0005 hard gate).
+--   2. Apply the "Cross-domain reconciliation" patches (single-owner
+--      de-duplication of shared enums/tables + deferred cross-domain FK
+--      ALTERs) to produce ONE consolidated, single-owner schema.
+--   3. Disposition the Should-fix items (fix or waive-with-reason).
+--
+-- Until then, read the fragments as the per-domain hardening drafts and
+-- v1-to-v2-mapping.md as the (incomplete) disposition. This file is a
+-- placeholder for the assembled output, intentionally left non-loadable.
+-- =====================================================================
