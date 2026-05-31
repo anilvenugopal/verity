@@ -40,6 +40,26 @@ This is **platform plumbing**, not a product vertical slice; the equity-research
 **local-dev-first** spec; production deltas are called out explicitly throughout and
 consolidated under *What changes for production*.
 
+> **Spec tier & slicing.** 001 is the **component spec** for `verity-governance` (PCR §4
+> hierarchy: ADRs → component specs → slices → implementation) and the behavioral source of
+> truth for the whole service. The roadmap phases (Intake, Registry/Compose, Decision
+> Logging, …) are **plan-driven delivery slices** of it — each is realized via
+> `/speckit.plan` + `/speckit.tasks` scoped to the relevant `FR-*` ranges here (plus its
+> UX wireframe and phase controls), and does **not** re-state these requirements as a
+> separate spec. Capability shapes are defined once: here for behavior, in
+> `specs/schema/verity_schema.sql` for data.
+
+---
+
+## Clarifications
+
+### Session 2026-05-31
+
+- Q: Minimum evidence set to promote a version to champion? → A: The **full validation set + design/static control evidence** — staging tests passed; ground-truth passed & reviewed; model card reviewed; challenger metrics reviewed; the risk-tier approval quorum + champion confirmation; impact assessment complete (limited/high); all linked functional & compliance requirements satisfied; and captured evidence for every design-time + static/model control required at the asset's tier (deploy/execution controls enforce at their own phases).
+- Q: Who may approve a compliance exception (waiving a control tier)? → A: A dedicated `approve_exception` action (distinct from promotion sign-off), granted to the `compliance` and `security` roles.
+- Q: Target latency for a decision-log record to become visible in the UI? → A: ≤ 20 seconds (p95), via async/batched ingest.
+- Q: Quota enforcement posture in v2? → A: Per-quota configurable — soft (warn/breach, never refuse) by default, with an optional hard-stop that refuses the run when the budget is exceeded.
+
 ---
 
 ## User Scenarios & Testing *(mandatory)*
@@ -198,9 +218,10 @@ draft; generate a model-inventory report and page the analytics feed by cursor.
 
 ### Edge Cases
 
-- **Quota breach (soft):** spend crosses the budget threshold → a `quota_check` records
-  `warning`/`breach` and surfaces on incidents; the invocation is **never refused** in
-  v1 (soft enforcement). Hard enforcement is deferred (see disposition).
+- **Quota breach:** spend crosses the budget threshold → a `quota_check` records
+  `warning`/`breach` and surfaces on incidents. With **soft** enforcement (default) the
+  invocation proceeds; with **hard-stop** enforcement the invocation is **refused** at
+  execution time (FR-QT-004).
 - **Run terminates without a decision row** (e.g. cancelled before claim): the run still
   resolves to a terminal envelope; telemetry/audit-derived fields are simply absent.
 - **Concurrent workers** claim the queue: claims are atomic and contention-free so no two
@@ -248,7 +269,11 @@ throughout.
   `lock_envelope`, `delete` (the matrix cells and the 10-member `studio_role` set are
   authoritative in [[user-authentication]]). Unknown role, unknown action, or a route with
   no declared action MUST **deny** (fail-closed). The v1 cookie-persona source is replaced;
-  the matrix and fail-closed behavior are unchanged.
+  the matrix and fail-closed behavior are unchanged. Beyond the v1 set, v2 adds explicit
+  fail-closed action cells for governed deployment (`deploy_nonprod`, `deploy_prod`,
+  `promote_champion`, `lock_deprecated`, `cleanup_deprecated`; ADR-0006), role mutation
+  ([[user-authentication]]), and **`approve_exception`** (compliance exceptions, FR-RP-009;
+  granted to `compliance`/`security`).
 - **FR-AUTHZ-002**: Action attribution previously self-asserted via persona
   (`acting_as_role`, `opened_by_role`, signoff role, `locked_role`) MUST be derived from
   the authenticated principal. Sign-off role MUST be derived from the principal and MUST
@@ -452,11 +477,16 @@ throughout.
   with the human-readable issue list; the gate must also be previewable read-only (to
   enable/disable UI controls).
 - **FR-LC-004**: The `candidate → champion` fast-track MUST NOT be gate-free in v2. v1
-  allowed it for demo seeding with no gate; v2 MUST require, at minimum, the champion-
-  confirmation and intake-gate checks for any non-seed promotion to champion (see
-  disposition). [NEEDS CLARIFICATION: exact minimum evidence set required on the
-  `candidate → champion` fast-track in v2 — champion-confirmation + intake-gate only, or
-  the full `challenger → champion` validation set?]
+  allowed it for demo seeding with no gate; in v2 **any non-seed promotion to champion** —
+  by fast-track or via `challenger → champion` — MUST satisfy the **full champion evidence
+  set**: staging tests passed; `ground_truth_passed`, `ground_truth_reviewed`,
+  `model_card_reviewed`, `challenger_metrics_reviewed`; the risk-tier approval quorum and
+  server-authoritative champion confirmation (FR-LC-003/005, FR-AP-005); impact assessment
+  complete for `limited`/`high` intakes; all linked `functional`/`compliance` requirements
+  satisfied; **and** captured evidence for every **design-time and static/model control**
+  required at the asset's tier (FR-RP-007/008/011). Deploy-time and execution controls
+  enforce at their own phases. A seed-only bootstrap path MAY bypass gates but MUST be
+  flagged as seed and is non-production.
 - **FR-LC-005**: Champion-targeted promotion MUST require an explicit, server-authoritative
   champion-confirmation step (deliberate acknowledgement; the v1 Studio name-typeback is
   one such mechanism) recorded as a dedicated audit fact, never inferred from free text.
@@ -604,11 +634,13 @@ throughout.
   breach when a quota comes back clear (decrementing the active-breach count). The system
   MUST surface check history, latest-check-per-quota, and active-breach count (most-recent
   check per quota with an unresolved fired alert).
-- **FR-QT-004**: Quota enforcement MUST remain **soft** in this scope: the system records
-  alerts but MUST NOT refuse invocations on quota state; `hard_stop` is stored but not
-  enforced (hard enforcement is deferred — see disposition). Quota guidance for a realized
-  entity MUST be derivable by reverse-looking-up its plan-row link to the parent intake's
-  locked envelope.
+- **FR-QT-004**: Quota enforcement MUST be **per-quota configurable** via an enforcement
+  mode: **soft by default** (record `warning`/`breach`, never refuse the invocation), with
+  an optional **hard-stop** (`hard_stop=true`) that **refuses** the invocation as an
+  execution-phase control when the budget is exceeded. Soft remains the default to preserve
+  v1 behavior; the `hard_stop` flag (stored but inert in v1) becomes enforceable in v2.
+  Quota guidance for a realized entity MUST be derivable by reverse-looking-up its plan-row
+  link to the parent intake's locked envelope.
 
 ### Capability area: Plan generation
 
@@ -766,7 +798,8 @@ throughout.
 - **FR-RP-009 — Exception governance.** When a control would block but an exception is
   warranted, the system MUST require a registered **exception** before proceeding, carrying:
   the **specific tier waived**, the **canonical requirement affected**, the **approving
-  authority** (a named principal authorized for the exception-approval action,
+  authority** (a principal holding the dedicated **`approve_exception`** action — granted to
+  the `compliance` and `security` roles, distinct from promotion sign-off;
   [[user-authentication]]), the **compensating controls**, and a **maximum permitted
   duration (expiry)**. Exceptions MUST be first-class, **append-only** audit records visible
   in the audit trail; an **expired** exception MUST stop suppressing its control (the block
@@ -967,6 +1000,19 @@ shape, not a binding wire format; the canonical OpenAPI lives with the service.
 
 ---
 
+## UI surfaces *(reference; build detail out of scope)*
+
+All UI-serving and Studio/admin surfaces are **clients of this gated API** (FR-AUTHZ-001),
+not a separate authority; their visual and interaction design is governed by the canonical
+[[design-system]] (`specs/ui/design-system.md`) — UI build detail is out of scope for this
+service spec. Key surfaces are illustrated by approved references: **navigation** →
+`specs/ui/verity-nav-framework.html` (apps-based model, design-system §7); **agent/task
+compose** → `specs/ui/verity-agent-studio.html` (authoring canvas, design-system §10);
+**intake** → `specs/ui/verity-intake-wireframe.html` (early-iteration UX, carried into the
+Intake feature spec). These bind the *observable* surfaces (intake, registry/compose,
+lifecycle, runs, decisions, compliance) to a consistent UX without constraining
+implementation.
+
 ## Success Criteria *(mandatory; measurable, technology-agnostic)*
 
 - **SC-001**: 100% of governance writes occur through the API; zero non-governance
@@ -987,6 +1033,9 @@ shape, not a binding wire format; the canonical OpenAPI lives with the service.
 - **SC-006**: Decision and model-invocation logs are provably append-only (no update/delete
   path exists), and a decision-log row is ingested for ≥99.9% of non-`none`-detail
   invocations.
+- **SC-006a**: A decision-log record is visible in the UI within **20 seconds (p95)** of the
+  invocation, via async/batched ingest; reporting/analytics run separately as jobs and are
+  never on the status path.
 - **SC-007**: A YAML bundle round-trips deterministically: re-exporting an imported bundle
   yields byte-identical output, the dependency graph reconstructs in a fresh store, and all
   imported versions land as `draft`.
@@ -1042,10 +1091,10 @@ shape, not a binding wire format; the canonical OpenAPI lives with the service.
 
 ## Out of scope / v2 deferrals
 
-- **Hard quota enforcement.** v2-in-scope quotas remain **soft** (alert-only); `hard_stop`
-  is stored but not enforced. Blocking invocations on quota state is **DEFERRED** to a
-  later phase. *(DEFER — no invocation-time enforcement infrastructure in this scope; soft
-  alerts preserve the audit signal meanwhile.)*
+- **Quota enforcement is per-quota configurable** (clarified 2026-05-31): **soft by
+  default** (alert-only), with an optional **hard-stop** that refuses the invocation as an
+  execution-phase control (FR-QT-004). *(No longer deferred; soft remains the default so the
+  v1 audit signal is preserved unless a quota opts into hard-stop.)*
 - **Scheduled quota checker / notifications.** On-demand and batch checks are in scope; a
   scheduled checker and outbound notifications are **DEFERRED**.
 - **Tier-2 bulk log store + portable analytics materialization.** The customer-portable
@@ -1215,7 +1264,7 @@ inventories is accounted for.
 | Quota check (period windows, spend-vs-budget, alert level, auto-resolve) | KEEP | |
 | Batch check (skip disabled, isolate failures) | KEEP | |
 | Check history / latest-per-quota / active-breach count | KEEP | |
-| Soft enforcement (no invocation refusal); `hard_stop` stored-not-enforced | DEFER | Hard enforcement deferred (Out of scope). |
+| Quota enforcement mode | CHANGE | v1 soft-only (`hard_stop` inert) → v2 **per-quota configurable**: soft default + optional **enforceable** hard-stop that refuses the run as an execution-phase control (FR-QT-004; clarified 2026-05-31). |
 | Quota guidance for realized entity (envelope reverse-lookup) | KEEP | |
 | Breaches not written to `incident` table | KEEP | Surfaced via the incidents union instead. |
 

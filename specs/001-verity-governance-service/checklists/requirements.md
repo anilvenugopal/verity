@@ -17,9 +17,9 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
-  - **1 remaining** (FR-LC area): exact minimum evidence set required on the champion
-    promotion gate. Deferred to the lifecycle/promotion phase; surfaced to the user.
+- [x] No [NEEDS CLARIFICATION] markers remain
+  - **Resolved 2026-05-31** (`/speckit.clarify`): the champion-gate minimum evidence set is
+    defined (FR-LC-004); 0 markers remain.
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic
@@ -48,7 +48,8 @@
 
 ## Notes
 
-- One open clarification (minimum champion-gate evidence set) — resolve via `/speckit.clarify`
-  or in the lifecycle/promotion phase. Not a blocker for planning the rest.
+- All clarifications resolved (Session 2026-05-31): champion-gate evidence set, exception
+  approver (`approve_exception` → compliance/security), decision-log visibility ≤20s p95,
+  configurable quota enforcement. Spec is clarification-clean and ready for `/speckit.plan`.
 - Compliance model traces to [[0008-compliance-control-evidence-model]]; constitution
   Principle VIII (v1.3.0) and PCR §3.9 carry the same model.
