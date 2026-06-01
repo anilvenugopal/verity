@@ -13,7 +13,7 @@ these as they are ruled. Related: [[0005-schema-hardening]], [[0004-storage-arch
 | 5 | Polymorphic refs / `executable` supertype | **Extensible shared parent** (see below) | 2026-05-31 | ✅ Ruled — pending DDL apply |
 | 6 | Attribution — unified `actor` (human + automation) | **actor_id + acting_role_code everywhere**; named automation actor, optionally linked to application | 2026-05-31 | ✅ Ruled — pending DDL apply |
 | 7 | Per-domain fidelity (intake, compliance) | intake ✅; compliance ✅ (`governance_domain` confirmed) | 2026-05-31 | ✅ Ruled — pending DDL apply |
-| 8 | Deployment status/health + harness flavor/version model | sketched (expand in packages-domain review) | 2026-05-31 | 🔶 Open |
+| 8 | Packages, deployment & harness control plane | **Ruled** (see below) | 2026-05-31 | ✅ Ruled — pending DDL apply |
 | 9 | Obligation determination & evidence mapping via ontology/reasoning (human-validated, relational SoR) | needs ADR | 2026-05-31 | 🔶 Open (own ADR) |
 
 ---
@@ -235,6 +235,50 @@ its `application`** (so logs read "automation `X` on behalf of app `Y`").
   append-only snapshots.
 - **`governance_domain`** → reference vocab. **Name confirmed `governance_domain`** (AI-governance
   areas, broader than compliance; matches the "AI governance domain" framing).
+
+## D8 — Packages, deployment & harness control plane (RULED 2026-05-31)
+
+Renamed `harness_flavor` → **`harness_variant`**. **champion ≠ deployed.** Three distinct
+things: **cluster** (infra), **`harness_instance`** (a running harness container on a cluster
+— the "collector", BigID-style), **`package_deployment`** (a package placed to run).
+**Digest** = a content fingerprint (`sha256:…`) of an artifact's exact bytes; a deployment
+pins **both** the `package_digest` and the resolved harness `image_digest` for reproducibility.
+
+**Harness control plane (two-directional):**
+- `harness_variant` (execution-engine variant, e.g. `claude_agentic_loop`) → `harness_image`
+  (variant + version + `image_digest`).
+- `harness_instance` — running harness on a cluster: `current_image` + `desired_image`
+  (patch by desired-vs-current convergence), owned/shared scope, `status`
+  (active/draining/disabled), denormalized `last_seen`.
+- **Up:** `harness_heartbeat` (**audit**, append-only, partitioned) — **minor** (frequent/light)
+  + **major** (less frequent/full, carries the **running-package catalog**) →
+  `harness_instance_health_current`, `harness_running_package_current`; enables **drift
+  detection** (actual vs intended deployments).
+- **Down:** `harness_instance_command` (append-only) — portal→agent: patch/restart/drain/
+  enable/disable/reload_packages; status pending→acknowledged→succeeded/failed.
+- Logs/diagnostics are **NOT** in the SoR → observability; a `collect_diagnostics` command
+  points to them.
+
+**Package deployment:**
+- `package` (`.vtx`/`.vax`, `package_digest`) from an `executable_version` (D5).
+- `package_harness_compatibility` — package ↔ **variant + version range** (declare loose;
+  deploy resolves + pins the exact harness `image_digest`).
+- `package_deployment` — package on a target cluster, pinned harness `image_digest`,
+  `run_mode`, environment, `status`; **lifecycle-gated** (staging/shadow/challenger/champion
+  → 0..N targets per the ADR-0006 matrix).
+- `package_deployment_event` — append-only governed ops + outcome + actor.
+- `deployment_connection` — env-specific connections; in the SoR **and** materialized into
+  the package bundle (runtime self-contained).
+- `deployment_binding_override` — per Source/Target binding `real | mocked` (+ payload);
+  **`run_mode` read-only forcibly suppresses/mocks Target Bindings** (shadow/challenger
+  safety rail).
+- `deployment_environment`, `deployment_cluster` (`non_prod`/`prod`/`ephemeral`).
+
+**Cross-cutting:** vocab → `reference` (variant, run_mode, deployment_operation, outcome,
+health_status, command_kind, environment_kind); control plane + deployment inventory →
+`core`, heartbeats → `audit`; `package` → `executable_version`; actor attribution incl.
+**automation actors**; deployment `status` mutable + append-only events; health append-only
++ current view. Relates to [[0006-packages-and-governed-deployment]], [[0002-execution-model]].
 
 > **D9 (own ADR):** obligation determination & evidence mapping may use an **ontology +
 > reasoning** (DL/SHACL/rules and/or LLM) as a *derivation layer* that **recommends**,
