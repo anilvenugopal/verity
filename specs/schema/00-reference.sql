@@ -524,5 +524,173 @@ CREATE TABLE reference.quota_alert_level (
     CONSTRAINT pk_quota_alert_level PRIMARY KEY (code), CONSTRAINT uq_quota_alert_level_sort UNIQUE (sort_order));
 INSERT INTO reference.quota_alert_level (code, label, sort_order) VALUES ('warning',1),('exceeded',2),('critical',3);
 
--- Further vocabularies (deployment_channel, environment_kind, run_mode, … for 08)
--- are appended here as their domains are re-applied.
+-- ===== DEPLOY-domain vocabularies (used by 08-deploy.sql) =============
+CREATE TABLE reference.harness_variant (
+    code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL,
+    grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date,
+    effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT pk_harness_variant PRIMARY KEY (code), CONSTRAINT uq_harness_variant_sort UNIQUE (sort_order));
+COMMENT ON TABLE reference.harness_variant IS 'Vocabulary: harness execution-engine variant (the kind of container/runtime). D8.';
+INSERT INTO reference.harness_variant (code, label, sort_order, description) VALUES
+    ('claude_agentic_loop','Claude agentic loop',1,'current default agent/task execution engine');
+
+CREATE TABLE reference.environment_kind (
+    code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL,
+    grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date,
+    effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT pk_environment_kind PRIMARY KEY (code), CONSTRAINT uq_environment_kind_sort UNIQUE (sort_order));
+INSERT INTO reference.environment_kind (code, label, sort_order) VALUES ('non_prod',1),('prod',2),('ephemeral',3);
+
+CREATE TABLE reference.deployment_channel (
+    code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL,
+    grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date,
+    effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT pk_deployment_channel PRIMARY KEY (code), CONSTRAINT uq_deployment_channel_sort UNIQUE (sort_order));
+INSERT INTO reference.deployment_channel (code, label, sort_order) VALUES
+    ('development',1),('staging',2),('evaluation',3),('production',4);
+
+-- deployment_run_mode: how a deployed package executes (the shadow/ab/live/locked clarification)
+CREATE TABLE reference.deployment_run_mode (
+    code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL,
+    grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date,
+    effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT pk_deployment_run_mode PRIMARY KEY (code), CONSTRAINT uq_deployment_run_mode_sort UNIQUE (sort_order));
+INSERT INTO reference.deployment_run_mode (code, label, sort_order, description) VALUES
+    ('live','Live',1,'champion: full Source+Target bindings, all traffic'),
+    ('shadow','Shadow',2,'challenger: full inputs, Target bindings suppressed (zero impact)'),
+    ('ab','A/B',3,'challenger: full I/O on a scoped sample (carries ab_sample marker)'),
+    ('locked','Locked',4,'deprecated: no execution');
+
+CREATE TABLE reference.deployment_operation (
+    code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL,
+    grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date,
+    effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT pk_deployment_operation PRIMARY KEY (code), CONSTRAINT uq_deployment_operation_sort UNIQUE (sort_order));
+INSERT INTO reference.deployment_operation (code, label, sort_order) VALUES
+    ('deploy_nonprod',1),('deploy_prod',2),('promote_champion',3),('lock_deprecated',4),('cleanup_deprecated',5),('rollback',6);
+
+CREATE TABLE reference.deployment_outcome (
+    code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL,
+    grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date,
+    effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT pk_deployment_outcome PRIMARY KEY (code), CONSTRAINT uq_deployment_outcome_sort UNIQUE (sort_order));
+INSERT INTO reference.deployment_outcome (code, label, sort_order) VALUES
+    ('requested',1),('rejected_incompatible',2),('rejected_lifecycle',3),('rejected_unauthorized',4),('succeeded',5),('failed',6),('superseded',7);
+
+CREATE TABLE reference.deployment_status (
+    code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL,
+    grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date,
+    effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT pk_deployment_status PRIMARY KEY (code), CONSTRAINT uq_deployment_status_sort UNIQUE (sort_order));
+INSERT INTO reference.deployment_status (code, label, sort_order) VALUES ('active',1),('superseded',2),('stopped',3);
+
+CREATE TABLE reference.harness_instance_status (
+    code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL,
+    grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date,
+    effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT pk_harness_instance_status PRIMARY KEY (code), CONSTRAINT uq_harness_instance_status_sort UNIQUE (sort_order));
+INSERT INTO reference.harness_instance_status (code, label, sort_order) VALUES ('active',1),('draining',2),('disabled',3);
+
+CREATE TABLE reference.health_status (
+    code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL,
+    grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date,
+    effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT pk_health_status PRIMARY KEY (code), CONSTRAINT uq_health_status_sort UNIQUE (sort_order));
+INSERT INTO reference.health_status (code, label, sort_order) VALUES ('healthy',1),('degraded',2),('down',3),('unknown',4);
+
+CREATE TABLE reference.heartbeat_kind (
+    code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL,
+    grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date,
+    effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT pk_heartbeat_kind PRIMARY KEY (code), CONSTRAINT uq_heartbeat_kind_sort UNIQUE (sort_order));
+INSERT INTO reference.heartbeat_kind (code, label, sort_order, description) VALUES
+    ('minor','Minor',1,'frequent/light: alive + basic health'),('major','Major',2,'less frequent/full: running-package catalog + metrics');
+
+CREATE TABLE reference.command_kind (
+    code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL,
+    grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date,
+    effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT pk_command_kind PRIMARY KEY (code), CONSTRAINT uq_command_kind_sort UNIQUE (sort_order));
+INSERT INTO reference.command_kind (code, label, sort_order) VALUES
+    ('patch',1),('restart',2),('drain',3),('enable',4),('disable',5),('reload_packages',6),('collect_diagnostics',7);
+
+CREATE TABLE reference.command_status (
+    code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL,
+    grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date,
+    effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT pk_command_status PRIMARY KEY (code), CONSTRAINT uq_command_status_sort UNIQUE (sort_order));
+INSERT INTO reference.command_status (code, label, sort_order) VALUES
+    ('pending',1),('acknowledged',2),('succeeded',3),('failed',4);
+
+-- ===== REPORTING-domain vocabularies (used by 09-reporting.sql) =======
+CREATE TABLE reference.embedding_runtime (
+    code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL,
+    grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date,
+    effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT pk_embedding_runtime PRIMARY KEY (code), CONSTRAINT uq_embedding_runtime_sort UNIQUE (sort_order));
+INSERT INTO reference.embedding_runtime (code, label, sort_order) VALUES ('fastembed','FastEmbed',1);
+
+CREATE TABLE reference.report_kind (
+    code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL,
+    grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date,
+    effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT pk_report_kind PRIMARY KEY (code), CONSTRAINT uq_report_kind_sort UNIQUE (sort_order));
+INSERT INTO reference.report_kind (code, label, sort_order) VALUES ('metadata_driven',1),('template_driven',2);
+
+CREATE TABLE reference.report_run_status (
+    code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL,
+    grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date,
+    effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT pk_report_run_status PRIMARY KEY (code), CONSTRAINT uq_report_run_status_sort UNIQUE (sort_order));
+INSERT INTO reference.report_run_status (code, label, sort_order) VALUES ('pending',1),('succeeded',2),('failed',3);
+
+-- ===== VALIDATION-domain vocabularies (used by 10-validation.sql) =====
+-- compact: code/label/sort_order + standard columns (description/grouping/parent_code/
+-- effective_*/is_active/metadata/created_at/updated_at), PK(code), UNIQUE(sort_order).
+CREATE TABLE reference.gt_dataset_status (code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL, grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date, effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), CONSTRAINT pk_gt_dataset_status PRIMARY KEY (code), CONSTRAINT uq_gt_dataset_status_sort UNIQUE (sort_order));
+INSERT INTO reference.gt_dataset_status (code,label,sort_order) VALUES ('collecting',1),('labeling',2),('adjudicating',3),('ready',4),('deprecated',5);
+CREATE TABLE reference.gt_quality_tier (code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL, grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date, effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), CONSTRAINT pk_gt_quality_tier PRIMARY KEY (code), CONSTRAINT uq_gt_quality_tier_sort UNIQUE (sort_order));
+INSERT INTO reference.gt_quality_tier (code,label,sort_order) VALUES ('silver',1),('gold',2);
+CREATE TABLE reference.gt_source_type (code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL, grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date, effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), CONSTRAINT pk_gt_source_type PRIMARY KEY (code), CONSTRAINT uq_gt_source_type_sort UNIQUE (sort_order));
+INSERT INTO reference.gt_source_type (code,label,sort_order) VALUES ('document',1),('submission',2),('synthetic',3);
+CREATE TABLE reference.gt_annotator_type (code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL, grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date, effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), CONSTRAINT pk_gt_annotator_type PRIMARY KEY (code), CONSTRAINT uq_gt_annotator_type_sort UNIQUE (sort_order));
+INSERT INTO reference.gt_annotator_type (code,label,sort_order) VALUES ('human_sme',1),('llm_judge',2),('adjudicator',3);
+CREATE TABLE reference.mock_kind (code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL, grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date, effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), CONSTRAINT pk_mock_kind PRIMARY KEY (code), CONSTRAINT uq_mock_kind_sort UNIQUE (sort_order));
+INSERT INTO reference.mock_kind (code,label,sort_order) VALUES ('tool',1),('source',2),('target',3);
+CREATE TABLE reference.validation_run_status (code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL, grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date, effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), CONSTRAINT pk_validation_run_status PRIMARY KEY (code), CONSTRAINT uq_validation_run_status_sort UNIQUE (sort_order));
+INSERT INTO reference.validation_run_status (code,label,sort_order) VALUES ('running',1),('complete',2),('failed',3);
+CREATE TABLE reference.validation_match_type (code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL, grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date, effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), CONSTRAINT pk_validation_match_type PRIMARY KEY (code), CONSTRAINT uq_validation_match_type_sort UNIQUE (sort_order));
+INSERT INTO reference.validation_match_type (code,label,sort_order) VALUES ('exact',1),('partial',2),('fuzzy',3);
+CREATE TABLE reference.extraction_field_type (code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL, grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date, effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), CONSTRAINT pk_extraction_field_type PRIMARY KEY (code), CONSTRAINT uq_extraction_field_type_sort UNIQUE (sort_order));
+INSERT INTO reference.extraction_field_type (code,label,sort_order) VALUES ('string',1),('numeric',2),('date',3),('boolean',4),('enum',5);
+CREATE TABLE reference.extraction_match_type (code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL, grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date, effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), CONSTRAINT pk_extraction_match_type PRIMARY KEY (code), CONSTRAINT uq_extraction_match_type_sort UNIQUE (sort_order));
+INSERT INTO reference.extraction_match_type (code,label,sort_order) VALUES ('exact',1),('numeric_tolerance',2),('case_insensitive',3),('contains',4);
+CREATE TABLE reference.tolerance_unit (code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL, grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date, effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), CONSTRAINT pk_tolerance_unit PRIMARY KEY (code), CONSTRAINT uq_tolerance_unit_sort UNIQUE (sort_order));
+INSERT INTO reference.tolerance_unit (code,label,sort_order) VALUES ('percent',1),('absolute',2);
+CREATE TABLE reference.incident_severity (code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL, grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date, effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), CONSTRAINT pk_incident_severity PRIMARY KEY (code), CONSTRAINT uq_incident_severity_sort UNIQUE (sort_order));
+INSERT INTO reference.incident_severity (code,label,sort_order) VALUES ('critical',1),('high',2),('medium',3),('low',4);
+CREATE TABLE reference.incident_status (code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL, grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date, effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), CONSTRAINT pk_incident_status PRIMARY KEY (code), CONSTRAINT uq_incident_status_sort UNIQUE (sort_order));
+INSERT INTO reference.incident_status (code,label,sort_order) VALUES ('open',1),('investigating',2),('mitigated',3),('resolved',4),('closed',5);
+CREATE TABLE reference.evaluation_type (code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL, grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date, effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), CONSTRAINT pk_evaluation_type PRIMARY KEY (code), CONSTRAINT uq_evaluation_type_sort UNIQUE (sort_order));
+INSERT INTO reference.evaluation_type (code,label,sort_order) VALUES ('shadow',1),('challenger',2),('periodic',3),('drift_check',4);
+CREATE TABLE reference.model_card_state (code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL, grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date, effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), CONSTRAINT pk_model_card_state PRIMARY KEY (code), CONSTRAINT uq_model_card_state_sort UNIQUE (sort_order));
+INSERT INTO reference.model_card_state (code,label,sort_order) VALUES ('draft',1),('in_review',2),('approved',3),('superseded',4);
+CREATE TABLE reference.setting_input_type (code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL, grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date, effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), CONSTRAINT pk_setting_input_type PRIMARY KEY (code), CONSTRAINT uq_setting_input_type_sort UNIQUE (sort_order));
+INSERT INTO reference.setting_input_type (code,label,sort_order) VALUES ('text',1),('select',2),('number',3);
+
+-- (END of vocabularies. This file is split into reference/<vocab>.sql at the reorg.)
