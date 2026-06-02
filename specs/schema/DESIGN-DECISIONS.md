@@ -15,6 +15,7 @@ these as they are ruled. Related: [[0005-schema-hardening]], [[0004-storage-arch
 | 7 | Per-domain fidelity (intake, compliance) | intake ✅; compliance ✅ (`governance_domain` confirmed) | 2026-05-31 | ✅ Ruled — pending DDL apply |
 | 8 | Packages, deployment & harness control plane | **Ruled** (see below) | 2026-05-31 | ✅ Ruled — pending DDL apply |
 | 9 | Obligation determination & evidence mapping via ontology/reasoning (human-validated, relational SoR) | **ADR-0009** (layered hybrid) | 2026-05-31 | ✅ Ruled — DB implications feed the re-apply |
+| 10 | Model decoupling (swap without re-promotion) + executable-level fallback | model_reference + ordered fallback chain | 2026-06-01 | ✅ Ruled — applied in re-apply |
 
 ---
 
@@ -311,3 +312,20 @@ reference `code`s); **generalized provenance** on derivable rows (`derivation_me
 `ontology_version`, `confidence`, `validated_by_actor_id`); reference tables documented as
 **SKOS** (`parent_code` = broader/narrower); a small `ontology_version` reference; keep
 relations explicit (no catch-all JSON).
+
+## D10 — Model decoupling + executable-level fallback (RULED 2026-06-01)
+
+Carries forward a v1 decoupling that was initially missed in the re-apply.
+- **`core.model_reference`** — a **stable alias** (e.g. `reasoning-primary`) that
+  `inference_config` points at. It resolves to an actual `core.model` via
+  **`core.model_reference_binding`** (SCD-2, effective-dated). **Swapping the underlying
+  model = rebind the reference (close old window, open new) → every package using it
+  follows, NO re-promotion.** (Provider EOLs a model → switch fast.) Past runs resolve
+  as-of via the binding window.
+- **`core.inference_config_model`** — the **ordered fallback chain**: an `inference_config`
+  lists model_references by `priority` (1 = primary, 2+ = fallbacks). **Fallback is
+  per-executable** — if the primary provider is down (e.g. Claude unavailable) the harness
+  tries the next reference.
+- `inference_config` **no longer holds a hard `model_id`** (removed). Cost *estimates* keep
+  a direct `model_id` (a forecast, not a promoted artifact). Applied in `02-registry` +
+  `06-decisions`.

@@ -457,5 +457,72 @@ CREATE TABLE reference.exception_status (
 INSERT INTO reference.exception_status (code, label, sort_order) VALUES
     ('requested',1),('approved',2),('rejected',3),('revoked',4),('expired',5);
 
--- Further vocabularies (deployment_channel, run_mode, environment_kind, quota_*, …)
+-- ===== DECISIONS-domain vocabularies (used by 06-decisions.sql) =======
+-- (decision_status, invocation_status, auth_event_type/outcome stay NATIVE enums per D1 —
+--  hot-path/Tier-2 internal; declared in 06-decisions. model_status + currency are vocab.)
+CREATE TABLE reference.model_status (
+    code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL,
+    grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date,
+    effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT pk_model_status PRIMARY KEY (code), CONSTRAINT uq_model_status_sort UNIQUE (sort_order));
+INSERT INTO reference.model_status (code, label, sort_order) VALUES ('active',1),('deprecated',2),('retired',3);
+
+CREATE TABLE reference.currency (
+    code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL,
+    grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date,
+    effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT pk_currency PRIMARY KEY (code), CONSTRAINT uq_currency_sort UNIQUE (sort_order));
+INSERT INTO reference.currency (code, label, sort_order) VALUES ('usd','US Dollar',1),('eur','Euro',2),('gbp','British Pound',3);
+
+-- ===== RUNS/QUOTAS-domain vocabularies (used by 07-runs.sql) ==========
+-- (run_status, run_completion_status, run_entity_kind, outbox_status stay NATIVE enums
+--  per D1 — hot-path dispatch state; declared in 07-runs.)
+CREATE TABLE reference.run_purpose (
+    code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL,
+    grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date,
+    effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT pk_run_purpose PRIMARY KEY (code), CONSTRAINT uq_run_purpose_sort UNIQUE (sort_order));
+INSERT INTO reference.run_purpose (code, label, sort_order) VALUES
+    ('production',1),('test',2),('validation',3),('audit_rerun',4);
+
+CREATE TABLE reference.quota_scope_type (
+    code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL,
+    grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date,
+    effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT pk_quota_scope_type PRIMARY KEY (code), CONSTRAINT uq_quota_scope_type_sort UNIQUE (sort_order));
+INSERT INTO reference.quota_scope_type (code, label, sort_order) VALUES
+    ('application',1),('agent',2),('task',3),('model',4);
+
+CREATE TABLE reference.quota_period (
+    code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL,
+    grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date,
+    effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT pk_quota_period PRIMARY KEY (code), CONSTRAINT uq_quota_period_sort UNIQUE (sort_order));
+INSERT INTO reference.quota_period (code, label, sort_order) VALUES ('daily',1),('weekly',2),('monthly',3);
+
+-- enforcement is per-quota configurable: soft (warn, never refuse) default, or hard (refuse). D-clarify.
+CREATE TABLE reference.quota_enforcement_mode (
+    code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL,
+    grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date,
+    effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT pk_quota_enforcement_mode PRIMARY KEY (code), CONSTRAINT uq_quota_enforcement_mode_sort UNIQUE (sort_order));
+INSERT INTO reference.quota_enforcement_mode (code, label, sort_order, description) VALUES
+    ('soft','Soft (warn only)',1,'record warning/breach; never refuse the run'),
+    ('hard','Hard-stop',2,'refuse the run when the budget is exceeded (execution-phase control)');
+
+CREATE TABLE reference.quota_alert_level (
+    code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL,
+    grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date,
+    effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT pk_quota_alert_level PRIMARY KEY (code), CONSTRAINT uq_quota_alert_level_sort UNIQUE (sort_order));
+INSERT INTO reference.quota_alert_level (code, label, sort_order) VALUES ('warning',1),('exceeded',2),('critical',3);
+
+-- Further vocabularies (deployment_channel, environment_kind, run_mode, … for 08)
 -- are appended here as their domains are re-applied.
