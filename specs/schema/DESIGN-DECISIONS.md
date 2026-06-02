@@ -14,7 +14,7 @@ these as they are ruled. Related: [[0005-schema-hardening]], [[0004-storage-arch
 | 6 | Attribution — unified `actor` (human + automation) | **actor_id + acting_role_code everywhere**; named automation actor, optionally linked to application | 2026-05-31 | ✅ Ruled — pending DDL apply |
 | 7 | Per-domain fidelity (intake, compliance) | intake ✅; compliance ✅ (`governance_domain` confirmed) | 2026-05-31 | ✅ Ruled — pending DDL apply |
 | 8 | Packages, deployment & harness control plane | **Ruled** (see below) | 2026-05-31 | ✅ Ruled — pending DDL apply |
-| 9 | Obligation determination & evidence mapping via ontology/reasoning (human-validated, relational SoR) | needs ADR | 2026-05-31 | 🔶 Open (own ADR) |
+| 9 | Obligation determination & evidence mapping via ontology/reasoning (human-validated, relational SoR) | **ADR-0009** (layered hybrid) | 2026-05-31 | ✅ Ruled — DB implications feed the re-apply |
 
 ---
 
@@ -280,8 +280,17 @@ health_status, command_kind, environment_kind); control plane + deployment inven
 **automation actors**; deployment `status` mutable + append-only events; health append-only
 + current view. Relates to [[0006-packages-and-governed-deployment]], [[0002-execution-model]].
 
-> **D9 (own ADR):** obligation determination & evidence mapping may use an **ontology +
-> reasoning** (DL/SHACL/rules and/or LLM) as a *derivation layer* that **recommends**,
-> with **human validation** (`mapping_source = human_validated`), while **Postgres remains
-> the auditable system-of-record** for resolved obligations + evidence. Requires explainable
-> derivations. To be specified in a dedicated ADR; does not block the schema review.
+### D9 — Obligation/evidence reasoning → [[0009-obligation-reasoning-ontology]] (RULED 2026-05-31)
+
+Layered hybrid: **Postgres is the system-of-record**; **SPARQL via a virtual knowledge graph**
+(OBDA/R2RML) over `core`/`reference`/`compliance`; **heavy reasoning via an optional
+triplestore as a derivation engine** that **recommends**, with **human validation**
+(`derivation_method = human_validated`) before anything is authoritative; reasoner **never
+auto-commits**; derivations are explainable. Scope = metamodel, not raw `audit` logs. Engine
+choice deferred to the component spec.
+
+**DB implications to fold into the re-apply:** stable IRI scheme (`schema.table.<uuid>` +
+reference `code`s); **generalized provenance** on derivable rows (`derivation_method`,
+`ontology_version`, `confidence`, `validated_by_actor_id`); reference tables documented as
+**SKOS** (`parent_code` = broader/narrower); a small `ontology_version` reference; keep
+relations explicit (no catch-all JSON).
