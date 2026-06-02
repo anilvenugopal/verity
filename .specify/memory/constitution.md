@@ -150,10 +150,11 @@ agents ship as **packages** (`.vtx`/`.vax`); each package declares the **harness
 it is compatible with **by immutable digest**, and the registry enforces compatibility so
 an incompatible package×image combination cannot be deployed. A package's **lifecycle
 state gates the environment and mode** it may run in: `staging` → non-prod only;
-`shadow`/`challenger` → prod read-only (challenger may A/B); `champion` → any environment,
-live; `deprecated` → locked, any environment, audit/replay only. "Read-only" means the
-harness executes and logs decisions but its Target Bindings are suppressed (no business
-side effects). The platform keeps an insert-only **deployment inventory** of what runs
+`challenger` → prod in **`shadow`** run-mode (outputs suppressed, zero impact) or **`ab`**
+run-mode (full I/O on a scoped sample); `champion` → any environment, `live`; `deprecated`
+→ `locked`, any environment, audit/replay only (and **restorable via rollback**). `shadow`
+mode means the harness executes and logs decisions but its Target Bindings are suppressed
+(no business side effects). The platform keeps an insert-only **deployment inventory** of what runs
 where. Together these make any past execution **reproducibly replayable** from its image
 digest, package, and decision log.
 

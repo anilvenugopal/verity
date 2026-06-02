@@ -57,7 +57,8 @@ the behavioral reference.
 - Every rename ripples into models, queries, and API field names; the
   v1-capability-inventory + traceability links are how we keep the mapping honest.
 - Risk of *over*-redesign. Mitigation: hardening means consistency/structure/insert-only,
-  **not** re-imagining the governance metamodel. The 7-state lifecycle, decision log,
+  **not** re-imagining the governance metamodel. The lifecycle (since amended to 6 states —
+  shadow folded into a challenger run-mode; see ADR-0006), decision log,
   entity model, and I/O grammar keep their semantics; only their expression is cleaned.
 
 ## Alternatives considered

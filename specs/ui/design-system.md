@@ -745,10 +745,10 @@ Mock mode is configurable per section (per tool, per connector), not globally. T
 Empty → entity created → Draft (editable canvas)
 Draft → promote to Candidate → Candidate (canvas read-only, tests run)
 Candidate → promote to Staging → Staging (test suite gated)
-Staging → promote to Shadow → Shadow (parallel run, writes suppressed)
-Shadow → promote to Challenger → Challenger (head-to-head vs champion)
+Staging → promote to Challenger → Challenger (prod evaluation; deploy in shadow OR ab run-mode, switchable)
 Challenger → promote to Champion → Champion (live production)
-Any → deprecate → Deprecated (read-only, no execution)
+Champion → deprecate → Deprecated (locked; restorable via rollback)
+Rollback: Deprecated → Champion (restore a prior champion)
 ```
 
 The lifecycle badge in the breadcrumb reflects the current state. All promotion actions require the approval gate (documented in `specs/schema/verity_schema.sql` on the `approval_record` table).

@@ -280,6 +280,23 @@ health_status, command_kind, environment_kind); control plane + deployment inven
 **automation actors**; deployment `status` mutable + append-only events; health append-only
 + current view. Relates to [[0006-packages-and-governed-deployment]], [[0002-execution-model]].
 
+**Run-mode semantics (clarified 2026-05-31):** `live` (champion: full Source+Target
+bindings, all traffic) · `read_only` (**shadow**: full Source bindings, **Target bindings
+forcibly suppressed** → zero data impact) · `ab` (**challenger/A-B**: full Source+Target
+bindings on a **scoped sample**; the run input carries an optional **`ab_sample`** marker
+scoping it to the package/deployment; decision logs tagged for champion-vs-challenger
+comparison) · `locked` (deprecated: no execution). Run-modes are **`live` / `shadow` / `ab`
+/ `locked`**. A `lifecycle_deployment_rule` table encodes the
+state→environment→allowed-run-modes→output-suppression matrix as auditable data.
+
+**LIFECYCLE AMENDED TO 6 STATES (2026-05-31):** `draft → candidate → staging → challenger
+→ champion → deprecated`. v1's **`shadow` is no longer a state** — it is a **challenger
+run-mode** (a challenger deploys in `shadow` or `ab`, **freely switchable**, no state
+change). **`deprecated` is restorable via rollback** (`deprecated → champion`; `is_terminal
+= false`). CHANGE-with-reason vs v1's 7 states (no silent loss). Docs updated: PCR,
+constitution, ADR-0002/0005/0006, design-system. **Pending sweep:** the 001 component-spec
+lifecycle FRs (FR-LC transition graph) + retirement of the old draft schema files.
+
 ### D9 — Obligation/evidence reasoning → [[0009-obligation-reasoning-ontology]] (RULED 2026-05-31)
 
 Layered hybrid: **Postgres is the system-of-record**; **SPARQL via a virtual knowledge graph**

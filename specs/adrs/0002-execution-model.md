@@ -32,7 +32,7 @@ reporting.**
 Adopt the **application-hosted harness** model.
 
 - **Centralized governance + registry.** One governance metamodel (PostgreSQL) is the
-  source of truth: entities are registered, composed, and promoted through the 7-state
+  source of truth: entities are registered, composed, and promoted through the 6-state
   lifecycle here. Promotion to `champion` produces a signed `.vax` (agent) / `.vtx`
   (task) artifact in a shared artifact library.
 - **Distributed execution.** Each business application runs its own harness container,

@@ -39,11 +39,15 @@ control plane.**
 | Lifecycle state | Deployable to | Run mode | Target Bindings (writes) |
 |---|---|---|---|
 | `draft` / `candidate` | — (authoring only) | — | — |
-| `staging` | non-prod clusters only | live | enabled (non-prod) |
-| `shadow` | prod (and any) | **read-only** | suppressed |
-| `challenger` | prod (and any) | **read-only or A/B** | suppressed (RO) / live on the A/B slice |
-| `champion` | **any environment** | live | enabled |
-| `deprecated` | **any environment** | locked | disabled (audit/replay only); cleanup allowed |
+| `staging` | non-prod clusters only | `live` | enabled (non-prod) |
+| `challenger` | prod (and any) | **`shadow`** or **`ab`** (freely switchable) | suppressed (shadow) / written on the sample (ab) |
+| `champion` | **any environment** | `live` | enabled |
+| `deprecated` | **any environment** | `locked` | disabled (audit/replay only); cleanup allowed; **restorable via rollback** |
+
+> **6-state lifecycle (amended 2026-05-31):** v1's `shadow` is no longer a lifecycle state —
+> it is a **challenger run-mode**. A challenger deploys in `shadow` (outputs suppressed, zero
+> impact) or `ab` (full I/O on a scoped sample carrying an `ab_sample` marker), switchable
+> without a state change. `deprecated` is restorable (rollback `deprecated → champion`).
 
 **"Read-only" is defined precisely:** the harness executes and **writes the decision
 log**, but its **Target Bindings (output writes) are suppressed/diverted** so there are no

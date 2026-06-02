@@ -8,7 +8,7 @@
   [[0008-compliance-control-evidence-model]], [[binding-grammar]], [[user-authentication]],
   [[constitution]]
 - **Purpose:** The umbrella feature specification for **`verity-governance`** — the
-  Tier-1 system-of-record service that owns AI asset definitions, their 7-state
+  Tier-1 system-of-record service that owns AI asset definitions, their 6-state
   lifecycle, the use-case intake/risk machine, the append-only decision and
   model-invocation audit trail, run/execution state, soft quotas, plan/cost/ROI
   business-case envelopes, testing/validation metadata, governed packaging and
@@ -73,7 +73,7 @@ and compliance reporting.
 ### User Story 1 — Author, validate, and promote a governed AI asset (Priority: P1)
 
 An engineer registers a task or agent, composes its bindings/prompts/tools, runs it
-through the 7-state lifecycle (draft → candidate → staging → shadow → challenger →
+through the 6-state lifecycle (draft → candidate → staging → challenger →
 champion), and promotes a champion that consumers resolve at runtime. The promotion to
 champion produces a deployable **package** (see Story 3). This is the core governed
 change loop the platform exists to provide.
@@ -93,7 +93,7 @@ inference snapshot, ordered prompts, and authorized tools.
    version state advances, its `deployment_channel` becomes `development`, an
    `approval_record` audit event is appended, and `updated_at` bumps.
 2. **Given** a `staging` version whose `staging_tests_passed` is false, **When** a caller
-   attempts `staging → shadow`, **Then** the promotion is rejected (gate not met) with
+   attempts `staging → challenger`, **Then** the promotion is rejected (gate not met) with
    the reason `"Staging tests have not passed"` and the state is unchanged.
 3. **Given** a `challenger` version with `ground_truth_passed=true` and all required
    approver review flags asserted, **When** the caller promotes `challenger → champion`,
@@ -191,8 +191,9 @@ draft; generate a model-inventory report and page the analytics feed by cursor.
    insert-only package inventory.
 2. **Given** a `staging` package, **When** a caller requests deployment to a `prod`
    target, **Then** it is refused (staging packages deploy to non-prod only); a
-   `shadow`/`challenger` package deploys to prod read-only / A-B only; a `champion`
-   package deploys to any live target; a `deprecated` package is locked from deployment.
+   `challenger` package deploys to prod in `shadow` or `ab` run-mode (switchable); a
+   `champion` package deploys to any live target; a `deprecated` package is locked
+   (but restorable via rollback).
 3. **Given** a deployment request whose package harness-image digest does not match the
    target environment's harness-image digest, **When** it is evaluated, **Then** it is
    refused as incompatible and recorded as a rejected deployment attempt.
@@ -443,7 +444,7 @@ throughout.
   read-only `version_label`, unique per entity; an agent/task version MUST carry a caller-
   facing `input_schema` (rejected as empty when promoting out of draft) and the lifecycle
   gate flags `staging_tests_passed`, `ground_truth_passed`, `fairness_passed`, plus agent
-  shadow/challenger completion flags and traffic-percentage fields.
+  challenger shadow-mode / A-B completion flags and traffic-percentage fields.
 - **FR-VM-003**: SCD-2 temporal windows MUST apply to agent/task/prompt versions: pre-
   champion states leave `valid_from`/`valid_to` NULL (not date-resolvable); promotion to
   champion opens `valid_from = now`, `valid_to = open-ended sentinel`; deprecation closes
@@ -457,25 +458,27 @@ throughout.
   schema) MUST be immutable; changes require a new version. v2 MUST enforce this at the
   governance API/data layer, not application-level only (see disposition).
 
-### Capability area: 7-state lifecycle & promotion
+### Capability area: 6-state lifecycle & promotion
 
-- **FR-LC-001**: The lifecycle MUST preserve the 7 states verbatim: `draft`, `candidate`,
-  `staging`, `shadow`, `challenger`, `champion`, `deprecated`, and the legal transition
-  graph: `draft → {candidate}`; `candidate → {staging, champion, deprecated}`; `staging →
-  {shadow, deprecated}`; `shadow → {challenger, deprecated}`; `challenger → {champion,
-  deprecated}`; `champion → {deprecated}`; `deprecated → {}` (terminal). An illegal
-  transition MUST be rejected with the legal target set.
+- **FR-LC-001**: The lifecycle has **6 states**: `draft`, `candidate`, `staging`,
+  `challenger`, `champion`, `deprecated`. (v1's `shadow` is CHANGED to a **challenger
+  run-mode**, not a state — a challenger deploys in `shadow` or `ab` mode, switchable; see
+  packaging/deployment.) Legal transition graph: `draft → {candidate}`; `candidate →
+  {staging, champion, deprecated}`; `staging → {challenger, deprecated}`; `challenger →
+  {champion, deprecated}`; `champion → {deprecated}`; `deprecated → {champion, challenger}`
+  (**rollback** — `deprecated` is restorable, not terminal). An illegal transition MUST be
+  rejected with the legal target set.
 - **FR-LC-002**: Each state MUST map to a deployment channel: `draft`/`candidate` →
-  `development`, `staging` → `staging`, `shadow` → `shadow`, `challenger` → `evaluation`,
-  `champion` → `production`, `deprecated` → `production` (inherited). The channel MUST be
-  set on every promotion.
+  `development`, `staging` → `staging`, `challenger` → `evaluation`, `champion` →
+  `production`, `deprecated` → `production` (inherited). (The v1 `shadow` channel is
+  retired — shadow is a challenger run-mode.) The channel MUST be set on every promotion.
 - **FR-LC-003**: Promotion gates MUST combine stored version facts with approver review-
-  flag assertions: `→ shadow` requires `staging_tests_passed` and `staging_results_reviewed`;
-  `→ challenger` requires `shadow_period_complete` and `shadow_metrics_reviewed`;
-  `challenger → champion` requires `ground_truth_passed`, `ground_truth_reviewed`,
-  `model_card_reviewed`, and `challenger_metrics_reviewed`. A failed gate MUST be rejected
-  with the human-readable issue list; the gate must also be previewable read-only (to
-  enable/disable UI controls).
+  flag assertions: `→ challenger` requires `staging_tests_passed` and
+  `staging_results_reviewed`; `challenger → champion` requires `shadow_evaluation_reviewed`
+  (when the challenger was run in `shadow` mode), `ground_truth_passed`,
+  `ground_truth_reviewed`, `model_card_reviewed`, and `challenger_metrics_reviewed`. A
+  failed gate MUST be rejected with the human-readable issue list; the gate must also be
+  previewable read-only (to enable/disable UI controls).
 - **FR-LC-004**: The `candidate → champion` fast-track MUST NOT be gate-free in v2. v1
   allowed it for demo seeding with no gate; in v2 **any non-seed promotion to champion** —
   by fast-track or via `challenger → champion` — MUST satisfy the **full champion evidence
@@ -842,9 +845,10 @@ throughout.
   harness-image reference**. The package build MUST be recorded in an **insert-only**
   package inventory.
 - **FR-PK-002**: Deployment MUST be governed and **lifecycle-gated** by the source
-  version's state: `staging` packages deploy to **non-prod only**; `shadow`/`challenger`
-  packages deploy to **prod read-only / A-B only**; `champion` packages deploy to **any
-  live** target; `deprecated` packages are **locked** (no deployment). A request violating
+  version's state: `staging` packages deploy to **non-prod only**; `challenger` packages
+  deploy to **prod in `shadow` or `ab` run-mode**; `champion` packages deploy to **any
+  live** target; `deprecated` packages are **locked** (no execution; restorable via
+  rollback). A request violating
   the gate MUST be refused with the reason.
 - **FR-PK-003**: Deployment MUST be refused when the package's pinned harness-image digest
   does not match the target environment's harness-image digest (compatibility check). Every
@@ -935,7 +939,7 @@ shape, not a binding wire format; the canonical OpenAPI lives with the service.
 - Champion-at-date temporal resolution; list versions ordered by components; version
   validity-window reads (derived, read-only).
 
-### 7-state lifecycle & promotion
+### 6-state lifecycle & promotion
 - Promote (transition + gate evidence + champion confirmation); rollback; list promotion
   attestations for a version; legal-next-states and gate-block-reason previews.
 
@@ -990,9 +994,9 @@ shape, not a binding wire format; the canonical OpenAPI lives with the service.
 ### Packaging & governed deployment *(v2-new — ADR-0006)*
 - Build package on champion promotion (`.vtx`/`.vax`, digest-pinned harness compatibility);
   list/get package; package inventory (insert-only).
-- Evaluate deployment (lifecycle-gated: staging → non-prod; shadow/challenger → prod read-
-  only / A-B; champion → any live; deprecated → locked; harness-image digest must match);
-  record deployment (insert-only inventory); list deployments.
+- Evaluate deployment (lifecycle-gated: staging → non-prod; challenger → prod in shadow/ab
+  run-mode; champion → any live; deprecated → locked but rollback-restorable; harness-image
+  digest must match); record deployment (insert-only inventory); list deployments.
 
 ### Cross-cutting: identity & authorization *(composed from [[user-authentication]])*
 - Resolve principal roles; evaluate action gate; grant/revoke platform and app-team roles
@@ -1197,12 +1201,12 @@ inventories is accounted for.
 | Model-price SCD-2 (`uq_mp_active`, cost view join) | KEEP | |
 | Prompt has no champion pointer / no channel / no rollback | CHANGE | v2 normalizes prompts onto the agent/task champion-pointer + channel + rollback model. |
 
-### 7-state lifecycle & promotion
+### 6-state lifecycle & promotion
 
 | v1 capability | Verdict | Notes |
 |---|---|---|
-| 7 states + legal transition graph + state→channel map | KEEP | Verbatim. |
-| Gate requirements (`→shadow`, `→challenger`, `challenger→champion`) | KEEP | Verbatim issue strings. |
+| Lifecycle states + legal transition graph + state→channel map | CHANGE | 7→**6 states** (v1 `shadow` → challenger run-mode); `deprecated` restorable via rollback (`deprecated → champion`); `shadow` channel retired. No silent loss. |
+| Gate requirements (`→challenger`, `challenger→champion`) | CHANGE | Folded v1's `→shadow`/`→challenger` gates: `→challenger` = staging tests; `challenger→champion` adds shadow-evaluation review. |
 | `candidate → champion` fast-track, gate-free | CHANGE | v2 MUST NOT be gate-free for non-seed promotions (FR-LC-004). |
 | `promote()` effects (state, channel, attestation, SCD-2, set-champion) | KEEP | |
 | Champion confirmation (name-typeback + acknowledgement) | CHANGE | Enforced on **all** surfaces in v2 (v1 enforced it only in Studio UI, not the JSON API). |

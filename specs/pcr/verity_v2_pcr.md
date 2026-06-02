@@ -55,7 +55,7 @@ However, three factors make modification the wrong choice:
 The following are carried forward into v2 without redesign. v1 is the reference.
 
 - Complete governance metamodel and PostgreSQL schema (43 governance tables, 8 runtime tables, all enumerations and views)
-- 7-state lifecycle: `draft → candidate → staging → shadow → challenger → champion → deprecated`
+- 6-state lifecycle: `draft → candidate → staging → challenger → champion → deprecated` (v1's `shadow` is now a **challenger run-mode**, not a state; `deprecated` is restorable via rollback)
 - Immutable decision log (`agent_decision_log`) as the canonical audit record
 - Event-sourced run tracking (`execution_run`, `execution_run_status`, `execution_run_completion`, `execution_run_error`, `execution_run_current` view)
 - Entity model: agents, tasks, prompts, tools, inference configs, data connectors, MCP servers
@@ -421,7 +421,7 @@ Each phase delivers a demonstrable, deployable increment. No phase depends on a 
 **Gate:** A package runs against a ground-truth set; pass/fail and metrics are recorded. Demo-ready.
 
 ### Phase 6 — Lifecycle / Promotion
-**Deliverable:** Full 7-state lifecycle (`draft → … → champion → deprecated`); approval records; promotion gates; state-transition-driven deployment placement (ADR-0006 matrix).  
+**Deliverable:** Full 6-state lifecycle (`draft → … → champion → deprecated`; `shadow`/`ab` are challenger run-modes; rollback restores deprecated); approval records; promotion gates; state-transition-driven deployment placement (ADR-0006 matrix).  
 **Gate:** An entity is promoted through the lifecycle with documented approvals; each transition drives the correct environment placement/mode. Demo-ready.
 
 ### Phase 7 — Production-like Run
