@@ -17,7 +17,7 @@ CREATE TABLE reference.executable_kind (
     is_packaged          boolean      NOT NULL DEFAULT true,   -- does a champion of this kind produce a package?
     package_format       text,                                  -- e.g. 'vtx','vax' (NULL when not packaged)
     effective_start_date date        NOT NULL DEFAULT current_date,
-    effective_end_date   date,
+    effective_end_date   date NOT NULL DEFAULT '2099-12-31',
     is_active            boolean      NOT NULL DEFAULT true,
     metadata             jsonb        NOT NULL DEFAULT '{}'::jsonb,
     created_at           timestamptz  NOT NULL DEFAULT now(),
@@ -25,7 +25,11 @@ CREATE TABLE reference.executable_kind (
     CONSTRAINT pk_executable_kind PRIMARY KEY (code),
     CONSTRAINT uq_executable_kind_sort UNIQUE (sort_order)
 );
-COMMENT ON TABLE reference.executable_kind IS 'Vocabulary: kinds of executable (agent, task, future). is_packaged/package_format decouple "governed" from "packaged" (D5/D8). New kind = new row, no schema change.';
+COMMENT ON TABLE reference.executable_kind IS
+'The kind of executable (agent/task, extensible) — the supertype discriminator and package format.
+
+@lifecycle reference
+@subject registry';
 INSERT INTO reference.executable_kind (code, label, sort_order, is_packaged, package_format) VALUES
     ('agent', 'Agent', 1, true, 'vax'),
     ('task',  'Task',  2, true, 'vtx');

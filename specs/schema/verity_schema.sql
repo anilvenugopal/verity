@@ -62,6 +62,13 @@ SET search_path = core, reference, audit, public;
 \i reference/heartbeat_kind.sql
 \i reference/command_kind.sql
 \i reference/command_status.sql
+\i reference/command_outbox_status.sql
+\i reference/harness_node_status.sql
+\i reference/credential_verification_status.sql
+\i reference/run_status.sql
+\i reference/run_completion_status.sql
+\i reference/outbox_status.sql
+\i reference/run_dispatch_status.sql
 \i reference/embedding_runtime.sql
 \i reference/report_kind.sql
 \i reference/report_run_status.sql
@@ -148,10 +155,7 @@ SET search_path = core, reference, audit, public;
 \i audit/status_transition.sql
 \i audit/auth_event.sql
 \i core/hitl_override.sql
-\i core/run_status.sql
-\i core/run_completion_status.sql
 \i core/run_entity_kind.sql
-\i core/outbox_status.sql
 \i core/execution_run.sql
 \i core/execution_run_status.sql
 \i core/execution_run_current.sql
@@ -163,6 +167,11 @@ SET search_path = core, reference, audit, public;
 \i core/deployment_cluster.sql
 \i core/harness_instance.sql
 \i core/harness_instance_command.sql
+\i core/harness_node.sql
+\i core/harness_coordinator.sql
+\i core/harness_dispatch.sql
+\i core/harness_app_credential.sql
+\i core/harness_command_outbox.sql
 \i audit/harness_heartbeat.sql
 \i audit/harness_instance_health_current.sql
 \i audit/harness_running_package_current.sql

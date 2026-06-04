@@ -19,3 +19,32 @@ CREATE TABLE core.intake_artifact_plan (
     CONSTRAINT fk_intake_plan_created_by FOREIGN KEY (created_by_actor_id) REFERENCES core.actor (actor_id),
     CONSTRAINT fk_intake_plan_created_role FOREIGN KEY (created_role_code) REFERENCES reference.role (code));
 CREATE INDEX ix_intake_artifact_plan_intake ON core.intake_artifact_plan (intake_id);
+COMMENT ON TABLE core.intake_artifact_plan IS
+'A planned executable (agent or task) for an intake — the bridge from "what we intend to build" to the realized version. When built, realized_executable_version_id points at the actual executable_version; status is mutable (D4, D5).
+
+@tier 1
+@lifecycle mutable
+@subject intake
+@status reference.executable_kind
+@status reference.artifact_plan_status
+@decision D5';
+COMMENT ON COLUMN core.intake_artifact_plan.intake_artifact_plan_id IS
+'Identity of the plan.';
+COMMENT ON COLUMN core.intake_artifact_plan.intake_id IS
+'The intake this plans for. @ref core.intake hard';
+COMMENT ON COLUMN core.intake_artifact_plan.planned_kind_code IS
+'agent or task the plan intends to build. @status reference.executable_kind';
+COMMENT ON COLUMN core.intake_artifact_plan.planned_name IS
+'Intended name of the executable.';
+COMMENT ON COLUMN core.intake_artifact_plan.artifact_plan_status_code IS
+'Mutable plan status (proposed/...). @status reference.artifact_plan_status';
+COMMENT ON COLUMN core.intake_artifact_plan.realized_executable_version_id IS
+'The built version once the plan is realized; null until then. @ref core.executable_version hard';
+COMMENT ON COLUMN core.intake_artifact_plan.created_at IS
+'When planned.';
+COMMENT ON COLUMN core.intake_artifact_plan.updated_at IS
+'When last updated.';
+COMMENT ON COLUMN core.intake_artifact_plan.created_by_actor_id IS
+'Who planned it. @ref core.actor hard';
+COMMENT ON COLUMN core.intake_artifact_plan.created_role_code IS
+'The capacity they acted in. @status reference.role';

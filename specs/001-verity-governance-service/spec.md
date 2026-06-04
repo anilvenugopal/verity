@@ -855,6 +855,34 @@ throughout.
   deployment (successful or refused) MUST be recorded in an **insert-only deployment
   inventory** with the actor, package, target, and outcome.
 
+### Capability area: Harness runtime, enrollment & dispatch *(v2-new — ADR-0010)*
+
+- **FR-HR-001**: All harness↔governance integration MUST be **API-only** ([[0003-harness-governance-api]]):
+  the spoke holds **no database credential**. The **Harness Gateway API** is the sole write
+  path; register, claim, release, heartbeat, and command-ack are gateway operations whose
+  database effects (including any `SKIP LOCKED` claim and the coordinator-lease update) run
+  **hub-side**.
+- **FR-HR-002**: Each cluster MUST elect **exactly one coordinator** via a hub-arbitrated
+  **heartbeat lease** — an atomic conditional update that makes split-brain impossible.
+  Leadership failover MUST NOT interrupt in-flight execution (workers complete jobs they
+  have claimed regardless of coordinator state).
+- **FR-HR-003**: Run dispatch MUST follow the transactional outbox → NATS → coordinator-claim
+  path. `harness_dispatch` MUST hold the mutable operational dispatch state and MUST be
+  written in the **same transaction** as the append-only `execution_run_status` audit. The
+  coordinator is the cluster's **sole hub uplink**; workers MUST NOT call the hub directly.
+- **FR-HR-004**: Enrollment MUST exchange a **one-time, short-lived token** for a
+  cluster-scoped **mTLS identity + app-scoped API key**; all spoke→hub traffic MUST be
+  **outbound-only** (no inbound ports), and certificates MUST auto-rotate on an overlap
+  window.
+- **FR-HR-005**: App data-source credentials MUST be **metadata-only at the hub** (Model B):
+  name, connector type, and verification status **only** — never a value, never a vault
+  reference. The secret MUST remain on the spoke; the coordinator reports
+  `credential_verification_status` via the gateway.
+- **FR-HR-006**: **Package** deployment (`deploy_package`) MUST NOT drain or interrupt
+  in-flight jobs — bundles load once at claim time and old/new bundles coexist in cache.
+  **Image** patch MUST surface a **graceful vs. force** drain choice in the portal; force
+  requeues interrupted jobs with a new idempotency key.
+
 ---
 
 ## Key Entities *(observable; no schema internals)*
@@ -895,6 +923,13 @@ throughout.
   to a compatible harness-image digest, recorded in an insert-only inventory.
 - **Deployment record** *(v2-new)* — an insert-only record of a governed, lifecycle-gated
   deployment of a package to an environment.
+- **Harness node / coordinator lease** *(v2-new — ADR-0010)* — a coordinator-eligible runtime
+  host in a cluster, and the per-cluster lease naming the elected coordinator (master).
+- **Dispatch record** *(v2-new — ADR-0010)* — the mutable per-run operational dispatch state
+  the coordinator drives (queued → published → claimed → assigned → executing → released),
+  twinned with the append-only run-status audit.
+- **Harness app credential** *(v2-new — ADR-0010)* — a metadata-only registry entry (name,
+  type, verification) for an app data-source secret that lives on the spoke, never at the hub.
 - **Compliance metamodel** — regulatory **frameworks & provisions** (left); **canonical
   requirements** with **governance domains** and **cumulative tier ladders** (stable
   center); **controls** (typed, phase-scoped, with an enforcement action) and **evidence

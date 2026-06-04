@@ -27,6 +27,44 @@ CREATE TABLE core.compliance_exception (
     CONSTRAINT fk_compliance_exception_opened_by FOREIGN KEY (opened_by_actor_id) REFERENCES core.actor (actor_id),
     CONSTRAINT fk_compliance_exception_opened_role FOREIGN KEY (opened_role_code) REFERENCES reference.role (code),
     CONSTRAINT ck_compliance_exception_tier CHECK (waived_tier_level >= 1));
-COMMENT ON TABLE core.compliance_exception IS 'tier:1 first-class audit. A controlled, time-boxed waiver of a requirement tier: compensating controls, named approver (approve_exception), expiry. status mutable (D4); approving role = compliance/security. ADR-0008.';
+COMMENT ON TABLE core.compliance_exception IS
+'A controlled, time-boxed waiver of a requirement tier: the compensating controls that mitigate in the interim, a named approver (the approve_exception action, held by compliance/security), and a hard expiry. A first-class audit object — exceptions are governed, not hidden. status is the mutable current state (transitions audited in audit.status_transition) (ADR-0008, D4).
+
+@tier 1
+@lifecycle mutable
+@subject compliance
+@status reference.exception_status
+@decision D4
+@adr 0008';
 CREATE INDEX ix_compliance_exception_requirement ON core.compliance_exception (canonical_requirement_id);
 CREATE INDEX ix_compliance_exception_expiry ON core.compliance_exception (expires_at) WHERE exception_status_code = 'approved';
+COMMENT ON COLUMN core.compliance_exception.compliance_exception_id IS
+'Identity of the waiver.';
+COMMENT ON COLUMN core.compliance_exception.canonical_requirement_id IS
+'The requirement being excepted. @ref core.canonical_requirement hard';
+COMMENT ON COLUMN core.compliance_exception.waived_tier_level IS
+'The tier waived. At least 1.';
+COMMENT ON COLUMN core.compliance_exception.scope_intake_id IS
+'Optional intake scope of the waiver. @ref core.intake hard';
+COMMENT ON COLUMN core.compliance_exception.scope_application_id IS
+'Optional application scope of the waiver. @ref core.application hard';
+COMMENT ON COLUMN core.compliance_exception.exception_status_code IS
+'Mutable current state; transitions audited in audit.status_transition. @status reference.exception_status';
+COMMENT ON COLUMN core.compliance_exception.approver_actor_id IS
+'Who approved the waiver (approve_exception; compliance/security). @ref core.actor hard';
+COMMENT ON COLUMN core.compliance_exception.signed_as_role_code IS
+'The capacity the approver signed in. @status reference.role';
+COMMENT ON COLUMN core.compliance_exception.compensating_controls IS
+'What mitigates the risk while the waiver is in effect.';
+COMMENT ON COLUMN core.compliance_exception.rationale IS
+'Why the waiver was granted.';
+COMMENT ON COLUMN core.compliance_exception.expires_at IS
+'Hard expiry; the maximum permitted duration of the waiver.';
+COMMENT ON COLUMN core.compliance_exception.opened_by_actor_id IS
+'Who requested the waiver. @ref core.actor hard';
+COMMENT ON COLUMN core.compliance_exception.opened_role_code IS
+'The capacity they acted in. @status reference.role';
+COMMENT ON COLUMN core.compliance_exception.created_at IS
+'When opened.';
+COMMENT ON COLUMN core.compliance_exception.updated_at IS
+'When last updated.';

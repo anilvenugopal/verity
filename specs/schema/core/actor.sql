@@ -26,5 +26,28 @@ CREATE TABLE core.actor (
         REFERENCES core.actor (actor_id) ON DELETE RESTRICT,
     CONSTRAINT ck_actor_display_name_not_blank CHECK (length(btrim(display_name)) > 0)
 );
-COMMENT ON TABLE core.actor IS 'tier:1. Unified attribution principal (human or automation). Single actor_id target for actor_id + acting_role_code across the schema. D6.';
+COMMENT ON TABLE core.actor IS
+'The single attribution principal for the whole platform — one identity model for humans and automations alike. Every auditable record in the schema points back to an actor_id plus the role it acted in, so "who did this, in what capacity" has exactly one answer everywhere. Humans and automations are subtypes that share this id (account_user, automation_actor) (D6).
+
+@tier 1
+@lifecycle mutable
+@subject identity
+@status reference.actor_type
+@decision D6';
 CREATE INDEX ix_actor_type ON core.actor (actor_type_code);
+COMMENT ON COLUMN core.actor.actor_id IS
+'The universal attribution id; every actor_id + acting_role_code pair across the schema resolves here.';
+COMMENT ON COLUMN core.actor.actor_type_code IS
+'human or automation — selects which subtype row (account_user vs automation_actor) carries the details. @status reference.actor_type';
+COMMENT ON COLUMN core.actor.display_name IS
+'Human-readable name for the principal; required non-blank.';
+COMMENT ON COLUMN core.actor.primary_role_code IS
+'The default capacity used when the actor does not name one (D6). @status reference.role';
+COMMENT ON COLUMN core.actor.is_active IS
+'Whether the principal may act; deactivating fails closed without deleting the attribution target.';
+COMMENT ON COLUMN core.actor.created_at IS
+'When the principal was created.';
+COMMENT ON COLUMN core.actor.updated_at IS
+'When the principal was last updated.';
+COMMENT ON COLUMN core.actor.created_by_actor_id IS
+'Who created this principal; null only for the bootstrap/system seed. @ref core.actor hard';

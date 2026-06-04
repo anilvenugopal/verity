@@ -10,3 +10,27 @@ CREATE TABLE core.mcp_server (
     CONSTRAINT fk_mcp_server_created_by FOREIGN KEY (created_by_actor_id) REFERENCES core.actor (actor_id),
     CONSTRAINT fk_mcp_server_created_role FOREIGN KEY (created_role_code) REFERENCES reference.role (code),
     CONSTRAINT uq_mcp_server_name UNIQUE (name));
+COMMENT ON TABLE core.mcp_server IS
+'A reusable MCP server an agent may use (agent-only at assignment time). Versioned config lives in mcp_server_version; no lifecycle of its own (D5).
+
+@tier 1
+@lifecycle mutable
+@subject registry
+@status reference.tool_transport
+@decision D5';
+COMMENT ON COLUMN core.mcp_server.mcp_server_id IS
+'Identity of the MCP server.';
+COMMENT ON COLUMN core.mcp_server.name IS
+'Human name; unique.';
+COMMENT ON COLUMN core.mcp_server.transport_code IS
+'How the server is reached. @status reference.tool_transport';
+COMMENT ON COLUMN core.mcp_server.description IS
+'What the server provides.';
+COMMENT ON COLUMN core.mcp_server.created_at IS
+'When created.';
+COMMENT ON COLUMN core.mcp_server.updated_at IS
+'When last updated.';
+COMMENT ON COLUMN core.mcp_server.created_by_actor_id IS
+'Who created it. @ref core.actor hard';
+COMMENT ON COLUMN core.mcp_server.created_role_code IS
+'The capacity they acted in. @status reference.role';

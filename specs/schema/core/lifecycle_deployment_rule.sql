@@ -8,7 +8,16 @@ CREATE TABLE core.lifecycle_deployment_rule (
     CONSTRAINT pk_lifecycle_deployment_rule PRIMARY KEY (lifecycle_state_code, environment_kind_code),
     CONSTRAINT fk_ldr_state FOREIGN KEY (lifecycle_state_code) REFERENCES reference.lifecycle_state (code),
     CONSTRAINT fk_ldr_env FOREIGN KEY (environment_kind_code) REFERENCES reference.environment_kind (code));
-COMMENT ON TABLE core.lifecycle_deployment_rule IS 'tier:1. The ADR-0006 lifecycle->environment matrix as auditable DATA: which run-modes a state may use per environment, and whether outputs suppress. The deploy gate reads this. D8.';
+COMMENT ON TABLE core.lifecycle_deployment_rule IS
+'The ADR-0006 lifecycle->environment matrix encoded as auditable data: for each (lifecycle_state, environment_kind) it states which run-modes are allowed and whether outputs are suppressed. The deploy gate reads this rather than hard-coding the policy, so safe progression (staging can''t reach prod; shadow/challenger can''t write to prod) is inspectable, governed data.
+
+@tier 1
+@lifecycle reference
+@subject deploy
+@status reference.lifecycle_state
+@status reference.environment_kind
+@decision D8
+@adr 0006';
 INSERT INTO core.lifecycle_deployment_rule (lifecycle_state_code, environment_kind_code, allowed_run_modes, output_suppressed) VALUES
     ('staging',   'non_prod',  ARRAY['live'],            false),
     ('challenger','prod',      ARRAY['shadow','ab'],     false),
@@ -18,3 +27,11 @@ INSERT INTO core.lifecycle_deployment_rule (lifecycle_state_code, environment_ki
     ('champion',  'ephemeral', ARRAY['live','shadow'],   false),
     ('deprecated','prod',      ARRAY['locked'],          true),
     ('deprecated','ephemeral', ARRAY['locked','shadow'], true);
+COMMENT ON COLUMN core.lifecycle_deployment_rule.lifecycle_state_code IS
+'The version lifecycle state the rule applies to. @status reference.lifecycle_state';
+COMMENT ON COLUMN core.lifecycle_deployment_rule.environment_kind_code IS
+'The environment class the rule applies to. @status reference.environment_kind';
+COMMENT ON COLUMN core.lifecycle_deployment_rule.allowed_run_modes IS
+'The subset of {live,shadow,ab,locked} permitted for this state in this environment; the deploy gate refuses anything outside it. @values live|shadow|ab|locked';
+COMMENT ON COLUMN core.lifecycle_deployment_rule.output_suppressed IS
+'Whether Target Binding writes are suppressed for this cell (true for deprecated/locked) — audit and replay with no side effects.';

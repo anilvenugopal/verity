@@ -19,3 +19,34 @@ CREATE TABLE core.intake_requirement (
     CONSTRAINT fk_intake_requirement_created_by FOREIGN KEY (created_by_actor_id) REFERENCES core.actor (actor_id),
     CONSTRAINT fk_intake_requirement_created_role FOREIGN KEY (created_role_code) REFERENCES reference.role (code));
 CREATE INDEX ix_intake_requirement_intake ON core.intake_requirement (intake_id);
+COMMENT ON TABLE core.intake_requirement IS
+'A typed, status-tracked requirement statement on an intake. It carries a pgvector embedding so requirements can be semantically de-duplicated and matched to realized entities before promotion. Status is mutable (D4).
+
+@tier 1
+@lifecycle mutable
+@subject intake
+@status reference.requirement_kind
+@status reference.requirement_status
+@decision D4';
+COMMENT ON COLUMN core.intake_requirement.intake_requirement_id IS
+'Identity of the requirement.';
+COMMENT ON COLUMN core.intake_requirement.intake_id IS
+'The intake it belongs to. @ref core.intake hard';
+COMMENT ON COLUMN core.intake_requirement.requirement_kind_code IS
+'The kind of requirement. @status reference.requirement_kind';
+COMMENT ON COLUMN core.intake_requirement.requirement_status_code IS
+'Mutable status (draft/...). @status reference.requirement_status';
+COMMENT ON COLUMN core.intake_requirement.title IS
+'Short title.';
+COMMENT ON COLUMN core.intake_requirement.body IS
+'Full requirement text.';
+COMMENT ON COLUMN core.intake_requirement.embedding IS
+'pgvector embedding of the requirement text for semantic de-duplication and matching; dimension per embedding_config.';
+COMMENT ON COLUMN core.intake_requirement.created_at IS
+'When created.';
+COMMENT ON COLUMN core.intake_requirement.updated_at IS
+'When last updated.';
+COMMENT ON COLUMN core.intake_requirement.created_by_actor_id IS
+'Who created it. @ref core.actor hard';
+COMMENT ON COLUMN core.intake_requirement.created_role_code IS
+'The capacity they acted in. @status reference.role';

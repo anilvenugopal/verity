@@ -19,4 +19,32 @@ CREATE TABLE core.source_binding (
     CONSTRAINT ck_source_binding_storage_needs_connector
         CHECK (source_kind_code <> 'storage_object' OR data_connector_version_id IS NOT NULL),
     CONSTRAINT uq_source_binding_name UNIQUE (executable_version_id, name));
-COMMENT ON TABLE core.source_binding IS 'tier:1. Declarative INPUT resolved before the executable runs (v1 source_binding renamed). Files-from-storage via connector + locator + delivery_mode (inline/reference/download/extracted). Uniform for agent+task. binding-grammar.';
+COMMENT ON TABLE core.source_binding IS
+'A declarative INPUT resolved before the executable runs — uniform for agents and tasks. Files from storage are resolved THROUGH a connector via a locator and a delivery_mode (inline/reference/download/extracted), which is the fix for the v1 base64-only limitation. A storage_object source must name its backend connector (CHECK).
+
+@tier 1
+@lifecycle mutable
+@subject registry
+@status reference.source_kind
+@status reference.binding_delivery_mode
+@see binding-grammar';
+COMMENT ON COLUMN core.source_binding.source_binding_id IS
+'Identity of the binding.';
+COMMENT ON COLUMN core.source_binding.executable_version_id IS
+'The version this input belongs to. @ref core.executable_version hard';
+COMMENT ON COLUMN core.source_binding.name IS
+'Binding name; unique within the version.';
+COMMENT ON COLUMN core.source_binding.source_kind_code IS
+'Where the input comes from — storage_object/task_output/structured/inline_content. @status reference.source_kind';
+COMMENT ON COLUMN core.source_binding.data_connector_version_id IS
+'The storage backend for a storage_object source; required for that kind (CHECK). @ref core.data_connector_version hard';
+COMMENT ON COLUMN core.source_binding.delivery_mode_code IS
+'How the content is delivered to the model — inline/reference/download/extracted. @status reference.binding_delivery_mode';
+COMMENT ON COLUMN core.source_binding.media_type IS
+'Expected media type, e.g. application/pdf.';
+COMMENT ON COLUMN core.source_binding.locator IS
+'Variable config that resolves the input — path template, query, business keys.';
+COMMENT ON COLUMN core.source_binding.nullable IS
+'Whether the input may be absent at run time.';
+COMMENT ON COLUMN core.source_binding.ordinal IS
+'Order among the versions inputs.';

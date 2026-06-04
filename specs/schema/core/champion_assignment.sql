@@ -21,5 +21,27 @@ CREATE TABLE core.champion_assignment (
     CONSTRAINT fk_champion_assignment_acting_role FOREIGN KEY (acting_role_code)
         REFERENCES reference.role (code) ON DELETE RESTRICT
 );
-COMMENT ON TABLE core.champion_assignment IS 'tier:1 append-only. Champion pointer events (assign/revoke). Current champion via entity_champion_current. Replaces v1 mutable champion column (D4/C6).';
+COMMENT ON TABLE core.champion_assignment IS
+'The append-only champion pointer: assign and revoke events that replace v1''s mutable current_champion column. The current champion for an executable is the latest non-revoked assignment, resolved through the version (entity_champion_current). Tying the pointer to events keeps a full, auditable promotion history (D4).
+
+@tier 1
+@lifecycle append-only
+@subject lifecycle
+@decision D4';
 CREATE INDEX ix_champion_assignment_version_time ON core.champion_assignment (executable_version_id, created_at DESC);
+COMMENT ON COLUMN core.champion_assignment.champion_assignment_id IS
+'Identity of the assign/revoke event.';
+COMMENT ON COLUMN core.champion_assignment.executable_version_id IS
+'The version being made, or unmade, champion. @ref core.executable_version hard';
+COMMENT ON COLUMN core.champion_assignment.is_revocation IS
+'True if this demotes the version rather than promoting it.';
+COMMENT ON COLUMN core.champion_assignment.lifecycle_event_id IS
+'The promotion transition that produced this assignment, when there is one. @ref core.lifecycle_event hard';
+COMMENT ON COLUMN core.champion_assignment.reason IS
+'Why the champion changed.';
+COMMENT ON COLUMN core.champion_assignment.actor_id IS
+'Who changed the champion. @ref core.actor hard';
+COMMENT ON COLUMN core.champion_assignment.acting_role_code IS
+'The capacity they acted in. @status reference.role';
+COMMENT ON COLUMN core.champion_assignment.created_at IS
+'When the assignment event occurred; the ordering key for the current champion.';

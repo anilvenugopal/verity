@@ -6,10 +6,14 @@ CREATE TABLE reference.lifecycle_state (
     code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL,
     is_deployable boolean NOT NULL DEFAULT false, is_terminal boolean NOT NULL DEFAULT false,
     grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date,
-    effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    effective_end_date date NOT NULL DEFAULT '2099-12-31', is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_lifecycle_state PRIMARY KEY (code), CONSTRAINT uq_lifecycle_state_sort UNIQUE (sort_order));
-COMMENT ON TABLE reference.lifecycle_state IS 'Vocabulary: the 6-state executable lifecycle (v1 7-state CHANGED: shadow folded into a challenger run-mode). sort_order = progression. deprecated is_terminal=false (restorable via rollback). Deployment rules per state in 08 (lifecycle_deployment_rule).';
+COMMENT ON TABLE reference.lifecycle_state IS
+'The executable lifecycle states (draft/candidate/staging/challenger/champion/deprecated); sort_order is the progression.
+
+@lifecycle reference
+@subject lifecycle';
 INSERT INTO reference.lifecycle_state (code, label, sort_order, is_deployable, is_terminal, grouping) VALUES
     ('draft','Draft',1,false,false,'authoring'),
     ('candidate','Candidate',2,false,false,'authoring'),
@@ -21,6 +25,6 @@ INSERT INTO reference.lifecycle_state (code, label, sort_order, is_deployable, i
 CREATE TABLE reference.approval_request_kind (
     code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL,
     grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date,
-    effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    effective_end_date date NOT NULL DEFAULT '2099-12-31', is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_approval_request_kind PRIMARY KEY (code), CONSTRAINT uq_approval_request_kind_sort UNIQUE (sort_order));

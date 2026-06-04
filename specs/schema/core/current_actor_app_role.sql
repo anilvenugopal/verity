@@ -9,4 +9,10 @@ FROM (
     ORDER  BY actor_id, application_id, app_team_role_code, created_at DESC
 ) latest
 WHERE NOT is_revocation;
-COMMENT ON VIEW core.current_actor_app_role IS 'Effective per-application app-team roles per actor (latest non-revoked grant). D6.';
+COMMENT ON VIEW core.current_actor_app_role IS
+'Effective per-application app-team roles per actor (the latest non-revoked grant). What the per-application authorization checks read (D6).
+
+@tier 1
+@lifecycle view
+@subject intake
+@decision D6';

@@ -6,4 +6,10 @@ SELECT DISTINCT ON (harness_instance_id)
 FROM   audit.harness_heartbeat
 WHERE  heartbeat_kind_code = 'major'
 ORDER  BY harness_instance_id, created_at DESC;
-COMMENT ON VIEW audit.harness_running_package_current IS 'Latest reported running-package catalog per instance (from major heartbeats). Compare to deployments for drift. D8.';
+COMMENT ON VIEW audit.harness_running_package_current IS
+'Latest running-package catalog per instance, taken from major heartbeats. Compared against core.deployment to surface deployment drift — what is actually running versus what governance says should be (D8).
+
+@tier 2
+@lifecycle view
+@subject deploy
+@decision D8';

@@ -11,5 +11,10 @@ FROM   audit.model_invocation_log m
 LEFT   JOIN core.model_price p
        ON p.model_id = m.model_id
       AND m.created_at >= p.valid_from
-      AND (p.valid_to IS NULL OR m.created_at < p.valid_to);
-COMMENT ON VIEW audit.v_model_invocation_cost IS 'Point-in-time cost: tokens × price-in-effect-at-invocation (SCD-2 join on model_price window). Stable across later price edits.';
+      AND (m.created_at < p.valid_to);
+COMMENT ON VIEW audit.v_model_invocation_cost IS
+'Point-in-time cost per invocation: tokens × the price in effect at the invocation timestamp (an SCD-2 join on the model_price window). Because it joins by time, the figure stays stable even after prices are later edited — cost is computed here, never stored.
+
+@tier 2
+@lifecycle view
+@subject decisions';

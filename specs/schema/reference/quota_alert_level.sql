@@ -3,7 +3,12 @@
 CREATE TABLE reference.quota_alert_level (
     code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL,
     grouping text, parent_code text, effective_start_date date NOT NULL DEFAULT current_date,
-    effective_end_date date, is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    effective_end_date date NOT NULL DEFAULT '2099-12-31', is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_quota_alert_level PRIMARY KEY (code), CONSTRAINT uq_quota_alert_level_sort UNIQUE (sort_order));
 INSERT INTO reference.quota_alert_level (code, label, sort_order) VALUES ('warning',1),('exceeded',2),('critical',3);
+COMMENT ON TABLE reference.quota_alert_level IS
+'Escalation level of a quota_check (warning/exceeded/critical).
+
+@lifecycle reference
+@subject runs';

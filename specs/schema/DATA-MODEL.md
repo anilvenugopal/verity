@@ -198,20 +198,22 @@ Every table/view/enum, grouped by subject area, with its purpose. (Index: TABLE-
 
 | Object | Schema | Kind | Purpose |
 |---|---|---|---|
-| `outbox_status` | core | enum |  |
-| `run_completion_status` | core | enum |  |
 | `run_entity_kind` | core | enum |  |
-| `run_status` | core | enum |  |
 | `execution_run` | core | table | tier:1. A governed run of an executable_version. Carries deployment_run_mode + ab_sample (A/B tagging). State is event-sourced in execution_run_status. ADR-0002 |
 | `execution_run_status` | core | table | tier:1 append-only. One row per run state transition (submitted/claimed/heartbeat/released). Current state via execution_run_current. Generalized v1 event-sourc |
+| `harness_dispatch` | core | table | tier:1. LEG hub->cluster->worker. Current operational dispatch state per run; the coordinator polls it. Audit in execution_run_status (same txn). ADR-0010. |
+| `outbox_status` | reference | table |  |
 | `quota` | core | table | tier:1. A budget quota over a scope/period. enforcement_mode soft (default; warn) or hard (refuse the run as an execution-phase control). D-clarify. |
 | `quota_alert_level` | reference | table |  |
 | `quota_check` | core | table | tier:1 append-only. A quota evaluation (spend vs budget) with alert level; refused=true only under hard enforcement. Latest-per-quota = current breach state. |
 | `quota_enforcement_mode` | reference | table |  |
 | `quota_period` | reference | table |  |
 | `quota_scope_type` | reference | table |  |
+| `run_completion_status` | reference | table |  |
 | `run_dispatch_outbox` | core | table | tier:1. Transactional outbox: run insert + outbox row in one txn; verity-relay publishes to NATS and marks published_at (PCR §3.3). |
+| `run_dispatch_status` | reference | table |  |
 | `run_purpose` | reference | table |  |
+| `run_status` | reference | table |  |
 | `execution_run_current` | core | view | Current state per run (latest status event). The status path reads this view, never the analytics tier (PCR §3.4). |
 
 ### deploy
@@ -219,9 +221,11 @@ Every table/view/enum, grouped by subject area, with its purpose. (Index: TABLE-
 | Object | Schema | Kind | Purpose |
 |---|---|---|---|
 | `command_kind` | reference | table |  |
+| `command_outbox_status` | reference | table |  |
 | `command_status` | reference | table |  |
+| `credential_verification_status` | reference | table |  |
 | `deployment` | core | table | tier:1. A package placed to run: pinned harness image (both package & image digests recorded), cluster, run_mode, status. champion!=deployed. D8/ADR-0006. |
-| `deployment_binding_override` | core | table | tier:1. Per-binding real|mock override for a deployment. NOTE: run_mode=shadow FORCIBLY suppresses/mocks ALL Target Bindings regardless of these rows (the shado |
+| `deployment_binding_override` | core | table | tier:1. Per-binding real/mock override for a deployment. NOTE: run_mode=shadow FORCIBLY suppresses/mocks ALL Target Bindings regardless of these rows (the shado |
 | `deployment_channel` | reference | table |  |
 | `deployment_cluster` | core | table | tier:1. A cluster within an environment (multiple per env, incl. ephemeral/replay). D8. |
 | `deployment_connection` | core | table | tier:1. Env-specific connections for a deployment; also materialized into the package bundle so the harness is self-contained at core. D8. |
@@ -232,15 +236,20 @@ Every table/view/enum, grouped by subject area, with its purpose. (Index: TABLE-
 | `deployment_run_mode` | reference | table |  |
 | `deployment_status` | reference | table |  |
 | `environment_kind` | reference | table |  |
+| `harness_app_credential` | core | table | tier:1. Metadata-only app data-source credential registry (Model B); the secret stays on the spoke. ADR-0010. |
+| `harness_command_outbox` | core | table | tier:1. LEG hub->cluster. Transactional outbox for hub->coordinator commands; separate from run_dispatch_outbox. ADR-0010. |
+| `harness_coordinator` | core | table | tier:1. Per-cluster coordinator (master) lease; atomic hub-side election (no advisory locks, no split-brain). ADR-0010. |
 | `harness_heartbeat` | audit | table | tier:2 append-only (partitioned). Agent->portal heartbeats: minor (frequent/light) + major (running-package catalog -> drift detection). D8. |
 | `harness_image` | core | table | tier:1. A built harness container = variant + version + immutable image_digest (the identity; tags are advisory). ADR-0006/D8. |
 | `harness_instance` | core | table | tier:1. A running harness container on a cluster (the "collector"): current/desired image (patch via convergence), owned/shared scope, status, last_seen. D8. |
 | `harness_instance_command` | core | table | tier:1 append-only. Portal->agent control commands (patch/drain/enable/...). status pending->acknowledged->succeeded/failed. D8. |
 | `harness_instance_status` | reference | table |  |
+| `harness_node` | core | table | tier:1. Coordinator-eligible runtime host (pod in k8s, VM on Linux). Distinct from harness_instance. ADR-0010. |
+| `harness_node_status` | reference | table |  |
 | `harness_variant` | reference | table | Vocabulary: harness execution-engine variant (the kind of container/runtime). D8. |
 | `health_status` | reference | table |  |
 | `heartbeat_kind` | reference | table |  |
-| `lifecycle_deployment_rule` | core | table | tier:1. The ADR-0006 lifecycle->environment matrix as auditable DATA: which run-modes a state may use per environment, and whether outputs suppress. The deploy  |
+| `lifecycle_deployment_rule` | core | table | tier:1. The ADR-0006 lifecycle->environment matrix as auditable DATA: which run-modes a state may use per environment, and whether outputs suppress. The deploy |
 | `package` | core | table | tier:1 insert-only. The .vtx/.vax artifact built from a champion executable_version. D8/ADR-0006. |
 | `package_harness_compatibility` | core | table | tier:1. Package <-> harness variant + version range it can run on. Declared loosely; the deploy gate resolves & pins an exact image_digest. D8/ADR-0006. |
 | `harness_instance_health_current` | audit | view |  |

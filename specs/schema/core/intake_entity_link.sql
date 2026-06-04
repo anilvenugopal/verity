@@ -14,3 +14,24 @@ CREATE TABLE core.intake_entity_link (
     CONSTRAINT fk_intake_entity_link_executable FOREIGN KEY (executable_id) REFERENCES core.executable (executable_id) ON DELETE RESTRICT,
     CONSTRAINT fk_intake_entity_link_created_by FOREIGN KEY (created_by_actor_id) REFERENCES core.actor (actor_id),
     CONSTRAINT fk_intake_entity_link_created_role FOREIGN KEY (created_role_code) REFERENCES reference.role (code));
+COMMENT ON TABLE core.intake_entity_link IS
+'Links an intake (optionally a specific requirement) to a realized executable — a real FK, not polymorphic (D5). This is how "what we asked for" connects to "what we built", for traceability and requirement verification before promotion.
+
+@tier 1
+@lifecycle mutable
+@subject intake
+@decision D5';
+COMMENT ON COLUMN core.intake_entity_link.intake_entity_link_id IS
+'Identity of the link.';
+COMMENT ON COLUMN core.intake_entity_link.intake_id IS
+'The intake. @ref core.intake hard';
+COMMENT ON COLUMN core.intake_entity_link.intake_requirement_id IS
+'The specific requirement this link satisfies, when scoped to one; set null if the requirement is removed. @ref core.intake_requirement hard';
+COMMENT ON COLUMN core.intake_entity_link.executable_id IS
+'The realized executable the intake produced. @ref core.executable hard';
+COMMENT ON COLUMN core.intake_entity_link.created_at IS
+'When linked.';
+COMMENT ON COLUMN core.intake_entity_link.created_by_actor_id IS
+'Who linked it. @ref core.actor hard';
+COMMENT ON COLUMN core.intake_entity_link.created_role_code IS
+'The capacity they acted in. @status reference.role';

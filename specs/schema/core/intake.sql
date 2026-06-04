@@ -21,6 +21,40 @@ CREATE TABLE core.intake (
     CONSTRAINT fk_intake_materiality FOREIGN KEY (materiality_tier_code) REFERENCES reference.materiality_tier (code),
     CONSTRAINT fk_intake_created_by FOREIGN KEY (created_by_actor_id) REFERENCES core.actor (actor_id),
     CONSTRAINT fk_intake_created_role FOREIGN KEY (created_role_code) REFERENCES reference.role (code));
-COMMENT ON TABLE core.intake IS 'tier:1. Use-case intake header. intake_status_code mutable (D4; transitions in audit.status_transition). Risk/materiality drive the obligation set.';
+COMMENT ON TABLE core.intake IS
+'A single AI use-case under governance — the header the whole intake machine hangs off. Its EU-AI-Act risk tier and NAIC/internal materiality drive the obligation set it must satisfy. intake_status_code is the mutable current state; transitions are audited in audit.status_transition (D4).
+
+@tier 1
+@lifecycle mutable
+@subject intake
+@status reference.intake_status
+@status reference.ai_risk_tier
+@status reference.naic_materiality
+@status reference.materiality_tier
+@decision D4';
 CREATE INDEX ix_intake_application ON core.intake (application_id);
 CREATE INDEX ix_intake_status ON core.intake (intake_status_code);
+COMMENT ON COLUMN core.intake.intake_id IS
+'Identity of the use-case.';
+COMMENT ON COLUMN core.intake.application_id IS
+'The owning application. @ref core.application hard';
+COMMENT ON COLUMN core.intake.title IS
+'Human title of the use-case.';
+COMMENT ON COLUMN core.intake.description IS
+'What the use-case does.';
+COMMENT ON COLUMN core.intake.intake_status_code IS
+'Mutable current state; transition history lives in audit.status_transition. @status reference.intake_status';
+COMMENT ON COLUMN core.intake.ai_risk_tier_code IS
+'EU-AI-Act risk classification; a primary driver of the obligation set. @status reference.ai_risk_tier';
+COMMENT ON COLUMN core.intake.naic_materiality_code IS
+'NAIC materiality classification feeding obligations. @status reference.naic_materiality';
+COMMENT ON COLUMN core.intake.materiality_tier_code IS
+'Internal materiality tier. @status reference.materiality_tier';
+COMMENT ON COLUMN core.intake.created_at IS
+'When created.';
+COMMENT ON COLUMN core.intake.updated_at IS
+'When last updated.';
+COMMENT ON COLUMN core.intake.created_by_actor_id IS
+'Who created it. @ref core.actor hard';
+COMMENT ON COLUMN core.intake.created_role_code IS
+'The capacity they acted in. @status reference.role';

@@ -11,4 +11,10 @@ FROM (
     ORDER  BY ev.executable_id, ca.created_at DESC
 ) latest
 WHERE NOT is_revocation;
-COMMENT ON VIEW core.entity_champion_current IS 'Current champion executable_version per executable (latest non-revoked assignment). D4.';
+COMMENT ON VIEW core.entity_champion_current IS
+'Current champion executable_version per executable (the latest non-revoked assignment, resolved via the version''s executable_id). The single source of "which version is live" for delegation and deployment (D4).
+
+@tier 1
+@lifecycle view
+@subject lifecycle
+@decision D4';

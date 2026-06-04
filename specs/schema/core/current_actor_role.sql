@@ -10,4 +10,10 @@ FROM (
     ORDER  BY actor_id, role_code, created_at DESC
 ) latest
 WHERE NOT is_revocation;
-COMMENT ON VIEW core.current_actor_role IS 'Effective platform roles per actor (latest non-revoked grant per role). D4.';
+COMMENT ON VIEW core.current_actor_role IS
+'Effective platform roles per actor: the latest non-revoked grant for each (actor, role). The authorization layer reads this instead of replaying the grant log (D4).
+
+@tier 1
+@lifecycle view
+@subject identity
+@decision D4';

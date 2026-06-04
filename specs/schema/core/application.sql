@@ -18,4 +18,23 @@ CREATE TABLE core.application (
     CONSTRAINT fk_application_created_role FOREIGN KEY (created_role_code) REFERENCES reference.role (code),
     CONSTRAINT uq_application_name UNIQUE (name),
     CONSTRAINT ck_application_name_not_blank CHECK (length(btrim(name)) > 0));
-COMMENT ON TABLE core.application IS 'tier:1. Business application that owns intakes/use-cases and (via app-team grants) its own team.';
+COMMENT ON TABLE core.application IS
+'A business application under governance — the tenant-of-record that owns intakes and use-cases and, through per-application app-team grants, its own team. Quota, reporting, and run attribution all scope to it.
+
+@tier 1
+@lifecycle mutable
+@subject intake';
+COMMENT ON COLUMN core.application.application_id IS
+'Identity of the application; the scoping key for intakes, app-team roles, quota and reporting.';
+COMMENT ON COLUMN core.application.name IS
+'Human name; unique and non-blank.';
+COMMENT ON COLUMN core.application.description IS
+'What the application is.';
+COMMENT ON COLUMN core.application.created_at IS
+'When onboarded.';
+COMMENT ON COLUMN core.application.updated_at IS
+'When last updated.';
+COMMENT ON COLUMN core.application.created_by_actor_id IS
+'Who onboarded it. @ref core.actor hard';
+COMMENT ON COLUMN core.application.created_role_code IS
+'The capacity they acted in (D6). @status reference.role';

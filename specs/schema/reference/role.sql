@@ -11,7 +11,7 @@ CREATE TABLE reference.role (
     parent_code          text,
     is_approval_role     boolean      NOT NULL DEFAULT false,  -- may sign off on approvals
     effective_start_date date        NOT NULL DEFAULT current_date,
-    effective_end_date   date,
+    effective_end_date   date NOT NULL DEFAULT '2099-12-31',
     is_active            boolean      NOT NULL DEFAULT true,
     metadata             jsonb        NOT NULL DEFAULT '{}'::jsonb,
     created_at           timestamptz  NOT NULL DEFAULT now(),
@@ -20,9 +20,13 @@ CREATE TABLE reference.role (
     CONSTRAINT fk_role_parent FOREIGN KEY (parent_code)
         REFERENCES reference.role (code) ON DELETE RESTRICT,
     CONSTRAINT uq_role_sort UNIQUE (sort_order),
-    CONSTRAINT ck_role_effective CHECK (effective_end_date IS NULL OR effective_end_date >= effective_start_date)
+    CONSTRAINT ck_role_effective CHECK (effective_end_date >= effective_start_date)
 );
-COMMENT ON TABLE reference.role IS 'Vocabulary: platform/governance roles (v1 studio_role+platform_role collapsed). is_approval_role = v1 approval_role subset. D1.';
+COMMENT ON TABLE reference.role IS
+'The unified platform role vocabulary (collapses v1 studio_role + platform_role); the acting_role_code paired with every actor.
+
+@lifecycle reference
+@subject identity';
 INSERT INTO reference.role (code, label, sort_order, grouping, is_approval_role) VALUES
     ('business_owner', 'Business Owner', 1, 'governance',  true),
     ('compliance',     'Compliance',     2, 'oversight',   true),

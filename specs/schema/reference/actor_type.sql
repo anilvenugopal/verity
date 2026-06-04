@@ -9,7 +9,7 @@
 --   parent_code  text -> self -- hierarchy (= skos:broader/narrower)
 --   effective_start_date / effective_end_date  -- validity window (D1-amend);
 --                                                  retire = close the window
---   is_active    bool         -- convenience flag (= effective_end_date IS NULL)
+--   is_active    bool         -- convenience flag (= effective_end_date = '2099-12-31')
 --   metadata     jsonb        -- icon/color/extra FE attrs
 --   created_at / updated_at
 -- Referencing columns elsewhere:  <vocab>_code text -> reference.<vocab>(code)
@@ -25,7 +25,7 @@ CREATE TABLE reference.actor_type (
     grouping             text,
     parent_code          text,
     effective_start_date date        NOT NULL DEFAULT current_date,
-    effective_end_date   date,
+    effective_end_date   date NOT NULL DEFAULT '2099-12-31',
     is_active            boolean      NOT NULL DEFAULT true,
     metadata             jsonb        NOT NULL DEFAULT '{}'::jsonb,
     created_at           timestamptz  NOT NULL DEFAULT now(),
@@ -34,9 +34,13 @@ CREATE TABLE reference.actor_type (
     CONSTRAINT fk_actor_type_parent FOREIGN KEY (parent_code)
         REFERENCES reference.actor_type (code) ON DELETE RESTRICT,
     CONSTRAINT uq_actor_type_sort UNIQUE (sort_order),
-    CONSTRAINT ck_actor_type_effective CHECK (effective_end_date IS NULL OR effective_end_date >= effective_start_date)
+    CONSTRAINT ck_actor_type_effective CHECK (effective_end_date >= effective_start_date)
 );
-COMMENT ON TABLE reference.actor_type IS 'Vocabulary: kind of actor (human vs machine). D1/D6.';
+COMMENT ON TABLE reference.actor_type IS
+'Whether an actor is a human or an automation; the discriminator for the core.actor supertype.
+
+@lifecycle reference
+@subject identity';
 INSERT INTO reference.actor_type (code, label, sort_order) VALUES
     ('human',      'Human user',        1),
     ('automation', 'Automation / agent', 2);

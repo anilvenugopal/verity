@@ -11,3 +11,8 @@
 -- API layer). Two partitions are shown (2026_06/2026_07); a partition-management job
 -- (pg_partman or a CronJob) creates future months ahead of time.
 CREATE TYPE audit.decision_status   AS ENUM ('complete', 'error', 'partial');
+COMMENT ON TYPE audit.decision_status IS
+'The outcome of a logged decision (audit.decision_log): complete, error, or partial.
+
+@subject decisions
+@lifecycle enum';

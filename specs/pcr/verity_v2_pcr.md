@@ -162,7 +162,8 @@ Postgres `LISTEN/NOTIFY` does not replicate across Postgres nodes. Once Postgres
 
 | Subject | Purpose |
 |---|---|
-| `verity.runs.pending` | New run submitted; worker pool subscribes via durable consumer group |
+| `verity.runs.pending` | New run submitted; per-cluster **coordinators** subscribe via durable consumer group |
+| `verity.cluster.{id}.commands` | Hub → coordinator control commands (patch, deploy_package, drain, …) |
 | `verity.events.{run_id}` | Per-run execution events (turn, tool calls, completion) |
 | `verity.decisions.stream` | Terminal decision records; consumed by decision log writer and analytics projector |
 | `verity.worker.heartbeat.{worker_id}` | Per-container 30s liveness signal |
@@ -171,10 +172,13 @@ Postgres `LISTEN/NOTIFY` does not replicate across Postgres nodes. Once Postgres
 **Transactional outbox pattern:**
 
 The governance API never publishes directly to NATS. On run submission:
-1. Single Postgres transaction inserts `execution_run` AND `run_dispatch_outbox`
-2. `verity-relay` service reads unpublished outbox rows (`SKIP LOCKED`), publishes to NATS, marks `published_at`
+1. Single Postgres transaction inserts `execution_run` AND `harness_dispatch` (`queued`) AND `run_dispatch_outbox` (`pending`)
+2. `verity-relay` service reads unpublished outbox rows (`SKIP LOCKED`), publishes to NATS, marks `published_to_cluster_at`
 3. `verity-dispatch-sweep` CronJob (every 60s) catches messages published but not claimed within 5 minutes and re-publishes
-4. Workers subscribe to NATS, claim via `SKIP LOCKED` on `execution_run` (NATS and Postgres provide two independent layers of at-least-once delivery)
+4. The target cluster's elected **coordinator** subscribes and **claims via the Harness Gateway API** — the atomic `SKIP LOCKED` claim runs **hub-side** inside the gateway ([[0003-harness-governance-api]]: the spoke holds no DB credential), which marks `harness_dispatch` claimed/assigned. NATS redelivery and the dispatch-sweep are the two independent at-least-once layers.
+5. The coordinator (the cluster's sole hub uplink) dispatches the claimed run to a worker over cluster-local NATS; workers never call the hub or the database directly.
+
+> **Runtime architecture:** the per-cluster coordinator, the heartbeat-lease election, the operator/coordinator split, island-mode resilience, and the API-only claim are fixed in [[0010-harness-runtime-federated-coordinator]]. `core.harness_dispatch` is the mutable operational dispatch state; `core.execution_run_status` is its append-only audit (written in the same transaction).
 
 **Feature flag:** `VERITY_DISPATCH_MODE=nats|postgres` — `postgres` poll loop kept as instant fallback.
 

@@ -139,3 +139,74 @@ Rules:
   if performance warrants, materialization is a Tier-2 concern.
 
 ### Worked example — execution run state machine
+
+---
+
+## 10. Temporal validity — open intervals use a sentinel, never NULL
+
+Every effective-dated row (reference vocab and SCD-2 history) is a **closed, fully
+populated range**. The open end is a far-future **sentinel**, not `NULL`.
+
+- **Date intervals:** `effective_start_date date NOT NULL DEFAULT current_date` and
+  `effective_end_date date NOT NULL DEFAULT '2099-12-31'`.
+- **Timestamp intervals (SCD-2):** `valid_from timestamptz NOT NULL DEFAULT now()` and
+  `valid_to timestamptz NOT NULL DEFAULT '2099-12-31 00:00:00+00'`.
+- **Why:** range predicates and temporal joins become uniform — `WHERE $asof BETWEEN
+  start AND end` with no `COALESCE(end,'infinity')` or `IS NULL` branch, and indexes can
+  be planned cleanly. The cost of a `NULL`-means-open convention is a special case in
+  every query; the sentinel removes it.
+- **"Current / open" row:** the one whose end column equals the sentinel. Partial unique
+  "one open row" indexes filter on it: `... WHERE valid_to = '2099-12-31 00:00:00+00'`
+  (not `IS NULL`). For reference vocab, `is_active` mirrors "end = sentinel".
+- **CHECK:** the window constraint is `end >= start` (no `IS NULL OR …` branch), e.g.
+  `CONSTRAINT ck_role_effective CHECK (effective_end_date >= effective_start_date)`.
+- The sentinel is a single documented constant; swapping to `'infinity'::date` /
+  `'infinity'::timestamptz` (Postgres-native, never expires) is a one-line change if ever
+  preferred. `2099-12-31` is the chosen value.
+
+## 11. Object & column comments — catalog documentation
+
+Substantive documentation lives in **catalog comments** (`COMMENT ON TABLE` /
+`COMMENT ON COLUMN`), which are stored in `pg_description` and surface in `\d+`, BI tools,
+and introspection. Inline `-- …` in the DDL is **source-only** (lost at load) and is
+reserved for terse type hints, not documentation.
+
+**Format — description first, then `@key value` tags:**
+
+```sql
+COMMENT ON TABLE core.harness_dispatch IS
+'Current operational dispatch state for one run within a cluster — the row the
+coordinator polls to find work. Append-only twin is execution_run_status.
+
+@tier 1
+@lifecycle mutable
+@subject runs
+@leg hub->cluster->worker
+@status reference.run_dispatch_status
+@invariant written in the same transaction as execution_run_status
+@adr 0010';
+```
+
+- The **description** (plain prose: the *what* and *why*) is mandatory and always first.
+- A blank line, then **`@key value` tags**, one per line. Parsers split on the first line
+  beginning with `@`. Tag keys come from the controlled vocabulary only; unknown keys are
+  a CI error (`grep`-enforceable).
+- **Repeatable** keys (e.g. several `@status`, `@invariant`, `@adr`) appear on their own
+  lines. **Boolean** keys are presence flags (`@pii`, `@deprecated <reason>`).
+
+**Controlled vocabulary**
+
+- *Table-level:* `@tier` (1|2) · `@lifecycle` (mutable|append-only|insert-only|scd2|view|
+  reference) · `@subject` (domain) · `@leg` (directional dispatch chain) · `@status
+  reference.X` · `@partitioned <strategy>` · `@invariant <text>` · `@adr <id>` /
+  `@decision <Dn>` · `@owner` · `@see <object>`.
+- *Column-level:* `@status reference.X` · `@ref <schema.table> hard|soft` (FK target +
+  whether enforced) · `@actor hub|relay|coordinator|worker` (who writes it — pairs with
+  the directional column naming) · `@units ms|bytes|usd|count` · `@classification
+  tier1_public…tier4_pii_restricted` · `@values a|b|c` (when not a ref table) ·
+  `@example <v>` · `@default <rationale>` · `@nullable-when <condition>` · `@since <adr>`.
+
+**Reference vocab tables** use the fixed column template (code/label/description/
+sort_order/grouping/parent_code/effective_*/is_active/metadata/timestamps); that template
+is documented here once, so a reference table needs only a **table** comment, not
+per-column comments.
