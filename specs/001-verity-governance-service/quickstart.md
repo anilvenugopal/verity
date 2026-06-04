@@ -37,9 +37,9 @@ intake=$(curl -s -XPOST localhost:8000/applications/$app/intakes -H 'content-typ
 curl -s -XPOST localhost:8000/intakes/$intake/classification -H 'content-type: application/json' \
   -d '{"ai_risk_tier_code":"high","naic_materiality_code":"material"}' | jq .
 
-# change status (audited, one transaction)
+# change status (audited, one transaction) — to_status_code must be a seeded reference.intake_status
 curl -s -XPOST localhost:8000/intakes/$intake/status -H 'content-type: application/json' \
-  -d '{"to_status_code":"triaged","reason":"meets criteria"}' | jq .
+  -d '{"to_status_code":"in_review","reason":"meets criteria"}' | jq .
 
 # add a requirement
 curl -s -XPOST localhost:8000/intakes/$intake/requirements -H 'content-type: application/json' \

@@ -33,7 +33,7 @@ def tail(services: list[str], tail_n: int = 20) -> None:
     colors = itertools.cycle(_COLORS)
     procs: list[subprocess.Popen] = []
     threads: list[threading.Thread] = []
-    print(f"aggregating: {', '.join(l for l, _ in sources)}   (Ctrl-C to stop)\n")
+    print(f"aggregating: {', '.join(lbl for lbl, _ in sources)}   (Ctrl-C to stop)\n")
     for label, cmd in sources:
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
         procs.append(p)

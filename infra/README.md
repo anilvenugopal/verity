@@ -14,4 +14,8 @@ Owns:
 CI's deploy-target tests provision an **ephemeral** substrate (kind for k8s, a VM/container for
 Linux) — the test double for what this provisions in production.
 
+Hub-only features (the intake slice and everything else that is just hub + Postgres) need no new
+infra: they run on the **Postgres substrate** this provisions — the local `pg` dev stack
+(`dev stack up pg`, a pgvector container) standing in for production **CloudNativePG**.
+
 Status: not started.

@@ -11,14 +11,38 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from psycopg import AsyncConnection
-from psycopg.errors import UniqueViolation
+from psycopg.errors import ForeignKeyViolation, UniqueViolation
 
 from verity.hub.auth.dependencies import require_action
 from verity.hub.auth.models import AuthContext
 from verity.hub.intake import service
-from verity.hub.intake.models import Application, ApplicationCreate, Intake, IntakeCreate
+from verity.hub.intake.models import (
+    Application,
+    ApplicationCreate,
+    Intake,
+    IntakeClassify,
+    IntakeCreate,
+    IntakeStatusChange,
+    Requirement,
+    RequirementCreate,
+)
 
 router = APIRouter(tags=["intake"])
+
+# Map the intake reference FKs to the offending request field (D-INT-7: a bad reference code
+# surfaces as 400 naming the field, not a 500).
+_FK_FIELD: dict[str, str] = {
+    "fk_intake_risk_tier": "ai_risk_tier_code",
+    "fk_intake_naic": "naic_materiality_code",
+    "fk_intake_materiality": "materiality_tier_code",
+    "fk_intake_status": "to_status_code",
+    "fk_intake_requirement_kind": "requirement_kind_code",
+}
+
+
+def _bad_code(exc: ForeignKeyViolation) -> HTTPException:
+    field = _FK_FIELD.get(getattr(exc.diag, "constraint_name", "") or "", "reference code")
+    return HTTPException(400, f"invalid {field}")
 
 
 async def get_conn(request: Request):
@@ -90,3 +114,59 @@ async def get_intake(
     if intake is None:
         raise HTTPException(404, "intake not found")
     return intake
+
+
+@router.post("/intakes/{intake_id}/classification", response_model=Intake)
+async def classify_intake(
+    intake_id: UUID,
+    body: IntakeClassify,
+    conn: AsyncConnection = Depends(get_conn),
+    ctx: AuthContext = Depends(require_action("reclassify_risk")),
+) -> Intake:
+    try:
+        intake = await service.classify_intake(conn, intake_id, body, ctx)
+    except ForeignKeyViolation as exc:
+        raise _bad_code(exc) from exc
+    if intake is None:
+        raise HTTPException(404, "intake not found")
+    return intake
+
+
+@router.post("/intakes/{intake_id}/status", response_model=Intake)
+async def change_status(
+    intake_id: UUID,
+    body: IntakeStatusChange,
+    conn: AsyncConnection = Depends(get_conn),
+    ctx: AuthContext = Depends(require_action("triage_intake")),
+) -> Intake:
+    try:
+        intake = await service.change_status(conn, intake_id, body, ctx)
+    except ForeignKeyViolation as exc:
+        raise _bad_code(exc) from exc
+    if intake is None:
+        raise HTTPException(404, "intake not found")
+    return intake
+
+
+@router.post("/intakes/{intake_id}/requirements", status_code=201, response_model=Requirement)
+async def add_requirement(
+    intake_id: UUID,
+    req: RequirementCreate,
+    conn: AsyncConnection = Depends(get_conn),
+    ctx: AuthContext = Depends(require_action("edit_requirement")),
+) -> Requirement:
+    if await service.get_intake(conn, intake_id) is None:
+        raise HTTPException(404, "intake not found")
+    try:
+        return await service.add_requirement(conn, intake_id, req, ctx)
+    except ForeignKeyViolation as exc:
+        raise _bad_code(exc) from exc
+
+
+@router.get("/intakes/{intake_id}/requirements", response_model=list[Requirement])
+async def list_requirements(
+    intake_id: UUID,
+    conn: AsyncConnection = Depends(get_conn),
+    ctx: AuthContext = Depends(require_action("view")),
+) -> list[Requirement]:
+    return await service.list_requirements(conn, intake_id)

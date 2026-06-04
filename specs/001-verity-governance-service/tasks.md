@@ -62,10 +62,10 @@ re-derived.
 **Goal**: set EU-AI-Act risk tier + NAIC/internal materiality on an intake.
 **Independent test**: a `reclassify_risk`-authorized principal sets the codes and they persist; an invalid code returns 400 (not 500).
 
-- [ ] T018 [P] [US2] Raw SQL `classify_intake` (UPDATE the three `*_code` columns, RETURNING) — `hub/db/queries/intake.sql`
-- [ ] T019 [P] [US2] `IntakeClassify` model — `hub/src/verity/hub/intake/models.py`
-- [ ] T020 [US2] Service `classify` + route `POST /intakes/{id}/classification` (gate `reclassify_risk`); map FK violation → 400 with the bad field (D-INT-7) — `hub/src/verity/hub/intake/{service,router}.py`
-- [ ] T021 [US2] e2e test: classify sets codes; `ai_risk_tier_code:"bogus"` → 400 — `hub/tests/verity/hub/intake/test_intake.py`
+- [X] T018 [P] [US2] Raw SQL `classify_intake` (UPDATE the three `*_code` columns, RETURNING) — `hub/db/queries/intake.sql`
+- [X] T019 [P] [US2] `IntakeClassify` model — `hub/src/verity/hub/intake/models.py`
+- [X] T020 [US2] Service `classify` + route `POST /intakes/{id}/classification` (gate `reclassify_risk`); map FK violation → 400 with the bad field (D-INT-7) — `hub/src/verity/hub/intake/{service,router}.py`
+- [X] T021 [US2] e2e test: classify sets codes; `ai_risk_tier_code:"bogus"` → 400 — `hub/tests/verity/hub/intake/test_intake.py`
 
 ---
 
@@ -74,10 +74,10 @@ re-derived.
 **Goal**: change an intake's status; one transaction updates the row **and** appends to `audit.status_transition`.
 **Independent test**: a status change updates `intake_status_code` and writes exactly one `audit.status_transition` row with `from_code`/`to_code`/`actor_id`/`acting_role_code`; an invalid status code returns 400.
 
-- [ ] T022 [P] [US3] Raw SQL `get_intake_status`, `update_intake_status` (`hub/db/queries/intake.sql`) + `insert_status_transition` (`hub/db/queries/status_transition.sql`)
-- [ ] T023 [P] [US3] `IntakeStatusChange` model — `hub/src/verity/hub/intake/models.py`
-- [ ] T024 [US3] Service `change_status` — **single transaction** (read from_code → update → insert audit, D-INT-1); route `POST /intakes/{id}/status` (gate `triage_intake`) — `hub/src/verity/hub/intake/{service,router}.py`
-- [ ] T025 [US3] e2e test: status change updates the row + exactly one audit row (from/to/actor/acting_role); invalid code → 400 — `hub/tests/verity/hub/intake/test_intake.py`
+- [X] T022 [P] [US3] Raw SQL `get_intake_status`, `update_intake_status` (`hub/db/queries/intake.sql`) + `insert_status_transition` (`hub/db/queries/status_transition.sql`)
+- [X] T023 [P] [US3] `IntakeStatusChange` model — `hub/src/verity/hub/intake/models.py`
+- [X] T024 [US3] Service `change_status` — **single transaction** (read from_code → update → insert audit, D-INT-1); route `POST /intakes/{id}/status` (gate `triage_intake`) — `hub/src/verity/hub/intake/{service,router}.py`
+- [X] T025 [US3] e2e test: status change updates the row + exactly one audit row (from/to/actor/acting_role); invalid code → 400 — `hub/tests/verity/hub/intake/test_intake.py`
 
 ---
 
@@ -86,18 +86,18 @@ re-derived.
 **Goal**: add and list typed requirements on an intake (`embedding` null — deferred D-INT-6).
 **Independent test**: an `edit_requirement`-authorized principal adds a requirement (embedding null) and lists it back.
 
-- [ ] T026 [P] [US4] Raw SQL `add_requirement`, `list_requirements` — `hub/db/queries/intake_requirement.sql`
-- [ ] T027 [P] [US4] `RequirementCreate/Requirement` models — `hub/src/verity/hub/intake/models.py`
-- [ ] T028 [US4] Service + routes `POST/GET /intakes/{id}/requirements` (gates `edit_requirement` / `view`) — `hub/src/verity/hub/intake/{service,router}.py`
-- [ ] T029 [US4] e2e test: add requirement (embedding null) + list — `hub/tests/verity/hub/intake/test_intake.py`
+- [X] T026 [P] [US4] Raw SQL `add_requirement`, `list_requirements` — `hub/db/queries/intake_requirement.sql`
+- [X] T027 [P] [US4] `RequirementCreate/Requirement` models — `hub/src/verity/hub/intake/models.py`
+- [X] T028 [US4] Service + routes `POST/GET /intakes/{id}/requirements` (gates `edit_requirement` / `view`) — `hub/src/verity/hub/intake/{service,router}.py`
+- [X] T029 [US4] e2e test: add requirement (embedding null) + list — `hub/tests/verity/hub/intake/test_intake.py`
 
 ---
 
 ## Phase 7: Polish & cross-cutting
 
-- [ ] T030 [P] Read-only intake queries in the dev console catalog (`intakes`, `status_history`, `requirements`) — `tools/src/verity/dev/catalog.py`
-- [ ] T031 [P] One-line `infra/README.md` note: hub-only features run on the `pg` substrate (dev stack `pg`; prod CloudNativePG)
-- [ ] T032 Full hub suite green (`pytest -q`) + quickstart smoke + `ruff check` clean
+- [X] T030 [P] Read-only intake queries in the dev console catalog (`intakes`, `status_history`, `requirements`) — `tools/src/verity/dev/catalog.py`
+- [X] T031 [P] One-line `infra/README.md` note: hub-only features run on the `pg` substrate (dev stack `pg`; prod CloudNativePG)
+- [X] T032 Full hub suite green (`pytest -q`) + quickstart smoke + `ruff check` clean
 
 ---
 
