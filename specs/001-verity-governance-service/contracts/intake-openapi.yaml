@@ -1,0 +1,178 @@
+openapi: 3.1.0
+info:
+  title: Verity Governance API — Intake slice
+  version: 0.1.0
+  description: >
+    Application onboarding → intake (classified) → requirements. Every route is action-gated
+    and fail-closed (user-authentication.md); the `x-action` extension names the action each
+    route requires. Field names mirror the canonical schema columns (naming gate). Auth is the
+    server-side session/principal (mock in local dev); the harness never uses these routes.
+servers:
+  - url: http://localhost:8000
+
+paths:
+  /applications:
+    post:
+      summary: Onboard an application
+      x-action: onboard_application
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ApplicationCreate' } } } }
+      responses:
+        "201": { description: created, content: { application/json: { schema: { $ref: '#/components/schemas/Application' } } } }
+        "403": { $ref: '#/components/responses/Denied' }
+    get:
+      summary: List applications
+      x-action: view
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Application' } } } } }
+
+  /applications/{application_id}:
+    get:
+      summary: Get an application
+      x-action: view
+      parameters: [ { $ref: '#/components/parameters/ApplicationId' } ]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/Application' } } } }
+        "404": { $ref: '#/components/responses/NotFound' }
+
+  /applications/{application_id}/intakes:
+    post:
+      summary: Create an intake under an application
+      x-action: create_intake
+      parameters: [ { $ref: '#/components/parameters/ApplicationId' } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/IntakeCreate' } } } }
+      responses:
+        "201": { description: created, content: { application/json: { schema: { $ref: '#/components/schemas/Intake' } } } }
+        "403": { $ref: '#/components/responses/Denied' }
+        "404": { $ref: '#/components/responses/NotFound' }
+    get:
+      summary: List intakes for an application
+      x-action: view
+      parameters: [ { $ref: '#/components/parameters/ApplicationId' } ]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Intake' } } } } }
+
+  /intakes/{intake_id}:
+    get:
+      summary: Get an intake
+      x-action: view
+      parameters: [ { $ref: '#/components/parameters/IntakeId' } ]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/Intake' } } } }
+        "404": { $ref: '#/components/responses/NotFound' }
+    patch:
+      summary: Edit intake title/description
+      x-action: edit_intake
+      parameters: [ { $ref: '#/components/parameters/IntakeId' } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/IntakeEdit' } } } }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/Intake' } } } }
+        "403": { $ref: '#/components/responses/Denied' }
+
+  /intakes/{intake_id}/classification:
+    post:
+      summary: Set/refresh risk tier + materiality (drives the obligation set)
+      x-action: reclassify_risk
+      parameters: [ { $ref: '#/components/parameters/IntakeId' } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/IntakeClassify' } } } }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/Intake' } } } }
+        "400": { $ref: '#/components/responses/BadCode' }
+        "403": { $ref: '#/components/responses/Denied' }
+
+  /intakes/{intake_id}/status:
+    post:
+      summary: Change intake status (audited; one transaction)
+      x-action: triage_intake
+      parameters: [ { $ref: '#/components/parameters/IntakeId' } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/IntakeStatusChange' } } } }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/Intake' } } } }
+        "400": { $ref: '#/components/responses/BadCode' }
+        "403": { $ref: '#/components/responses/Denied' }
+
+  /intakes/{intake_id}/requirements:
+    post:
+      summary: Add a requirement to an intake
+      x-action: edit_requirement
+      parameters: [ { $ref: '#/components/parameters/IntakeId' } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/RequirementCreate' } } } }
+      responses:
+        "201": { description: created, content: { application/json: { schema: { $ref: '#/components/schemas/Requirement' } } } }
+        "403": { $ref: '#/components/responses/Denied' }
+    get:
+      summary: List requirements for an intake
+      x-action: view
+      parameters: [ { $ref: '#/components/parameters/IntakeId' } ]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Requirement' } } } } }
+
+components:
+  parameters:
+    ApplicationId: { name: application_id, in: path, required: true, schema: { type: string, format: uuid } }
+    IntakeId: { name: intake_id, in: path, required: true, schema: { type: string, format: uuid } }
+  responses:
+    Denied: { description: action not permitted, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    NotFound: { description: not found, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    BadCode: { description: invalid reference code, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  schemas:
+    Error: { type: object, properties: { code: { type: string }, detail: { type: string }, request_id: { type: string } } }
+    ApplicationCreate:
+      type: object
+      required: [name]
+      properties: { name: { type: string, minLength: 1 }, description: { type: string } }
+    Application:
+      type: object
+      properties:
+        application_id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+    IntakeCreate:
+      type: object
+      required: [title]
+      properties: { title: { type: string, minLength: 1 }, description: { type: string } }
+    IntakeEdit:
+      type: object
+      properties: { title: { type: string }, description: { type: string } }
+    IntakeClassify:
+      type: object
+      description: any subset; codes validated against the reference vocabularies
+      properties:
+        ai_risk_tier_code: { type: string }
+        naic_materiality_code: { type: string }
+        materiality_tier_code: { type: string }
+    IntakeStatusChange:
+      type: object
+      required: [to_status_code]
+      properties:
+        to_status_code: { type: string, description: a reference.intake_status code }
+        reason: { type: string }
+    Intake:
+      type: object
+      properties:
+        intake_id: { type: string, format: uuid }
+        application_id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        intake_status_code: { type: string }
+        ai_risk_tier_code: { type: string, nullable: true }
+        naic_materiality_code: { type: string, nullable: true }
+        materiality_tier_code: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+    RequirementCreate:
+      type: object
+      required: [requirement_kind_code, title, body]
+      properties:
+        requirement_kind_code: { type: string }
+        title: { type: string, minLength: 1 }
+        body: { type: string, minLength: 1 }
+    Requirement:
+      type: object
+      properties:
+        intake_requirement_id: { type: string, format: uuid }
+        intake_id: { type: string, format: uuid }
+        requirement_kind_code: { type: string }
+        requirement_status_code: { type: string }
+        title: { type: string }
+        body: { type: string }
+        created_at: { type: string, format: date-time }
