@@ -1,0 +1,2 @@
+# Forward, numbered SQL migrations (NNNN_*.sql) applied after the 0001 baseline.
+# The baseline is the canonical schema (specs/schema/verity_schema.sql) + seeds, applied by migrate.py.

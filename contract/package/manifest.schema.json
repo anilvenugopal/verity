@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://verity.example/contract/package/manifest.schema.json",
+  "title": "Verity package manifest (.vtx / .vax)",
+  "description": "The bundle manifest the harness verifies (SHA-256) before any data is touched (ADR-0006, ADR-0010). SKELETON — fill from the packaging component spec.",
+  "type": "object",
+  "required": ["package_kind", "package_digest", "executable", "harness_compatibility"],
+  "properties": {
+    "package_kind": { "enum": ["vtx", "vax"], "description": "vtx = task, vax = agent (reference.executable_kind)" },
+    "package_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$", "description": "immutable artifact fingerprint" },
+    "executable": {
+      "type": "object",
+      "required": ["executable_version_id", "semver"],
+      "properties": {
+        "executable_version_id": { "type": "string", "format": "uuid" },
+        "semver": { "type": "string" },
+        "kind_code": { "enum": ["agent", "task"] }
+      }
+    },
+    "harness_compatibility": {
+      "type": "array",
+      "description": "variant + version range; the deploy gate resolves & pins an exact image digest",
+      "items": {
+        "type": "object",
+        "required": ["variant_code"],
+        "properties": {
+          "variant_code": { "type": "string" },
+          "min_harness_version": { "type": "string" },
+          "max_harness_version": { "type": "string" }
+        }
+      }
+    },
+    "composition": {
+      "type": "object",
+      "description": "resolved, self-contained config the harness needs at runtime",
+      "properties": {
+        "inference": { "type": "object" },
+        "prompts": { "type": "array", "items": { "type": "object" } },
+        "tools": { "type": "array", "items": { "type": "object" } },
+        "source_bindings": { "type": "array", "items": { "type": "object" } },
+        "target_bindings": { "type": "array", "items": { "type": "object" } },
+        "connections": { "type": "array", "items": { "type": "object" } }
+      }
+    }
+  }
+}

@@ -1,0 +1,137 @@
+openapi: 3.1.0
+info:
+  title: Verity Harness Gateway API
+  version: 0.1.0-skeleton
+  description: >
+    The ONLY write path between a harness (spoke) and the governance hub (ADR-0003: the spoke
+    holds no DB credential). Every DB effect — the coordinator-lease UPDATE, the SKIP LOCKED
+    claim, run-state transitions, log ingest — runs hub-side inside these handlers. Outbound,
+    mTLS, TLS 1.3 on 443 (ADR-0010). This is a SKELETON: paths/shapes are fixed here; per-field
+    detail is filled from the component specs. Hub-owned, versioned, contract-tested both sides.
+servers:
+  - url: https://gateway.verity.example/relay/v1
+security:
+  - mtlsClusterCert: []
+    bearerJWT: []
+
+paths:
+  /healthz:
+    get:
+      summary: Liveness/readiness
+      security: []
+      responses: { "200": { description: ok } }
+
+  /register:
+    post:
+      summary: Enrollment — exchange a one-time token for the cluster's mTLS identity + API key
+      security: []
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/RegisterRequest' } } }
+      responses:
+        "200": { description: enrolled, content: { application/json: { schema: { $ref: '#/components/schemas/RegisterResult' } } } }
+        "401": { $ref: '#/components/responses/Unauthorized' }
+
+  /clusters/{cluster_id}/heartbeat:
+    post:
+      summary: Coordinator heartbeat — refreshes the lease (hub-side atomic UPDATE) and liveness
+      parameters: [ { $ref: '#/components/parameters/ClusterId' } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/Heartbeat' } } }
+      responses:
+        "200":
+          description: accepted; lease_held tells the coordinator whether it still leads
+          content: { application/json: { schema: { $ref: '#/components/schemas/HeartbeatResult' } } }
+
+  /clusters/{cluster_id}/dispatch/next:
+    post:
+      summary: Coordinator polls for the next claimable runs (hub-side SKIP LOCKED on harness_dispatch)
+      parameters: [ { $ref: '#/components/parameters/ClusterId' } ]
+      requestBody:
+        content: { application/json: { schema: { type: object, properties: { limit: { type: integer, default: 1 } } } } }
+      responses:
+        "200": { description: zero or more runs claimed for this coordinator, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/DispatchedRun' } } } } }
+
+  /runs/{run_id}/release:
+    post:
+      summary: Worker reports terminal state — writes execution_run_status + decision log (ingest)
+      parameters: [ { $ref: '#/components/parameters/RunId' } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/RunRelease' } } }
+      responses:
+        "202": { description: accepted for ingest }
+
+  /commands/{command_id}/ack:
+    post:
+      summary: Coordinator acknowledges a command (deploy_package, patch, ...) with its result
+      parameters: [ { name: command_id, in: path, required: true, schema: { type: string, format: uuid } } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CommandAck' } } }
+      responses:
+        "200": { description: recorded }
+
+components:
+  securitySchemes:
+    mtlsClusterCert: { type: mutualTLS }
+    bearerJWT: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    ClusterId: { name: cluster_id, in: path, required: true, schema: { type: string, format: uuid } }
+    RunId: { name: run_id, in: path, required: true, schema: { type: string, format: uuid } }
+  responses:
+    Unauthorized: { description: missing/invalid credential }
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [enrollment_token, node_identifier]
+      properties:
+        enrollment_token: { type: string, description: one-time, short-lived, scoped to {application, environment} }
+        node_identifier: { type: string, description: pod name (k8s) or hostname/VM id (Linux) }
+    RegisterResult:
+      type: object
+      properties:
+        api_key: { type: string }
+        mtls_cert_pem: { type: string }
+        mtls_key_pem: { type: string }
+        deployment_cluster_id: { type: string, format: uuid }
+    Heartbeat:
+      type: object
+      required: [node_id, kind]
+      properties:
+        node_id: { type: string }
+        kind: { type: string, enum: [minor, major], description: reference.heartbeat_kind }
+        worker_count: { type: integer }
+        active_run_count: { type: integer }
+        queue_depth: { type: integer }
+        runtime_version: { type: string }
+        health_status_code: { type: string, description: reference.health_status }
+        running_packages: { type: array, items: { type: object }, description: "major only: catalog for drift detection" }
+    HeartbeatResult:
+      type: object
+      properties:
+        lease_held: { type: boolean, description: false => another node won the lease; step down }
+    DispatchedRun:
+      type: object
+      description: a run the hub atomically claimed for this coordinator (harness_dispatch -> claimed)
+      properties:
+        execution_run_id: { type: string, format: uuid }
+        package_digest: { type: string }
+        run_dispatch_status_code: { type: string, description: reference.run_dispatch_status }
+        payload: { type: object, description: everything needed to execute (champion ref, bindings) }
+    RunRelease:
+      type: object
+      required: [completion_status_code, write_idempotency_key]
+      properties:
+        completion_status_code: { type: string, description: reference.run_completion_status }
+        write_idempotency_key: { type: string }
+        decision_log: { type: object, description: the canonical decision record (audit.decision_log ingest) }
+        model_invocations: { type: array, items: { type: object } }
+        error_code: { type: string }
+    CommandAck:
+      type: object
+      required: [outcome]
+      properties:
+        outcome: { type: string, description: reference.command_status (succeeded/failed) }
+        result: { type: object }
