@@ -1,7 +1,7 @@
 """JIT provisioning of the identity principal (FR-006a)."""
 from __future__ import annotations
 
-from ..db import queries
+from verity.hub.db import queries
 
 
 async def jit_provision(conn, *, tenant_id, microsoft_oid, display_name, email, upn) -> str:
@@ -16,4 +16,4 @@ async def jit_provision(conn, *, tenant_id, microsoft_oid, display_name, email, 
         email=email,
         upn=upn,
     )
-    return str(row[0])
+    return str(row["actor_id"])

@@ -11,7 +11,7 @@ import psycopg
 from rich.console import Console
 from rich.table import Table
 
-from .config import CONTAINERS, DEV_DB_URL, HUB, HUB_PY, RUNTIME, UVICORN_LOG, UVICORN_PID
+from verity.dev.config import CONTAINERS, DEV_DB_URL, HUB, HUB_PY, RUNTIME, UVICORN_LOG, UVICORN_PID
 
 console = Console()
 

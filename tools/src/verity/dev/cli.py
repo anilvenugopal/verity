@@ -5,10 +5,10 @@ import subprocess
 
 import typer
 
-from . import logs as logmux
-from . import ops
-from .catalog import QUERIES, SHELL, TESTS
-from .config import ALL_SERVICES
+from verity.dev import logs as logmux
+from verity.dev import ops
+from verity.dev.catalog import QUERIES, SHELL, TESTS
+from verity.dev.config import ALL_SERVICES
 
 app = typer.Typer(no_args_is_help=True, add_completion=False, help="Verity developer/demo console")
 stack_app = typer.Typer(no_args_is_help=True, help="local container stack (pg/nats/minio)")
@@ -83,7 +83,7 @@ def sh(name: str = typer.Argument(..., help=f"one of: {', '.join(SHELL)}")):
 @app.command()
 def menu():
     """The slim interactive developer pane."""
-    from .menu import run_menu
+    from verity.dev.menu import run_menu
 
     run_menu()
 

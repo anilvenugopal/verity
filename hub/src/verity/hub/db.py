@@ -6,9 +6,10 @@ No ORM. The thin repo helpers live in repo.py.
 from __future__ import annotations
 
 import aiosql
+from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 
-from .paths import component_root
+from verity.hub.paths import component_root
 
 QUERIES_DIR = component_root() / "db" / "queries"
 
@@ -19,4 +20,7 @@ queries = aiosql.from_path(QUERIES_DIR, "apsycopg", mandatory_parameters=False)
 
 def make_pool(database_url: str) -> AsyncConnectionPool:
     """Create (unopened) the async connection pool. Caller opens/closes it (app lifespan)."""
-    return AsyncConnectionPool(conninfo=database_url, open=False, min_size=1, max_size=10)
+    return AsyncConnectionPool(
+        conninfo=database_url, open=False, min_size=1, max_size=10,
+        kwargs={"row_factory": dict_row},
+    )

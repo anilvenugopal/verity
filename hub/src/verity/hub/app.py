@@ -11,10 +11,11 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from .auth.dependencies import get_principal, require_action
-from .auth.models import AuthError, Principal
-from .config import get_settings, validate_startup
-from .db import make_pool, queries
+from verity.hub.auth.dependencies import get_principal, require_action
+from verity.hub.auth.models import AuthContext, AuthError, Principal
+from verity.hub.config import get_settings, validate_startup
+from verity.hub.db import make_pool, queries
+from verity.hub.intake.router import router as intake_router
 
 logger = logging.getLogger("verity.hub")
 
@@ -51,7 +52,7 @@ def create_app() -> FastAPI:
     @app.get("/readyz", tags=["health"])
     async def readyz() -> dict[str, object]:
         async with app.state.pool.connection() as conn:
-            roles = await queries.count_roles(conn)
+            roles = (await queries.count_roles(conn))["n"]
         return {"status": "ready", "reference_roles": roles}
 
     @app.get("/me", tags=["auth"])
@@ -65,10 +66,11 @@ def create_app() -> FastAPI:
     # Example action-gated route: granting a platform role is security-only (FR-023).
     @app.get("/admin/roles", tags=["auth"])
     async def admin_roles(
-        principal: Principal = Depends(require_action("grant_platform_role")),
+        ctx: AuthContext = Depends(require_action("grant_platform_role")),
     ) -> dict[str, str]:
-        return {"status": "authorized", "actor_id": principal.actor_id}
+        return {"status": "authorized", "actor_id": ctx.principal.actor_id, "acting_role": ctx.acting_role}
 
+    app.include_router(intake_router)
     return app
 
 

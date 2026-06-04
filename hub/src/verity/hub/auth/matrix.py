@@ -27,6 +27,7 @@ ACTION_ROLES: dict[str, frozenset[str]] = {
     "view": PLATFORM_ROLES,
     "view_reports": PLATFORM_ROLES,
     # intake authoring / lifecycle
+    "onboard_application": frozenset({"business_owner", "ai_governance", "security"}),
     "create_intake": _AUTHORS,
     "edit_intake": _AUTHORS,
     "triage_intake": _GOVERNANCE,
@@ -68,3 +69,12 @@ def is_action_allowed(roles: set[str], action: str) -> bool:
     if action in {"signoff", "withdraw_approval"} and not (roles & APPROVAL_ROLES):
         return False
     return bool(roles & allowed)
+
+
+def acting_role_for(roles: set[str], action: str) -> str:
+    """The role the principal acts under for an authorized action: a held role that permits it
+    (deterministic). Only meaningful after is_action_allowed() is true; falls back defensively."""
+    matched = sorted(roles & ACTION_ROLES.get(action, frozenset()))
+    if matched:
+        return matched[0]
+    return sorted(roles)[0] if roles else "viewer"

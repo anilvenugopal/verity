@@ -37,3 +37,6 @@ pythonpath = ["src"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 filterwarnings = ["ignore:Using .httpx. with .starlette.testclient"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"

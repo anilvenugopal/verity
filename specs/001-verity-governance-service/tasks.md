@@ -29,12 +29,12 @@ re-derived.
 
 ## Phase 2: Foundational — finalize the uncommitted foundation-prep (BLOCKS all stories)
 
-- [ ] T005 Finalize `dict_row` on the pool and the two scalar auth queries (→ select-one named) — `hub/src/verity/hub/db.py`, `hub/db/queries/health.sql` (`count_roles`), `hub/db/queries/auth.sql` (`has_role_grant`), and call sites `hub/src/verity/hub/auth/authenticator.py`, `hub/src/verity/hub/app.py` (`readyz`)
-- [ ] T006 [P] Add `AuthContext(principal, action, acting_role)` — `hub/src/verity/hub/auth/models.py`
-- [ ] T007 [P] Add `acting_role_for()` + the `onboard_application` matrix cell — `hub/src/verity/hub/auth/matrix.py`
-- [ ] T008 `require_action` returns `AuthContext`; update the `/admin/roles` handler — `hub/src/verity/hub/auth/dependencies.py`, `hub/src/verity/hub/app.py`
-- [ ] T009 [P] Absolute `verity.*` imports across `hub/` + `tools/`; ruff `ban-relative-imports` rule — `hub/pyproject.toml`, `tools/pyproject.toml`
-- [ ] T010 Create the intake package init so `app.py`'s `intake_router` import resolves — `hub/src/verity/hub/intake/__init__.py`; then run `pytest -q` to confirm the existing suite is green
+- [X] T005 Finalize `dict_row` on the pool and the two scalar auth queries (→ select-one named) — `hub/src/verity/hub/db.py`, `hub/db/queries/health.sql` (`count_roles`), `hub/db/queries/auth.sql` (`has_role_grant`), and call sites `hub/src/verity/hub/auth/authenticator.py`, `hub/src/verity/hub/app.py` (`readyz`)
+- [X] T006 [P] Add `AuthContext(principal, action, acting_role)` — `hub/src/verity/hub/auth/models.py`
+- [X] T007 [P] Add `acting_role_for()` + the `onboard_application` matrix cell — `hub/src/verity/hub/auth/matrix.py`
+- [X] T008 `require_action` returns `AuthContext`; update the `/admin/roles` handler — `hub/src/verity/hub/auth/dependencies.py`, `hub/src/verity/hub/app.py`
+- [X] T009 [P] Absolute `verity.*` imports across `hub/` + `tools/`; ruff `ban-relative-imports` rule — `hub/pyproject.toml`, `tools/pyproject.toml`
+- [X] T010 Create the intake package init so `app.py`'s `intake_router` import resolves — `hub/src/verity/hub/intake/__init__.py`; then run `pytest -q` to confirm the existing suite is green
 
 **Checkpoint**: hub imports cleanly; all existing tests pass before any story work.
 
@@ -45,13 +45,13 @@ re-derived.
 **Goal**: a governance user registers an application and opens an intake under it; reads work; every route is action-gated.
 **Independent test**: an `onboard_application`-authorized principal creates an application and an intake and reads both; a `viewer`-only principal is denied (403) on create and allowed (200) on GET; writes record `created_by_actor_id + acting_role`.
 
-- [ ] T011 [P] [US1] Raw SQL for applications (`create_application`, `list_applications`, `get_application`) — `hub/db/queries/application.sql`
-- [ ] T012 [P] [US1] Raw SQL for intake create/read (`create_intake`, `get_intake`, `list_intakes_by_application`) — `hub/db/queries/intake.sql`
-- [ ] T013 [P] [US1] Pydantic boundary models `ApplicationCreate/Application`, `IntakeCreate/Intake` — fields mirror schema columns (naming gate) — `hub/src/verity/hub/intake/models.py`
-- [ ] T014 [US1] Intake service: create/get/list (insert via the repo helper; attribution `actor_id + acting_role` server-resolved, D6) — `hub/src/verity/hub/intake/service.py`
-- [ ] T015 [US1] Router: `POST/GET /applications`, `POST/GET /applications/{id}/intakes`, `GET /intakes/{id}` — gated `onboard_application` / `create_intake` / `view`; 404 on missing id — `hub/src/verity/hub/intake/router.py`
-- [ ] T016 [US1] Wire `app.include_router(intake_router)` — `hub/src/verity/hub/app.py`
-- [ ] T017 [US1] e2e test (PG18): onboard→create→read; viewer 403 on create / 200 on GET; attribution recorded — `hub/tests/verity/hub/intake/test_intake.py`
+- [X] T011 [P] [US1] Raw SQL for applications (`create_application`, `list_applications`, `get_application`) — `hub/db/queries/application.sql`
+- [X] T012 [P] [US1] Raw SQL for intake create/read (`create_intake`, `get_intake`, `list_intakes_by_application`) — `hub/db/queries/intake.sql`
+- [X] T013 [P] [US1] Pydantic boundary models `ApplicationCreate/Application`, `IntakeCreate/Intake` — fields mirror schema columns (naming gate) — `hub/src/verity/hub/intake/models.py`
+- [X] T014 [US1] Intake service: create/get/list (insert via the repo helper; attribution `actor_id + acting_role` server-resolved, D6) — `hub/src/verity/hub/intake/service.py`
+- [X] T015 [US1] Router: `POST/GET /applications`, `POST/GET /applications/{id}/intakes`, `GET /intakes/{id}` — gated `onboard_application` / `create_intake` / `view`; 404 on missing id — `hub/src/verity/hub/intake/router.py`
+- [X] T016 [US1] Wire `app.include_router(intake_router)` — `hub/src/verity/hub/app.py`
+- [X] T017 [US1] e2e test (PG18): onboard→create→read; viewer 403 on create / 200 on GET; attribution recorded — `hub/tests/verity/hub/intake/test_intake.py`
 
 **Checkpoint**: US1 independently runnable + tested (the MVP).
 

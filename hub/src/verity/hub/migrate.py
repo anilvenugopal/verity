@@ -13,8 +13,8 @@ from pathlib import Path
 
 import psycopg
 
-from .config import get_settings
-from .paths import component_root, repo_root
+from verity.hub.config import get_settings
+from verity.hub.paths import component_root, repo_root
 
 SCHEMA_DIR = repo_root() / "specs" / "schema"                  # canonical schema (hub owns the runner)
 MIGRATIONS_DIR = component_root() / "db" / "migrations"

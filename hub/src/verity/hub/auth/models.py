@@ -20,6 +20,15 @@ class Principal(BaseModel):
     disabled: bool = False
 
 
+class AuthContext(BaseModel):
+    """What an action-gated route receives: the principal, the action it passed, and the role
+    it acted under (a held role that authorizes the action) — the D6 attribution pair."""
+
+    principal: Principal
+    action: str
+    acting_role: str
+
+
 class AuthError(Exception):
     """Carries an HTTP status (401 unauthenticated / 403 denied) and a stable, non-leaking code."""
 

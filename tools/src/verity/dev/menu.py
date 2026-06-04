@@ -5,10 +5,10 @@ import subprocess
 
 from InquirerPy import inquirer
 
-from . import logs as logmux
-from . import ops
-from .catalog import QUERIES, SHELL, TESTS
-from .config import ALL_SERVICES
+from verity.dev import logs as logmux
+from verity.dev import ops
+from verity.dev.catalog import QUERIES, SHELL, TESTS
+from verity.dev.config import ALL_SERVICES
 
 
 def _pick(message: str, items: dict[str, tuple[str, object]]) -> str:

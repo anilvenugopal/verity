@@ -36,11 +36,11 @@ WHERE  tenant_id = %(tenant_id)s AND microsoft_oid = %(microsoft_oid)s;
 -- Effective platform roles (latest non-revoked grant per role). Read from PRIMARY for authz.
 SELECT role_code FROM core.current_actor_role WHERE actor_id = %(actor_id)s;
 
--- name: has_role_grant$
+-- name: has_role_grant^
 SELECT EXISTS (
     SELECT 1 FROM core.current_actor_role
     WHERE actor_id = %(actor_id)s AND role_code = %(role_code)s
-);
+) AS present;
 
 -- name: grant_platform_role!
 -- DEV/MOCK seeding ONLY: ensure the mock principal's configured roles exist as grants so role

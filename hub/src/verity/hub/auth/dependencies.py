@@ -3,11 +3,11 @@ from __future__ import annotations
 
 from fastapi import Depends, Request
 
-from ..config import get_settings
-from .authenticator import get_authenticator
-from .events import emit_auth_event
-from .matrix import is_action_allowed
-from .models import AuthError, Principal
+from verity.hub.config import get_settings
+from verity.hub.auth.authenticator import get_authenticator
+from verity.hub.auth.events import emit_auth_event
+from verity.hub.auth.matrix import acting_role_for, is_action_allowed
+from verity.hub.auth.models import AuthContext, AuthError, Principal
 
 
 def _request_id(request: Request) -> str:
@@ -29,7 +29,7 @@ def require_action(action_code: str):
     """Dependency factory gating a route on an action code. Fail-closed; emits a denial
     auth_event on refusal (FR-008, FR-024, FR-029)."""
 
-    async def _dep(request: Request, principal: Principal = Depends(get_principal)) -> Principal:
+    async def _dep(request: Request, principal: Principal = Depends(get_principal)) -> AuthContext:
         if not is_action_allowed(principal.platform_roles, action_code):
             await emit_auth_event(
                 request.app.state.pool,
@@ -41,6 +41,10 @@ def require_action(action_code: str):
                 request_id=_request_id(request),
             )
             raise AuthError(403, "forbidden", f"action '{action_code}' not permitted")
-        return principal
+        return AuthContext(
+            principal=principal,
+            action=action_code,
+            acting_role=acting_role_for(principal.platform_roles, action_code),
+        )
 
     return _dep

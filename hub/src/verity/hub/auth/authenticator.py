@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from ..config import Settings
-from ..db import queries
-from .events import emit_auth_event
-from .models import Principal
-from .provisioning import jit_provision
+from verity.hub.config import Settings
+from verity.hub.db import queries
+from verity.hub.auth.events import emit_auth_event
+from verity.hub.auth.models import Principal
+from verity.hub.auth.provisioning import jit_provision
 
 
 class Authenticator(Protocol):
@@ -36,13 +36,13 @@ class MockAuthenticator:
             )
             # dev seed: ensure configured roles exist as grants so resolution uses the real path
             for role in s.mock_roles:
-                if not await queries.has_role_grant(conn, actor_id=actor_id, role_code=role):
+                if not (await queries.has_role_grant(conn, actor_id=actor_id, role_code=role))["present"]:
                     await queries.grant_platform_role(
                         conn, actor_id=actor_id, role_code=role, granted_by=actor_id
                     )
             # apsycopg select-many yields an async generator -> iterate with async for
-            roles = {r[0] async for r in queries.get_platform_roles(conn, actor_id=actor_id)}
-            _, epoch, disabled_at = await queries.get_account_state(
+            roles = {r["role_code"] async for r in queries.get_platform_roles(conn, actor_id=actor_id)}
+            acct = await queries.get_account_state(
                 conn, tenant_id=s.mock_tenant_id, microsoft_oid=s.mock_microsoft_oid
             )
         await emit_auth_event(
@@ -52,7 +52,7 @@ class MockAuthenticator:
         return Principal(
             actor_id=actor_id, tenant_id=s.mock_tenant_id, microsoft_oid=s.mock_microsoft_oid,
             display_name=s.mock_display_name, email=s.mock_email,
-            platform_roles=roles, session_epoch=epoch, disabled=disabled_at is not None,
+            platform_roles=roles, session_epoch=acct["session_epoch"], disabled=acct["disabled_at"] is not None,
         )
 
 

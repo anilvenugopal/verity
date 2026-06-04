@@ -7,7 +7,7 @@ import subprocess
 import sys
 import threading
 
-from .config import CONTAINERS, UVICORN_LOG
+from verity.dev.config import CONTAINERS, UVICORN_LOG
 
 _COLORS = ["36", "32", "33", "35", "34", "31"]  # cyan green yellow magenta blue red
 
