@@ -5,15 +5,16 @@ No ORM. The thin repo helpers live in repo.py.
 """
 from __future__ import annotations
 
-from pathlib import Path
-
 import aiosql
 from psycopg_pool import AsyncConnectionPool
 
-QUERIES_DIR = Path(__file__).resolve().parents[2] / "db" / "queries"
+from .paths import component_root
+
+QUERIES_DIR = component_root() / "db" / "queries"
 
 # Loaded once at import; the psycopg (v3) adapter works with async connections.
-queries = aiosql.from_path(QUERIES_DIR, "psycopg")
+# mandatory_parameters=False: we document params in the SQL prose, not aiosql's name spec.
+queries = aiosql.from_path(QUERIES_DIR, "apsycopg", mandatory_parameters=False)
 
 
 def make_pool(database_url: str) -> AsyncConnectionPool:

@@ -4,7 +4,7 @@ Baseline (0001) = the canonical schema (specs/schema/verity_schema.sql, structur
 the separated seeds (specs/schema/seed/). Subsequent changes are forward, numbered
 hub/db/migrations/NNNN_*.sql, applied in order and tracked in public.schema_migrations.
 
-Run:  python -m verity_hub.migrate
+Run:  python -m hub.migrate
 """
 from __future__ import annotations
 
@@ -14,10 +14,10 @@ from pathlib import Path
 import psycopg
 
 from .config import get_settings
+from .paths import component_root, repo_root
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-SCHEMA_DIR = REPO_ROOT / "specs" / "schema"          # canonical schema home (hub owns the runner)
-MIGRATIONS_DIR = Path(__file__).resolve().parents[2] / "db" / "migrations"
+SCHEMA_DIR = repo_root() / "specs" / "schema"                  # canonical schema (hub owns the runner)
+MIGRATIONS_DIR = component_root() / "db" / "migrations"
 
 
 def expand_loader(loader: Path) -> str:
@@ -74,5 +74,36 @@ def run() -> None:
     print("migrations up to date")
 
 
+def reset() -> None:
+    """DEV ONLY: drop the app schemas + migration ledger and rebuild from the canonical DDL.
+
+    The preferred pre-stability workflow (ADR-0012): while the schema churns, recreate from
+    clean DDL rather than accumulate patches. Fail-closed outside local.
+    """
+    settings = get_settings()
+    if settings.env != "local":
+        raise RuntimeError("FATAL: `reset` (destructive recreate) requires VERITY_ENV=local.")
+    with psycopg.connect(settings.database_url) as conn:
+        for schema in ("reference", "core", "audit"):
+            conn.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
+        conn.execute("DROP TABLE IF EXISTS public.schema_migrations")
+        conn.commit()
+    print("reset: dropped reference/core/audit + schema_migrations")
+    run()  # rebuild the baseline (canonical schema + seeds)
+
+
+def main(argv: list[str] | None = None) -> None:
+    import sys
+
+    cmd = (argv if argv is not None else sys.argv[1:])[:1] or ["up"]
+    match cmd[0]:
+        case "reset":
+            reset()
+        case "up":
+            run()
+        case other:
+            raise SystemExit(f"usage: python -m verity.hub.migrate [up|reset] (got {other!r})")
+
+
 if __name__ == "__main__":
-    run()
+    main()
