@@ -6,7 +6,7 @@ CREATE TABLE reference.embedding_runtime (
     effective_end_date date NOT NULL DEFAULT '2099-12-31', is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_embedding_runtime PRIMARY KEY (code), CONSTRAINT uq_embedding_runtime_sort UNIQUE (sort_order));
-INSERT INTO reference.embedding_runtime (code, label, sort_order) VALUES ('fastembed','FastEmbed',1);
+
 COMMENT ON TABLE reference.embedding_runtime IS
 'The embedding runtime that produces requirement vectors (e.g. fastembed).
 

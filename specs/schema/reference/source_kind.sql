@@ -8,11 +8,6 @@ CREATE TABLE reference.source_kind (
     effective_end_date date NOT NULL DEFAULT '2099-12-31', is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_source_kind PRIMARY KEY (code), CONSTRAINT uq_source_kind_sort UNIQUE (sort_order));
-INSERT INTO reference.source_kind (code, label, sort_order) VALUES
-    ('storage_object','Storage Object',1),  -- a file/object in a storage backend (via connector)
-    ('task_output','Task Output',2),     -- output of a prior task in the workflow
-    ('structured','Structured',3),      -- a structured payload resolved from elsewhere
-    ('inline_content','Inline Content',4);  -- literal inline content
 
 CREATE TABLE reference.target_kind (
     code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL,

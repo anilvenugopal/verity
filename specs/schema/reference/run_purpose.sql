@@ -8,8 +8,7 @@ CREATE TABLE reference.run_purpose (
     effective_end_date date NOT NULL DEFAULT '2099-12-31', is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_run_purpose PRIMARY KEY (code), CONSTRAINT uq_run_purpose_sort UNIQUE (sort_order));
-INSERT INTO reference.run_purpose (code, label, sort_order) VALUES
-    ('production','Production',1),('test','Test',2),('validation','Validation',3),('audit_rerun','Audit Rerun',4);
+
 COMMENT ON TABLE reference.run_purpose IS
 'Why a run executed (production vs evaluation/replay), separating real traffic from test-harness runs.
 

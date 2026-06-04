@@ -10,9 +10,7 @@ CREATE TABLE reference.run_dispatch_status (
     effective_end_date date NOT NULL DEFAULT '2099-12-31', is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_run_dispatch_status PRIMARY KEY (code), CONSTRAINT uq_run_dispatch_status_sort UNIQUE (sort_order));
-INSERT INTO reference.run_dispatch_status (code, label, sort_order) VALUES
-    ('queued','Queued',1),('published','Published',2),('claimed','Claimed',3),('assigned','Assigned',4),
-    ('executing','Executing',5),('released','Released',6),('requeued','Requeued',7),('cancelled','Cancelled',8);
+
 COMMENT ON TABLE reference.run_dispatch_status IS
 'Operational dispatch state of a run within a cluster (queued/published/claimed/assigned/executing/released/requeued/cancelled).
 

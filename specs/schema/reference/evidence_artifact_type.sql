@@ -6,9 +6,7 @@ CREATE TABLE reference.evidence_artifact_type (
     effective_end_date date NOT NULL DEFAULT '2099-12-31', is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_evidence_artifact_type PRIMARY KEY (code), CONSTRAINT uq_evidence_artifact_type_sort UNIQUE (sort_order));
-INSERT INTO reference.evidence_artifact_type (code, label, sort_order) VALUES
-    ('config_snapshot','Config Snapshot',1),('model_card','Model Card',2),('package_manifest','Package Manifest',3),('approval_record','Approval Record',4),('test_result','Test Result',5),
-    ('validation_report','Validation Report',6),('decision_log','Decision Log',7),('binding_resolution','Binding Resolution',8),('deployment_record','Deployment Record',9),('document','Document',10);
+
 COMMENT ON TABLE reference.evidence_artifact_type IS
 'The kind of compliance evidence artifact (config_snapshot/model_card/...).
 

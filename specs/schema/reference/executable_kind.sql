@@ -30,6 +30,3 @@ COMMENT ON TABLE reference.executable_kind IS
 
 @lifecycle reference
 @subject registry';
-INSERT INTO reference.executable_kind (code, label, sort_order, is_packaged, package_format) VALUES
-    ('agent', 'Agent', 1, true, 'vax'),
-    ('task',  'Task',  2, true, 'vtx');

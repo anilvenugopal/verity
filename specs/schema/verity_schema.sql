@@ -2,6 +2,7 @@
 -- verity_schema.sql — Verity v2 canonical schema · LOADER
 -- One file per object under reference/ core/ audit/. Loaded in dependency order;
 -- cross-domain FKs applied last (core/_relationships.sql). Target: PostgreSQL 18+.
+-- STRUCTURE ONLY — reference data is seeded separately: seed/reference_seed.sql (ADR-0011).
 -- =====================================================================
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE EXTENSION IF NOT EXISTS vector;

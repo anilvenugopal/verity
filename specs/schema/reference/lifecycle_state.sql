@@ -14,13 +14,6 @@ COMMENT ON TABLE reference.lifecycle_state IS
 
 @lifecycle reference
 @subject lifecycle';
-INSERT INTO reference.lifecycle_state (code, label, sort_order, is_deployable, is_terminal, grouping) VALUES
-    ('draft','Draft',1,false,false,'authoring'),
-    ('candidate','Candidate',2,false,false,'authoring'),
-    ('staging','Staging',3,true,false,'pre_prod'),
-    ('challenger','Challenger',4,true,false,'prod'),    -- deploys in shadow OR ab run-mode
-    ('champion','Champion',5,true,false,'prod'),
-    ('deprecated','Deprecated',6,true,false,'retired'); -- restorable via rollback (deprecated -> champion/challenger)
 
 CREATE TABLE reference.approval_request_kind (
     code text NOT NULL, label text NOT NULL, description text, sort_order integer NOT NULL,

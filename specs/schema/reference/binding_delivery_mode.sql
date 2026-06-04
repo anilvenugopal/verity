@@ -7,12 +7,7 @@ CREATE TABLE reference.binding_delivery_mode (
     effective_end_date date NOT NULL DEFAULT '2099-12-31', is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_binding_delivery_mode PRIMARY KEY (code), CONSTRAINT uq_binding_delivery_mode_sort UNIQUE (sort_order));
-INSERT INTO reference.binding_delivery_mode (code, label, sort_order, description) VALUES
-    ('inline','Inline content',1,'base64/text content block (vision/small files)'),
-    ('reference','By reference',2,'signed URL / object handle; tool streams it (large files)'),
-    ('download','Download to workdir',3,'harness fetches the file to the run working dir'),
-    ('extracted','Extracted to structured',4,'parse the file into structured fields'),
-    ('write_file','Write file',5,'target: write the output as a file to the backend');
+
 COMMENT ON TABLE reference.binding_delivery_mode IS
 'How a resolved Source/Target binding payload is delivered (inline/reference/download/extracted/write_file) — the fix for v1 base64-only delivery.
 

@@ -6,10 +6,7 @@ CREATE TABLE reference.command_kind (
     effective_end_date date NOT NULL DEFAULT '2099-12-31', is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_command_kind PRIMARY KEY (code), CONSTRAINT uq_command_kind_sort UNIQUE (sort_order));
-INSERT INTO reference.command_kind (code, label, sort_order) VALUES
-    ('patch','Patch',1),('restart','Restart',2),('drain','Drain',3),('enable','Enable',4),('disable','Disable',5),('reload_packages','Reload Packages',6),('collect_diagnostics','Collect Diagnostics',7),
-    ('deploy_package','Deploy Package',8),  -- coordinator swaps bundle in artifact cache; no drain (in-flight jobs keep their bundle)
-    ('patch_cert','Patch Cert',9);      -- operator installs a rotated mTLS cert (7-day overlap window)
+
 COMMENT ON TABLE reference.command_kind IS
 'The kind of portal->agent harness command (patch/drain/deploy_package/...), used by harness_instance_command.
 

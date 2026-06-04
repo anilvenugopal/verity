@@ -6,8 +6,7 @@ CREATE TABLE reference.coverage_level (
     effective_end_date date NOT NULL DEFAULT '2099-12-31', is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_coverage_level PRIMARY KEY (code), CONSTRAINT uq_coverage_level_sort UNIQUE (sort_order));
-INSERT INTO reference.coverage_level (code, label, sort_order) VALUES
-    ('full','Full',1),('substantial','Substantial',2),('partial','Partial',3),('gap','Gap',4);
+
 COMMENT ON TABLE reference.coverage_level IS
 'Coverage classification attached to a governance-domain maturity score.
 

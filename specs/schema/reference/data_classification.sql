@@ -6,8 +6,7 @@ CREATE TABLE reference.data_classification (
     effective_end_date date NOT NULL DEFAULT '2099-12-31', is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_data_classification PRIMARY KEY (code), CONSTRAINT uq_data_classification_sort UNIQUE (sort_order));
-INSERT INTO reference.data_classification (code, label, sort_order) VALUES
-    ('tier1_public','Tier1 Public',1),('tier2_internal','Tier2 Internal',2),('tier3_confidential','Tier3 Confidential',3),('tier4_pii_restricted','Tier4 Pii Restricted',4);
+
 COMMENT ON TABLE reference.data_classification IS
 'Sensitivity class of the data an executable handles (public/internal/confidential/pii_restricted), enforced pre-dispatch.
 

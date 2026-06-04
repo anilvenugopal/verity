@@ -27,14 +27,3 @@ COMMENT ON TABLE reference.role IS
 
 @lifecycle reference
 @subject identity';
-INSERT INTO reference.role (code, label, sort_order, grouping, is_approval_role) VALUES
-    ('business_owner', 'Business Owner', 1, 'governance',  true),
-    ('compliance',     'Compliance',     2, 'oversight',   true),
-    ('legal',          'Legal',          3, 'oversight',   true),
-    ('model_risk',     'Model Risk',     4, 'oversight',   true),
-    ('ai_governance',  'AI Governance',  5, 'governance',  true),
-    ('security',       'Security',       6, 'oversight',   true),
-    ('privacy',        'Privacy',        7, 'oversight',   true),
-    ('engineer',       'Engineer',       8, 'engineering', false),
-    ('auditor',        'Auditor',        9, 'oversight',   false),
-    ('viewer',         'Viewer',        10, 'governance',  false);

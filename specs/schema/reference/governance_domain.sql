@@ -14,6 +14,3 @@ COMMENT ON TABLE reference.governance_domain IS
 
 @lifecycle reference
 @subject compliance';
-INSERT INTO reference.governance_domain (code, label, sort_order) VALUES
-    ('model_risk','Model Risk',1),('fairness','Fairness',2),('privacy','Privacy',3),('security','Security',4),('transparency','Transparency',5),
-    ('robustness','Robustness',6),('data_governance','Data Governance',7),('human_oversight','Human Oversight',8),('accountability','Accountability',9);

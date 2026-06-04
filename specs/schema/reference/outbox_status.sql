@@ -8,8 +8,7 @@ CREATE TABLE reference.outbox_status (
     effective_end_date date NOT NULL DEFAULT '2099-12-31', is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_outbox_status PRIMARY KEY (code), CONSTRAINT uq_outbox_status_sort UNIQUE (sort_order));
-INSERT INTO reference.outbox_status (code, label, sort_order) VALUES
-    ('pending','Pending',1),('published','Published',2),('claimed','Claimed',3),('failed','Failed',4);
+
 COMMENT ON TABLE reference.outbox_status IS
 'Delivery state of a run_dispatch_outbox row (pending/published/claimed/failed).
 

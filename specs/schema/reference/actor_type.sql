@@ -41,6 +41,3 @@ COMMENT ON TABLE reference.actor_type IS
 
 @lifecycle reference
 @subject identity';
-INSERT INTO reference.actor_type (code, label, sort_order) VALUES
-    ('human',      'Human user',        1),
-    ('automation', 'Automation / agent', 2);

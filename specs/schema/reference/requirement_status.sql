@@ -6,8 +6,7 @@ CREATE TABLE reference.requirement_status (
     effective_end_date date NOT NULL DEFAULT '2099-12-31', is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_requirement_status PRIMARY KEY (code), CONSTRAINT uq_requirement_status_sort UNIQUE (sort_order));
-INSERT INTO reference.requirement_status (code, label, sort_order) VALUES
-    ('draft','Draft',1),('approved','Approved',2),('implemented','Implemented',3),('verified','Verified',4),('deprecated','Deprecated',5);
+
 COMMENT ON TABLE reference.requirement_status IS
 'Mutable status of an intake requirement (draft/...).
 

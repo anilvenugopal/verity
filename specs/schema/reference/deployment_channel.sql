@@ -6,8 +6,7 @@ CREATE TABLE reference.deployment_channel (
     effective_end_date date NOT NULL DEFAULT '2099-12-31', is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_deployment_channel PRIMARY KEY (code), CONSTRAINT uq_deployment_channel_sort UNIQUE (sort_order));
-INSERT INTO reference.deployment_channel (code, label, sort_order) VALUES
-    ('development','Development',1),('staging','Staging',2),('evaluation','Evaluation',3),('production','Production',4);
+
 COMMENT ON TABLE reference.deployment_channel IS
 'The release channel a version is published on.
 

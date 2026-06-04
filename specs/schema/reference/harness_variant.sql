@@ -11,5 +11,3 @@ COMMENT ON TABLE reference.harness_variant IS
 
 @lifecycle reference
 @subject deploy';
-INSERT INTO reference.harness_variant (code, label, sort_order, description) VALUES
-    ('claude_agentic_loop','Claude agentic loop',1,'current default agent/task execution engine');
