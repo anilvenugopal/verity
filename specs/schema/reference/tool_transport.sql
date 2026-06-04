@@ -7,7 +7,7 @@ CREATE TABLE reference.tool_transport (
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_tool_transport PRIMARY KEY (code), CONSTRAINT uq_tool_transport_sort UNIQUE (sort_order));
 INSERT INTO reference.tool_transport (code, label, sort_order) VALUES
-    ('python_inprocess',1),('mcp',2),('http',3);
+    ('python_inprocess','Python Inprocess',1),('mcp','Mcp',2),('http','Http',3);
 COMMENT ON TABLE reference.tool_transport IS
 'How a tool or MCP server is invoked (its transport).
 

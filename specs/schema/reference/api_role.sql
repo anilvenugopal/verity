@@ -7,7 +7,7 @@ CREATE TABLE reference.api_role (
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_api_role PRIMARY KEY (code), CONSTRAINT uq_api_role_sort UNIQUE (sort_order));
 INSERT INTO reference.api_role (code, label, sort_order) VALUES
-    ('system',1),('user',2),('assistant_prefill',3);
+    ('system','System',1),('user','User',2),('assistant_prefill','Assistant Prefill',3);
 COMMENT ON TABLE reference.api_role IS
 'The chat API role a prompt fills in a request (system/user/assistant), used by executable_prompt_assignment.
 

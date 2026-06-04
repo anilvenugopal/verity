@@ -9,7 +9,7 @@ CREATE TABLE reference.run_purpose (
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_run_purpose PRIMARY KEY (code), CONSTRAINT uq_run_purpose_sort UNIQUE (sort_order));
 INSERT INTO reference.run_purpose (code, label, sort_order) VALUES
-    ('production',1),('test',2),('validation',3),('audit_rerun',4);
+    ('production','Production',1),('test','Test',2),('validation','Validation',3),('audit_rerun','Audit Rerun',4);
 COMMENT ON TABLE reference.run_purpose IS
 'Why a run executed (production vs evaluation/replay), separating real traffic from test-harness runs.
 

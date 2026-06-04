@@ -7,7 +7,7 @@ CREATE TABLE reference.quota_scope_type (
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_quota_scope_type PRIMARY KEY (code), CONSTRAINT uq_quota_scope_type_sort UNIQUE (sort_order));
 INSERT INTO reference.quota_scope_type (code, label, sort_order) VALUES
-    ('application',1),('agent',2),('task',3),('model',4);
+    ('application','Application',1),('agent','Agent',2),('task','Task',3),('model','Model',4);
 COMMENT ON TABLE reference.quota_scope_type IS
 'What a quota applies to (application/agent/task/model).
 

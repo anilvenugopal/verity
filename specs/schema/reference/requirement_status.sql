@@ -7,7 +7,7 @@ CREATE TABLE reference.requirement_status (
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_requirement_status PRIMARY KEY (code), CONSTRAINT uq_requirement_status_sort UNIQUE (sort_order));
 INSERT INTO reference.requirement_status (code, label, sort_order) VALUES
-    ('draft',1),('approved',2),('implemented',3),('verified',4),('deprecated',5);
+    ('draft','Draft',1),('approved','Approved',2),('implemented','Implemented',3),('verified','Verified',4),('deprecated','Deprecated',5);
 COMMENT ON TABLE reference.requirement_status IS
 'Mutable status of an intake requirement (draft/...).
 

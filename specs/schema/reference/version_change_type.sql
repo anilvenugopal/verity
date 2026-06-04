@@ -7,7 +7,7 @@ CREATE TABLE reference.version_change_type (
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_version_change_type PRIMARY KEY (code), CONSTRAINT uq_version_change_type_sort UNIQUE (sort_order));
 INSERT INTO reference.version_change_type (code, label, sort_order) VALUES
-    ('major',1),('minor',2),('patch',3);
+    ('major','Major',1),('minor','Minor',2),('patch','Patch',3);
 COMMENT ON TABLE reference.version_change_type IS
 'Semver bump class of a version (major/minor/patch).
 

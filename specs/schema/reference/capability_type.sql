@@ -8,7 +8,7 @@ CREATE TABLE reference.capability_type (
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_capability_type PRIMARY KEY (code), CONSTRAINT uq_capability_type_sort UNIQUE (sort_order));
 INSERT INTO reference.capability_type (code, label, sort_order) VALUES
-    ('classification',1),('extraction',2),('generation',3),('summarisation',4),('matching',5),('validation',6);
+    ('classification','Classification',1),('extraction','Extraction',2),('generation','Generation',3),('summarisation','Summarisation',4),('matching','Matching',5),('validation','Validation',6);
 COMMENT ON TABLE reference.capability_type IS
 'What an executable_version does (classification/extraction/...), a governance classification of capability.
 

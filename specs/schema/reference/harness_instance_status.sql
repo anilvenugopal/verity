@@ -6,7 +6,7 @@ CREATE TABLE reference.harness_instance_status (
     effective_end_date date NOT NULL DEFAULT '2099-12-31', is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_harness_instance_status PRIMARY KEY (code), CONSTRAINT uq_harness_instance_status_sort UNIQUE (sort_order));
-INSERT INTO reference.harness_instance_status (code, label, sort_order) VALUES ('active',1),('draining',2),('disabled',3);
+INSERT INTO reference.harness_instance_status (code, label, sort_order) VALUES ('active','Active',1),('draining','Draining',2),('disabled','Disabled',3);
 COMMENT ON TABLE reference.harness_instance_status IS
 'Operational state of a running harness container (active/draining/disabled).
 

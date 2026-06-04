@@ -7,7 +7,7 @@ CREATE TABLE reference.approval_decision (
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_approval_decision PRIMARY KEY (code), CONSTRAINT uq_approval_decision_sort UNIQUE (sort_order));
 INSERT INTO reference.approval_decision (code, label, sort_order) VALUES
-    ('approved',1),('rejected',2),('requested_changes',3),('abstained',4);
+    ('approved','Approved',1),('rejected','Rejected',2),('requested_changes','Requested Changes',3),('abstained','Abstained',4);
 COMMENT ON TABLE reference.approval_decision IS
 'An individual approver''s decision on a sign-off (approve/reject/...), used by approval_signoff.
 

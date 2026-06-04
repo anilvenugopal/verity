@@ -7,7 +7,7 @@ CREATE TABLE reference.approval_request_status (
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_approval_request_status PRIMARY KEY (code), CONSTRAINT uq_approval_request_status_sort UNIQUE (sort_order));
 INSERT INTO reference.approval_request_status (code, label, sort_order) VALUES
-    ('pending',1),('approved',2),('rejected',3),('cancelled',4);
+    ('pending','Pending',1),('approved','Approved',2),('rejected','Rejected',3),('cancelled','Cancelled',4);
 COMMENT ON TABLE reference.approval_request_status IS
 'Lifecycle status of an approval_request (pending/approved/...).
 

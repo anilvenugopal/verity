@@ -7,7 +7,7 @@ CREATE TABLE reference.deployment_operation (
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_deployment_operation PRIMARY KEY (code), CONSTRAINT uq_deployment_operation_sort UNIQUE (sort_order));
 INSERT INTO reference.deployment_operation (code, label, sort_order) VALUES
-    ('deploy_nonprod',1),('deploy_prod',2),('promote_champion',3),('lock_deprecated',4),('cleanup_deprecated',5),('rollback',6);
+    ('deploy_nonprod','Deploy Nonprod',1),('deploy_prod','Deploy Prod',2),('promote_champion','Promote Champion',3),('lock_deprecated','Lock Deprecated',4),('cleanup_deprecated','Cleanup Deprecated',5),('rollback','Rollback',6);
 COMMENT ON TABLE reference.deployment_operation IS
 'A governed deployment operation (deploy_*/promote_champion/lock_deprecated/cleanup_deprecated/rollback), recorded in deployment_event.
 

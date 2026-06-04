@@ -9,7 +9,7 @@ CREATE TABLE reference.credential_verification_status (
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_credential_verification_status PRIMARY KEY (code), CONSTRAINT uq_credential_verification_status_sort UNIQUE (sort_order));
 INSERT INTO reference.credential_verification_status (code, label, sort_order) VALUES
-    ('unverified',1),('verified',2),('failed',3),('expired',4);
+    ('unverified','Unverified',1),('verified','Verified',2),('failed','Failed',3),('expired','Expired',4);
 COMMENT ON TABLE reference.credential_verification_status IS
 'Result of the coordinator''s test-connection for an app data-source credential (unverified/verified/failed/expired).
 

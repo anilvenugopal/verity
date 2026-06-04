@@ -7,7 +7,7 @@ CREATE TABLE reference.trust_level (
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_trust_level PRIMARY KEY (code), CONSTRAINT uq_trust_level_sort UNIQUE (sort_order));
 INSERT INTO reference.trust_level (code, label, sort_order) VALUES
-    ('trusted',1),('conditional',2),('sandboxed',3),('blocked',4);
+    ('trusted','Trusted',1),('conditional','Conditional',2),('sandboxed','Sandboxed',3),('blocked','Blocked',4);
 COMMENT ON TABLE reference.trust_level IS
 'Trust classification governing how an executable''s outputs may be used.
 

@@ -6,7 +6,7 @@ CREATE TABLE reference.report_kind (
     effective_end_date date NOT NULL DEFAULT '2099-12-31', is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_report_kind PRIMARY KEY (code), CONSTRAINT uq_report_kind_sort UNIQUE (sort_order));
-INSERT INTO reference.report_kind (code, label, sort_order) VALUES ('metadata_driven',1),('template_driven',2);
+INSERT INTO reference.report_kind (code, label, sort_order) VALUES ('metadata_driven','Metadata Driven',1),('template_driven','Template Driven',2);
 COMMENT ON TABLE reference.report_kind IS
 'Whether a report is metadata_driven or template_driven.
 

@@ -7,7 +7,7 @@ CREATE TABLE reference.command_status (
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_command_status PRIMARY KEY (code), CONSTRAINT uq_command_status_sort UNIQUE (sort_order));
 INSERT INTO reference.command_status (code, label, sort_order) VALUES
-    ('pending',1),('acknowledged',2),('succeeded',3),('failed',4);
+    ('pending','Pending',1),('acknowledged','Acknowledged',2),('succeeded','Succeeded',3),('failed','Failed',4);
 COMMENT ON TABLE reference.command_status IS
 'The lifecycle of a harness command itself (pending/acknowledged/succeeded/failed), distinct from its outbox delivery state.
 

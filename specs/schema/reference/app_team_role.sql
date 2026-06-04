@@ -8,7 +8,7 @@ CREATE TABLE reference.app_team_role (
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_app_team_role PRIMARY KEY (code), CONSTRAINT uq_app_team_role_sort UNIQUE (sort_order));
 INSERT INTO reference.app_team_role (code, label, sort_order) VALUES
-    ('app_demo_owner',1),('app_demo_lead',2),('app_demo_dev',3),('app_demo_sre',4),('app_demo_ops',5);
+    ('app_demo_owner','App Demo Owner',1),('app_demo_lead','App Demo Lead',2),('app_demo_dev','App Demo Dev',3),('app_demo_sre','App Demo Sre',4),('app_demo_ops','App Demo Ops',5);
 COMMENT ON TABLE reference.app_team_role IS
 'Per-application app-team roles granted via actor_app_role_grant — the per-application authorization vocabulary.
 

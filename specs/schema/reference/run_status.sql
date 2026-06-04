@@ -9,7 +9,7 @@ CREATE TABLE reference.run_status (
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_run_status PRIMARY KEY (code), CONSTRAINT uq_run_status_sort UNIQUE (sort_order));
 INSERT INTO reference.run_status (code, label, sort_order) VALUES
-    ('submitted',1),('claimed',2),('heartbeat',3),('released',4);
+    ('submitted','Submitted',1),('claimed','Claimed',2),('heartbeat','Heartbeat',3),('released','Released',4);
 COMMENT ON TABLE reference.run_status IS
 'Event-sourced run state, one row per execution_run_status transition (submitted/claimed/heartbeat/released).
 

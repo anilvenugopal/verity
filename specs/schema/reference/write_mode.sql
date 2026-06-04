@@ -8,7 +8,7 @@ CREATE TABLE reference.write_mode (
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_write_mode PRIMARY KEY (code), CONSTRAINT uq_write_mode_sort UNIQUE (sort_order));
 INSERT INTO reference.write_mode (code, label, sort_order) VALUES
-    ('create',1),('overwrite',2),('create_or_version',3);
+    ('create','Create',1),('overwrite','Overwrite',2),('create_or_version','Create Or Version',3);
 COMMENT ON TABLE reference.write_mode IS
 'How a Target Binding places the written object (create/overwrite/create_or_version).
 

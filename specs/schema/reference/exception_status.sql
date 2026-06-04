@@ -7,7 +7,7 @@ CREATE TABLE reference.exception_status (
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_exception_status PRIMARY KEY (code), CONSTRAINT uq_exception_status_sort UNIQUE (sort_order));
 INSERT INTO reference.exception_status (code, label, sort_order) VALUES
-    ('requested',1),('approved',2),('rejected',3),('revoked',4),('expired',5);
+    ('requested','Requested',1),('approved','Approved',2),('rejected','Rejected',3),('revoked','Revoked',4),('expired','Expired',5);
 COMMENT ON TABLE reference.exception_status IS
 'Lifecycle status of a compliance_exception (requested/approved/...).
 

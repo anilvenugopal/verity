@@ -7,7 +7,7 @@ CREATE TABLE reference.enforcement_action (
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_enforcement_action PRIMARY KEY (code), CONSTRAINT uq_enforcement_action_sort UNIQUE (sort_order));
 INSERT INTO reference.enforcement_action (code, label, sort_order) VALUES
-    ('block',1),('refuse',2),('suppress_write',3),('warn',4),('log_only',5);
+    ('block','Block',1),('refuse','Refuse',2),('suppress_write','Suppress Write',3),('warn','Warn',4),('log_only','Log Only',5);
 COMMENT ON TABLE reference.enforcement_action IS
 'What a control does when it fires (block/refuse/suppress_write/warn/log_only).
 

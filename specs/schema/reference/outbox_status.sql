@@ -9,7 +9,7 @@ CREATE TABLE reference.outbox_status (
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_outbox_status PRIMARY KEY (code), CONSTRAINT uq_outbox_status_sort UNIQUE (sort_order));
 INSERT INTO reference.outbox_status (code, label, sort_order) VALUES
-    ('pending',1),('published',2),('claimed',3),('failed',4);
+    ('pending','Pending',1),('published','Published',2),('claimed','Claimed',3),('failed','Failed',4);
 COMMENT ON TABLE reference.outbox_status IS
 'Delivery state of a run_dispatch_outbox row (pending/published/claimed/failed).
 

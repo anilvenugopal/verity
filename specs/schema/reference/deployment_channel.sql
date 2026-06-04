@@ -7,7 +7,7 @@ CREATE TABLE reference.deployment_channel (
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_deployment_channel PRIMARY KEY (code), CONSTRAINT uq_deployment_channel_sort UNIQUE (sort_order));
 INSERT INTO reference.deployment_channel (code, label, sort_order) VALUES
-    ('development',1),('staging',2),('evaluation',3),('production',4);
+    ('development','Development',1),('staging','Staging',2),('evaluation','Evaluation',3),('production','Production',4);
 COMMENT ON TABLE reference.deployment_channel IS
 'The release channel a version is published on.
 

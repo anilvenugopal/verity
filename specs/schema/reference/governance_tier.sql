@@ -7,7 +7,7 @@ CREATE TABLE reference.governance_tier (
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_governance_tier PRIMARY KEY (code), CONSTRAINT uq_governance_tier_sort UNIQUE (sort_order));
 INSERT INTO reference.governance_tier (code, label, sort_order) VALUES
-    ('behavioural',1),('contextual',2),('formatting',3);
+    ('behavioural','Behavioural',1),('contextual','Contextual',2),('formatting','Formatting',3);
 COMMENT ON TABLE reference.governance_tier IS
 'Governance tier driving review and approval rigor for an executable version.
 

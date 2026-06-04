@@ -6,7 +6,7 @@ CREATE TABLE reference.report_run_status (
     effective_end_date date NOT NULL DEFAULT '2099-12-31', is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_report_run_status PRIMARY KEY (code), CONSTRAINT uq_report_run_status_sort UNIQUE (sort_order));
-INSERT INTO reference.report_run_status (code, label, sort_order) VALUES ('pending',1),('succeeded',2),('failed',3);
+INSERT INTO reference.report_run_status (code, label, sort_order) VALUES ('pending','Pending',1),('succeeded','Succeeded',2),('failed','Failed',3);
 COMMENT ON TABLE reference.report_run_status IS
 'Status of an async report job (pending/succeeded/failed).
 

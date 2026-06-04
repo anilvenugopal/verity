@@ -7,9 +7,9 @@ CREATE TABLE reference.command_kind (
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_command_kind PRIMARY KEY (code), CONSTRAINT uq_command_kind_sort UNIQUE (sort_order));
 INSERT INTO reference.command_kind (code, label, sort_order) VALUES
-    ('patch',1),('restart',2),('drain',3),('enable',4),('disable',5),('reload_packages',6),('collect_diagnostics',7),
-    ('deploy_package',8),  -- coordinator swaps bundle in artifact cache; no drain (in-flight jobs keep their bundle)
-    ('patch_cert',9);      -- operator installs a rotated mTLS cert (7-day overlap window)
+    ('patch','Patch',1),('restart','Restart',2),('drain','Drain',3),('enable','Enable',4),('disable','Disable',5),('reload_packages','Reload Packages',6),('collect_diagnostics','Collect Diagnostics',7),
+    ('deploy_package','Deploy Package',8),  -- coordinator swaps bundle in artifact cache; no drain (in-flight jobs keep their bundle)
+    ('patch_cert','Patch Cert',9);      -- operator installs a rotated mTLS cert (7-day overlap window)
 COMMENT ON TABLE reference.command_kind IS
 'The kind of portal->agent harness command (patch/drain/deploy_package/...), used by harness_instance_command.
 

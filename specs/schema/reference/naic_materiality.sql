@@ -6,7 +6,7 @@ CREATE TABLE reference.naic_materiality (
     effective_end_date date NOT NULL DEFAULT '2099-12-31', is_active boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_naic_materiality PRIMARY KEY (code), CONSTRAINT uq_naic_materiality_sort UNIQUE (sort_order));
-INSERT INTO reference.naic_materiality (code, label, sort_order) VALUES ('material',1),('non_material',2);
+INSERT INTO reference.naic_materiality (code, label, sort_order) VALUES ('material','Material',1),('non_material','Non Material',2);
 COMMENT ON TABLE reference.naic_materiality IS
 'NAIC materiality classification (material/non_material) feeding obligations.
 

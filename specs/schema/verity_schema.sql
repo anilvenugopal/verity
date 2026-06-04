@@ -77,6 +77,7 @@ SET search_path = core, reference, audit, public;
 \i reference/gt_source_type.sql
 \i reference/gt_annotator_type.sql
 \i reference/mock_kind.sql
+\i reference/metric_type.sql
 \i reference/validation_run_status.sql
 \i reference/validation_match_type.sql
 \i reference/extraction_field_type.sql

@@ -8,7 +8,7 @@ CREATE TABLE reference.ai_risk_tier (
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT pk_ai_risk_tier PRIMARY KEY (code), CONSTRAINT uq_ai_risk_tier_sort UNIQUE (sort_order));
 INSERT INTO reference.ai_risk_tier (code, label, sort_order) VALUES
-    ('minimal',1),('limited',2),('high',3),('unacceptable',4);
+    ('minimal','Minimal',1),('limited','Limited',2),('high','High',3),('unacceptable','Unacceptable',4);
 COMMENT ON TABLE reference.ai_risk_tier IS
 'EU-AI-Act-style ordered risk classification (minimal<limited<high<unacceptable) that drives an intake''s obligation set.
 
