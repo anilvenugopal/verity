@@ -1,77 +1,75 @@
-# Phase 1 — Data Model: Application Onboarding slice
+# Phase 1 — Data Model: Intake Assessment slice (capture + tier + ceiling)
 
-Field names are schema column names verbatim (naming gate). This slice **grows** the canonical
-schema (spec-covered: FR-IN-015…018) and **reuses** existing approval/compliance/app-team tables.
-DDL changes are reviewed before service work (Principle II).
+Field names are schema column names verbatim (naming gate). This slice **reuses** the existing
+assessment entity and adds **one column** to `core.intake`. Obligation-resolution entities are
+**not** touched (deferred — unseeded metamodel).
 
-## Grown: `core.application` (new columns)
-
-| Column | Type | Notes |
-|---|---|---|
-| `code` | text | TLA; `UNIQUE`, `CHECK (code ~ '^[A-Z]{3}$')`; immutable after `active` (service-enforced) |
-| `application_status_code` | text | FK → `reference.application_status`; default `'pending'` |
-| `data_classification_code` | text | FK → `reference.data_classification` (sensitivity ceiling; codes `tier1_public`…`tier4_pii_restricted`) |
-| `line_of_business_code` | text NULL | FK → `reference.line_of_business` (optional) |
-| `business_owner_actor_id` | uuid | FK → `core.actor`; the designated owner + approval-routing target (set at propose) |
-| `affects_consumers` | boolean | NOT NULL, no default (explicit attestation) |
-| `processes_pii` | boolean | NOT NULL, no default |
-| `consumer_facing` | boolean | NOT NULL, no default |
-
-Existing: `application_id`, `name` (unique, non-blank), `description`, `created_at`, `updated_at`,
-`created_by_actor_id`, `created_role_code`.
-
-## New join tables (the compliance perimeter, FR-IN-017)
-
-- **`core.application_regulatory_framework`** — `(application_id → core.application, framework_code → core.regulatory_framework)`, PK both; ≥1 enforced in the service.
-- **`core.application_governance_domain`** — `(application_id, governance_domain_code → reference.governance_domain)`, PK both; ≥1.
-- **`core.application_jurisdiction`** — `(application_id, jurisdiction_code → reference.jurisdiction)`, PK both; ≥1.
-
-## New reference vocabularies
-
-- **`reference.application_status`** — `pending` · `active` · `suspended` · `retired`.
-- **`reference.jurisdiction`** — controlled (US states + `eu` · `uk` · …).
-- **`reference.line_of_business`** — `pc` · `life` · `health` · `annuities` · `commercial` · `reinsurance` · `other`.
-
-## Grown: `core.approval_request` (one column)
+## Grown: `core.intake` (one column)
 
 | Column | Type | Notes |
 |---|---|---|
-| `target_application_id` | uuid NULL | FK → `core.application`; scopes onboarding approvals (joins existing `target_intake_id` / `target_executable_version_id`) |
+| `data_classification_code` | text NULL | FK → `reference.data_classification`; the intake's actual sensitivity (set by the Data tab). MUST NOT exceed the owning application's ceiling (FR-IN-018, D-ASM-5). |
 
-`request_kind_code` gains the `application_onboarding` value (seed/validate per D-ONB-7).
+Existing intake columns reused: `ai_risk_tier_code`, `naic_materiality_code` (set by the computed
+tier, D-ASM-3), `intake_status_code` (auto-reject path, D-ASM-4).
 
-## Reused as-is (no change)
+## Reused as-is: `core.intake_impact_assessment` (+ `_current` view)
 
-- **`core.approval_request`** — `approval_request_id`, `request_kind_code`, `status_code` (default `pending`), `opened_by_actor_id`, `opened_role_code`.
-- **`core.approval_signoff`** — `approval_request_id`, `approver_actor_id`, `signed_as_role_code`, `decision_code → reference.approval_decision`, `comment`.
-- **`core.actor_app_role_grant`** (+ `current_actor_app_role` view) — business owner + initial app-team grants; the `app_owner` grant written on approval.
-- **`reference.governance_domain`** (the 9), **`reference.data_classification`** (4 sensitivity codes — verify seed, D-ONB-3), **`core.regulatory_framework`**, **`reference.approval_decision`**, **`reference.approval_request_status`**, **`reference.app_team_role`** (renamed `app_*`, D-ONB-6).
+| Column | Role this slice |
+|---|---|
+| `intake_id` | FK → `core.intake` (cascade) |
+| `revision` | 1,2,3… immutable; new revision per submit; UNIQUE `(intake_id, revision)` |
+| `assessment` | `jsonb` — the **four-tab structured answers** (AI Decision Impact · Data · Security & Access · captured) |
+| `valid_from` / `valid_to` | SCD-2 window; `valid_to = '2099-12-31'` is the open/current revision |
+| `created_by_actor_id` / `created_role_code` | attribution (D6) |
+
+`core.intake_impact_assessment_current` (view, `valid_to = '2099-12-31'`) is the read path.
+
+## The `assessment` jsonb shape (boundary-validated, D-ASM-2)
+
+```
+{
+  "ai_decision_impact": { decision_role, decision_domain, affected_population, adverse_impact,
+                          human_oversight: {strategy, threshold}, reversibility,
+                          gdpr_art22, deployment_scale },
+  "data":              { description, sources[], data_classification_code, pii_presence,
+                         sensitive_categories[], lawful_basis, residency, retention, use },
+  "security_access":   { sources[], targets[], tools[], credential_handling, egress },   # captured, not yet resolved
+  "rationale":         "<free text>"
+}
+```
+
+## Computation (read-only outputs)
+
+- **Inherent tier** (D-ASM-3): `ai_decision_impact.*` → `ai_risk_tier_code` + `naic_materiality_code`
+  (written to `core.intake` via `intake.service.classify_intake`).
+- **Auto-reject** (D-ASM-4): `ai_risk_tier_code = 'unacceptable'` → `intake_status_code = 'rejected'`
+  + one `audit.status_transition` row (via `intake.service.change_status`).
+- **Ceiling** (D-ASM-5): `data.data_classification_code` rank ≤ `application.data_classification_code`
+  rank (`tier1_public` < … < `tier4_pii_restricted`); `data.pii_presence != none` ⇒ ≥ `tier3_confidential`.
 
 ## Relationships
 
 ```
-actor ──proposes──> application (pending)
-   │                     │ 1───* application_regulatory_framework ─> regulatory_framework
-   │                     │ 1───* application_governance_domain ────> governance_domain
-   │                     │ 1───* application_jurisdiction ─────────> jurisdiction
-   │                     │ data_classification_code (ceiling) ─────> data_classification
-   └──signs off──> approval_request (kind=application_onboarding, target_application_id)
-                        │ 1───* approval_signoff (signed_as_role, decision)
-                        └── resolved (approved) ──> application.status = active
-                                                    + actor_app_role_grant (app_owner)
+application (ceiling: data_classification_code)
+     │ 1───* intake (data_classification_code ≤ app ceiling; ai_risk_tier/naic_materiality computed)
+                   │ 1───* intake_impact_assessment (jsonb answers, SCD-2 revisions)
+                   └── unacceptable tier ──> status=rejected + audit.status_transition
 ```
 
-## Validation rules (from FR-IN-015…018)
+## Validation rules (FR-AS-002/003/008, FR-IN-004/018)
 
-- `code`: `^[A-Z]{3}$`, unique; immutable once `active`.
-- Perimeter: ≥1 regulatory framework, ≥1 governance domain, ≥1 jurisdiction (else 400).
-- Attestations: all three booleans required (no default; missing → 400/422).
-- `data_classification_code` is the **ceiling**: an intake's actual classification MUST NOT exceed it; `processes_pii = true` ⇒ ceiling ≥ `confidential`. **[deferred — T034]**: `core.intake` has no `data_classification` column yet (intake classification = risk-tier/materiality only); ceiling enforcement requires an intake-schema addition in the next intake slice.
-- Approval resolves only when every computed required role (AI Governance + business-owner-if-not-proposer) has an `approval` sign-off; any rejection blocks.
-- A non-`active` application MUST NOT own promotable intakes/assets (FR-IN-015).
-- All writes record `created_by/role` server-side (D6 / FR-018).
+- The assessment body is Pydantic-validated (enumerated choices); stored as `jsonb`.
+- Each submit creates a new revision (closes the prior open window); reads use the `_current` view.
+- The computed tier is **inherent** and sets the intake's `*_code` columns.
+- `unacceptable` → audited auto-reject (one transaction).
+- Intake `data_classification_code` ≤ app ceiling; `processes_pii` ⇒ ≥ `tier3_confidential` (else 400).
+- All writes record `created_by/role` server-side (D6).
 
-## State
+## Deferred entities (NOT touched — unseeded metamodel)
 
-`application_status`: `pending` --(approval)--> `active` --(governed)--> `suspended` / `retired`.
-The compliance perimeter is editable only via re-approval (a change proposal — FR-IN-013); `code` is immutable once `active` (FR-IN-018).
+`core.intake_obligation` / `intake_obligation_resolution`, `canonical_requirement`,
+`regulatory_provision`, `control`, `evidence_specification`, `requirement_tier`, `domain_maturity` —
+obligation resolution (FR-AS-001 / FR-IN-014) is a dedicated content slice. The Security & Access
+answers are captured in `assessment` jsonb for that later slice; no approvable records / ITSM export
+/ mitigations this slice (FR-AS-004/005/006/007).

@@ -1,86 +1,66 @@
-# Phase 0 — Research & Decisions: Application Onboarding slice
+# Phase 0 — Research & Decisions: Intake Assessment slice (capture + tier + ceiling)
 
-The stack/storage are fixed (constitution + ADRs). These decisions resolve the choices specific
-to onboarding. Much of the infrastructure already exists in the canonical schema; several
-decisions are about *reuse* vs *grow*.
+Decisions specific to this slice. The stack/storage are fixed; the compliance metamodel is
+unseeded, so obligation resolution is out of scope (see plan.md Scope).
 
-## D-ONB-1 — Approval required-roles are computed, not stored
-- **Decision**: `core.approval_request` has no `required_roles` column; for `kind=application_onboarding`
-  the service **computes** the required set = `{ai_governance}` ∪ `{business_owner}` **iff** the
-  proposer is not the named business owner. The request **resolves** (`approved`) when there is an
-  `approval` sign-off from each required role (recorded in `core.approval_signoff`); any
-  `rejected`/`changes_requested` sign-off blocks.
-- **Rationale**: the conditional rule (FR-IN-015) is policy, best kept in code beside the matrix;
-  the existing tables already carry the request + sign-offs. Avoids a schema change for roles.
-- **Alternatives**: store `required_roles` on the request (rejected — duplicates policy, drifts);
-  a DB trigger to resolve (rejected — hides attribution).
+## D-ASM-1 — Reuse `intake_impact_assessment` (jsonb + SCD-2); no new table
+- **Decision**: the four-tab questionnaire is stored in the existing `core.intake_impact_assessment`
+  — `assessment jsonb` holds the structured answers; each submit writes a **new revision** (closes
+  the prior open SCD-2 window: set its `valid_to = now()`, insert `revision = max+1` with
+  `valid_to = '2099-12-31'`). Reads use `core.intake_impact_assessment_current`.
+- **Rationale**: the entity already exists and is designed for exactly this (D4 history-keeping);
+  `(intake_id, revision)` is UNIQUE; no schema growth for the assessment itself.
+- **Alternatives**: a new per-question table (rejected — premature relational modeling before the
+  obligation-resolution slice needs queryable answers; jsonb is the documented shape).
 
-## D-ONB-2 — TLA `code` is the application identity key
-- **Decision**: `core.application.code` is a 3-letter TLA — `CHECK (code ~ '^[A-Z]{3}$')`, `UNIQUE`,
-  **immutable after approval** (enforced in the service: the column is settable while `pending`,
-  rejected on change once `active`). It is the audit-correlation key (FR-IN-015) and the
-  `application_code` resolution key referenced by FR-IN-001.
-- **Rationale**: a stable short key removes ambiguity in evidence trails; FR-IN-001 already
-  resolves intakes by `application_code`.
-- **Alternatives**: longer slug (rejected — the TLA is the chosen product convention; 3-char space
-  ~17.5k is sufficient for an app catalog); mutable code (rejected — breaks audit correlation).
+## D-ASM-2 — Boundary-validated jsonb (Pydantic shape; stored opaque)
+- **Decision**: the API validates the 4-tab answer shape with Pydantic models (enumerated choices
+  per FR-AS-002/003), then stores it as `jsonb`. The DB does not constrain the answer structure.
+- **Rationale**: keeps the answer schema evolvable while still rejecting malformed input at the
+  boundary; the tier rules read named fields off the validated model.
+- **Alternatives**: a JSON-schema CHECK in the DB (rejected — duplicates the Pydantic contract,
+  brittle as questions evolve).
 
-## D-ONB-3 — Reuse `reference.data_classification` as the sensitivity ceiling
-- **Decision**: the perimeter's data-classification **reuses** the existing
-  `reference.data_classification` (its table comment defines it as the data-sensitivity vocab:
-  `public`/`internal`/`confidential`/`pii_restricted`). `core.application.data_classification_code`
-  FKs to it as the **ceiling**. An intake's actual classification MUST NOT exceed it;
-  `processes_pii = true` implies a ceiling ≥ `confidential`.
-- **Implementation check**: an early grep suggested the *seed* may hold environment-tier codes
-  (`development/staging/…`) rather than the 4 sensitivity codes — **verify and repair the seed** to
-  `{public, internal, confidential, pii_restricted}` during the migration task.
-- **Alternatives**: a new `data_sensitivity` vocab (rejected — the existing table already *means*
-  sensitivity per its contract; renaming/duplicating would churn references).
+## D-ASM-3 — Inherent tier computed from answers; set via the existing intake classify path
+- **Decision**: the AI-Decision-Impact answers drive a deterministic rules function →
+  `ai_risk_tier` (`minimal`|`limited`|`high`|`unacceptable`) + `naic_materiality`
+  (`material`|`non_material`). The computed values are written to the intake via the **existing**
+  `intake.service.classify_intake` (Slice-1) — gated here by `edit_impact_assessment` rather than
+  `reclassify_risk`. The tier is **inherent** (FR-AS-008) — not lowered by anything in this slice.
+- **Rationale**: one source of truth for the intake's `*_code` columns; reuse, no duplication.
+- **Alternatives**: a separate assessment-owned tier column (rejected — the intake already owns
+  `ai_risk_tier_code`).
 
-## D-ONB-4 — Compliance perimeter as join tables; domains/frameworks reused
-- **Decision**: the multi-valued perimeter is three join tables —
-  `core.application_regulatory_framework` (→ existing `core.regulatory_framework`),
-  `core.application_governance_domain` (→ existing `reference.governance_domain`, the 9), and
-  `core.application_jurisdiction` (→ new `reference.jurisdiction`). The three attestations
-  (`affects_consumers`, `processes_pii`, `consumer_facing`) are NOT-NULL booleans on
-  `core.application` (no default — explicit attestation, FR-IN-017).
-- **Rationale**: governance domains + frameworks already exist; only jurisdictions/LOB are new.
-  Booleans-without-default force a deliberate Yes/No (a default reads as a silent "No").
-- **Alternatives**: a single jsonb perimeter blob (rejected — unqueryable, no FK integrity for the
-  framework→provision→obligation chain).
+## D-ASM-4 — `unacceptable` auto-rejects the intake (audited), reusing change_status
+- **Decision**: a computed `unacceptable` tier triggers the FR-IN-004 safety behavior — the intake
+  is auto-rejected (`intake_status_code = 'rejected'`) with the canonical note, in one transaction
+  that also appends `audit.status_transition`, via the **existing** `intake.service.change_status`.
+- **Rationale**: closes the intake-slice FR-IN-004 auto-reject deferral; the audited one-txn path
+  already exists (D-INT-1).
+- **Alternatives**: leave it to a human (rejected — prohibited use under EU-AI-Act framing is a
+  hard stop, not a discretionary call).
 
-## D-ONB-5 — Onboarding supersedes the Slice-1 instant create
-- **Decision**: the shipped `POST /applications` (instant create, Slice 1) is **reworked** into
-  *propose* → creates the application `pending` with identity + ownership + perimeter; a separate
-  *submit* opens the approval; *sign-off* resolves it to `active`. Slice-1's create test is
-  updated to assert `pending` + the perimeter.
-- **Rationale**: FR-IN-015 makes onboarding a governed proposal; the thin create was a Slice-1
-  placeholder.
-- **Alternatives**: keep both paths (rejected — two create semantics is a footgun).
+## D-ASM-5 — Intake data classification + ceiling (closes T034)
+- **Decision**: add `core.intake.data_classification_code` (FK `reference.data_classification`,
+  NULL until the Data tab is completed). On capture, enforce the **application ceiling**: the
+  intake's classification rank MUST NOT exceed the app's `data_classification_code` (FR-IN-018),
+  and `processes_pii = true` in the Data tab implies a classification ≥ `tier3_confidential`. A
+  violation is a 400.
+- **Rationale**: the Data tab is where the intake's sensitivity is first declared; this is the
+  natural home for the ceiling check deferred from Slice 2 (T034).
+- **Alternatives**: enforce only at intake create (rejected — the classification is set by the
+  assessment, after create).
 
-## D-ONB-6 — `app_team_role` renamed `app_demo_*` → `app_*`
-- **Decision**: rename the seed vocab `app_demo_{owner,lead,dev,sre,ops}` →
-  `app_{owner,lead,dev,sre,ops}`. The business owner + initial app-team write grants to the
-  existing `core.actor_app_role_grant`; approval writes the `app_owner` grant.
-- **Rationale**: the `*_demo_*` names leak demo semantics into the product vocab.
-- **SC-004 note**: this touches the "vocabularies verbatim from v1" criterion — recorded as an
-  **intentional v2 product rename** (never silent — Principle VI), to be reflected in the
-  disposition table.
-
-## D-ONB-7 — New vocabs: `application_status`, `jurisdiction`, `line_of_business`
-- **Decision**: add `reference.application_status` (`pending` | `active` | `suspended` | `retired`),
-  `reference.jurisdiction` (controlled — US states + EU/UK + …; "Other" is a non-driving free-text
-  note, not a row), and `reference.line_of_business` (P&C · Life · Health · Annuities · Commercial ·
-  Reinsurance · … + `other`). The `application_onboarding` value is added to the approval-request
-  kind vocabulary (or validated by the service if the kind column is unconstrained).
-- **Rationale**: status/jurisdiction/LOB are genuinely new; jurisdictions must be controlled so the
-  jurisdiction→regime mapping works (FR-IN-017).
-- **Alternatives**: free-text jurisdiction (rejected — breaks regime selection).
+## D-ASM-6 — Captured-but-not-resolved tabs are still stored
+- **Decision**: the **Security & Access** answers (sources/targets/tools) and any **Data**-tab
+  fields beyond classification are **captured** in the `assessment` jsonb even though their
+  downstream machinery (approvable access records, ITSM export, obligation resolution, mitigations)
+  is deferred. Nothing is dropped — the answers persist for the later slices to consume.
+- **Rationale**: forward-compatibility (Principle VI — never silently drop); the later slices read
+  the captured answers rather than re-asking.
 
 ## Error model (slice)
-- `401/403` → `AuthError` (unauthenticated / action denied), non-leaking JSON.
-- `404` → unknown application / approval id.
-- `409` → duplicate TLA; attempt to mutate an immutable `code`; submit on a non-`pending` app.
-- `400` → invalid reference code (FK) with the field; perimeter cardinality (`<1` framework /
-  domain / jurisdiction); a missing attestation; classification-ceiling violation.
-- `422` → Pydantic request validation.
+- `401/403` → `AuthError`. `404` → unknown intake / no assessment yet.
+- `400` → classification exceeds the app ceiling; `processes_pii` without ≥ confidential.
+- `422` → Pydantic answer-shape validation.
+- `409` → reserved (e.g. assessing a terminal intake) — minimal in this slice.

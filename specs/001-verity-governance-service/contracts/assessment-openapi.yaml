@@ -1,0 +1,117 @@
+openapi: 3.1.0
+info:
+  title: Verity Governance API — Intake Assessment slice (capture + tier + ceiling)
+  version: 0.1.0
+  description: >
+    The structured intake assessment: a four-tab questionnaire captured as a versioned record
+    (SCD-2 revisions on intake_impact_assessment). The AI-Decision-Impact answers compute the
+    intake's inherent risk tier + materiality (unacceptable auto-rejects); the Data tab sets the
+    intake's data classification, enforced against the application's onboarding ceiling. Obligation
+    resolution, approvable access records, and mitigations are OUT of this slice (deferred —
+    unseeded compliance metamodel). Routes are action-gated and fail-closed.
+servers:
+  - url: http://localhost:8000
+
+paths:
+  /intakes/{intake_id}/assessment:
+    put:
+      summary: Submit/refresh the intake assessment (new revision); computes the inherent tier
+      x-action: edit_impact_assessment
+      parameters: [ { $ref: '#/components/parameters/IntakeId' } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/AssessmentInput' } } } }
+      responses:
+        "200": { description: captured, content: { application/json: { schema: { $ref: '#/components/schemas/AssessmentView' } } } }
+        "400": { $ref: '#/components/responses/BadInput' }
+        "403": { $ref: '#/components/responses/Denied' }
+        "404": { $ref: '#/components/responses/NotFound' }
+    get:
+      summary: Get the current assessment + computed tier
+      x-action: view
+      parameters: [ { $ref: '#/components/parameters/IntakeId' } ]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/AssessmentView' } } } }
+        "404": { $ref: '#/components/responses/NotFound' }
+
+  /intakes/{intake_id}/assessment/revisions:
+    get:
+      summary: List the assessment revision history (SCD-2)
+      x-action: view
+      parameters: [ { $ref: '#/components/parameters/IntakeId' } ]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/RevisionMeta' } } } } }
+
+components:
+  parameters:
+    IntakeId: { name: intake_id, in: path, required: true, schema: { type: string, format: uuid } }
+  responses:
+    Denied: { description: action not permitted, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    NotFound: { description: not found, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    BadInput: { description: classification exceeds the app ceiling / pii without >= confidential / bad code, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  schemas:
+    Error: { type: object, properties: { code: { type: string }, detail: { type: string }, request_id: { type: string } } }
+
+    AssessmentInput:
+      type: object
+      required: [ai_decision_impact, data]
+      properties:
+        ai_decision_impact:
+          type: object
+          required: [decision_role, decision_domain, affected_population, adverse_impact, human_oversight, reversibility, gdpr_art22, deployment_scale]
+          properties:
+            decision_role: { type: string, enum: [assists, recommends_with_signoff, autonomous] }
+            decision_domain: { type: string, enum: [underwriting, pricing, claims, fraud, marketing, servicing, internal_ops] }
+            affected_population: { type: string, enum: [internal_only, brokers_agents, policyholders_consumers, vulnerable] }
+            adverse_impact: { type: string, enum: [negligible, financial, coverage_or_claim_denial, unfair_discriminatory, safety] }
+            human_oversight:
+              type: object
+              properties: { strategy: { type: string, enum: [none, on_the_loop, in_the_loop] }, threshold: { type: string } }
+            reversibility: { type: string, enum: [easily_reversible, reversible_with_effort, irreversible] }
+            gdpr_art22: { type: boolean }
+            deployment_scale: { type: string, enum: [pilot, limited, production_wide] }
+        data:
+          type: object
+          required: [description, data_classification_code, pii_presence]
+          properties:
+            description: { type: string }
+            sources: { type: array, items: { type: string } }
+            data_classification_code: { type: string, description: a reference.data_classification code (tier1_public..tier4_pii_restricted) }
+            pii_presence: { type: string, enum: [none, direct, indirect, special_category] }
+            sensitive_categories: { type: array, items: { type: string } }
+            lawful_basis: { type: string, enum: [established, needs_review, not_applicable] }
+            residency: { type: string, enum: [in_region, cross_border] }
+            retention: { type: string }
+            use: { type: string, enum: [training, inference, both] }
+        security_access:
+          type: object
+          description: captured for the later access/mitigation slice (not resolved here)
+          properties:
+            sources: { type: array, items: { type: object } }
+            targets: { type: array, items: { type: object } }
+            tools: { type: array, items: { type: object } }
+            credential_handling: { type: string }
+            egress: { type: string, enum: [none, allow_listed, open] }
+        rationale: { type: string }
+
+    AssessmentView:
+      type: object
+      properties:
+        intake_id: { type: string, format: uuid }
+        revision: { type: integer }
+        assessment: { type: object, description: the captured four-tab answers (echoed) }
+        computed:
+          type: object
+          properties:
+            ai_risk_tier_code: { type: string, description: inherent (FR-AS-008) }
+            naic_materiality_code: { type: string }
+            data_classification_code: { type: string, nullable: true }
+            intake_status_code: { type: string, description: rejected if the tier is unacceptable }
+            auto_rejected: { type: boolean }
+        created_at: { type: string, format: date-time }
+
+    RevisionMeta:
+      type: object
+      properties:
+        revision: { type: integer }
+        valid_from: { type: string, format: date-time }
+        valid_to: { type: string, format: date-time }
+        created_by_actor_id: { type: string, format: uuid }

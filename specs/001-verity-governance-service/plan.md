@@ -1,89 +1,82 @@
-# Implementation Plan — Application Onboarding slice
+# Implementation Plan — Intake Assessment slice (capture + tier + ceiling)
 
-**Branch**: `001-verity-governance-service` · **Spec**: [spec.md](spec.md) (FR-IN-015…018, FR-AUTHZ-001, FR-AP-*)
-**Slice**: Application onboarding — the governed proposal that creates the tenant-of-record and its compliance perimeter.
+**Branch**: `001-verity-governance-service` · **Spec**: [spec.md](spec.md) (FR-AS-001…010, FR-IN-004/017/018, FR-RP-010)
+**Slice**: the structured intake assessment — capture the questionnaire, compute the inherent risk tier, and enforce the data-classification ceiling.
 
 > **Slice history (one feature, sequential slices):**
-> - **Slice 1 — Intake CRUD (shipped):** application/intake/classify/status/requirements US1–US4 (commits `8780d24`, `fc2dd8d`). Its plan artifacts are preserved in git history (`88f73f5`).
-> - **Slice 2 — Application Onboarding (this plan):** supersedes the thin instant `POST /applications` from Slice 1 with a governed propose→approve flow.
+> - **Slice 1 — Intake CRUD (shipped):** `8780d24`, `fc2dd8d`.
+> - **Slice 2 — Application Onboarding (shipped):** `4252d88`, `f222d71`, `7d0003e`, `8229063` (perimeter + governed approval).
+> - **Slice 3 — Intake Assessment (this plan):** the assessment questionnaire + inherent-tier computation + the intake data-classification ceiling (closes the deferred T034). Prior slices' plan artifacts are in git history.
 
 ## Summary
 
-Application onboarding turns the thin Slice-1 `application` record into a **governed tenant-of-record**: a proposal (not an instant create) that captures **identity** (name, immutable 3-char TLA, purpose), **ownership** (business owner + initial app-team), and the **compliance perimeter** (data-classification ceiling, ≥1 regulatory framework / governance domain / jurisdiction, three explicit attestations), then requires an **AI-Governance + business-owner** approval before the application goes `active`. It also lands the **minimal, reusable approval primitive** (`approval_request` + `approval_signoff` over existing tables) that intake/change-proposals/exceptions will reuse.
+The intake assessment is the structured front-end that drives risk classification. This slice builds the **buildable core**: a four-tab questionnaire stored as a versioned `jsonb` on the existing `core.intake_impact_assessment` (SCD-2 revisions), whose **AI-Decision-Impact** answers compute the intake's **inherent `ai_risk_tier` + `naic_materiality`** (auto-rejecting an `unacceptable` use case), and whose **Data** tab sets the intake's **`data_classification`** — enforced against the application's onboarding **ceiling** (FR-IN-018, closing T034).
+
+## ⚠️ Scope reality (confirmed with the product owner)
+
+The assessment's *headline* outcome — resolving answers → the **obligation set** (FR-AS-001 / FR-IN-014) — is **NOT buildable in this slice**: the compliance metamodel (`canonical_requirement`, `regulatory_provision`, `control`, `evidence_specification`, `requirement_tier`, `intake_obligation`) is **entirely unseeded** (0 rows). Authoring that content is a large, dedicated governance-content effort. This slice captures the answers **forward-compatibly** (so resolution wires in later) but does not resolve obligations.
 
 ## Technical Context
 
-- **Stack:** Python 3.12 · FastAPI · psycopg v3 async · raw SQL via aiosql + thin repo (ADR-0012) · Pydantic v2 · PostgreSQL 18. (Unchanged from Slice 1.)
-- **Package:** `verity.hub`; new module `verity.hub.application` (onboarding) + `verity.hub.approval` (the primitive). Tests mirror the package.
-- **Data layer:** the canonical schema, **grown** for onboarding (DDL changes are spec-covered: FR-IN-015…018). Migrations are hand-written, numbered SQL (ADR-0012).
-- **Existing infrastructure reused (no new tables for these):** `core.approval_request`, `core.approval_signoff`, `reference.approval_decision`, `reference.approval_request_status`, `core.actor_app_role_grant` (+ `current_actor_app_role` view), `reference.governance_domain` (the 9), `reference.data_classification` (sensitivity), `core.regulatory_framework`, the compliance metamodel (`canonical_requirement`/`control`/`evidence_specification`/`domain_maturity`).
-- **NEEDS CLARIFICATION:** none blocking — resolved in research.md (D-ONB-1…7).
+- **Stack:** unchanged (Python 3.12 · FastAPI · psycopg v3 async · aiosql raw SQL · Pydantic v2 · PG18). New module `verity.hub.assessment`. Tests mirror the package.
+- **Data layer:** **reuse** `core.intake_impact_assessment` (jsonb `assessment` + SCD-2 `valid_from`/`valid_to` + `(intake_id, revision)` UNIQUE) and its `_current` view — they already exist. **One schema add:** `core.intake.data_classification_code`.
+- **Cross-slice reuse:** `intake.service.classify_intake` (set the computed tier/materiality), `intake.service.change_status` (one-txn audited auto-reject), the application **ceiling** (`application.data_classification_code` + the rank map from `application.service`).
+- **NEEDS CLARIFICATION:** none blocking — D-ASM-1…6 in research.md.
 
 ## Constitution Check
 
 | Principle | Gate | Status |
 |---|---|---|
-| I — Spec precedes implementation | Onboarding is fully specced (FR-IN-015…018) before code | ✅ PASS |
-| II — Schema is the hardened foundation | DDL growth is spec-covered + reviewed before service work; new objects follow naming-conventions.md | ✅ PASS (review the migration first) |
-| III — Legacy is reference, never source | Re-author; `app_demo_*`→`app_*` rename recorded as an intentional v2 delta (not silent) | ✅ PASS |
-| IV — API-only governance boundary | All writes via the governance API; attribution server-resolved (D6); no direct DB from callers | ✅ PASS |
-| V — Uniform bindings, agent-only tools | N/A (no binding/tool surface in this slice) | ✅ N/A |
-| VI — Slice-first, parity committed | Onboarding scoped; deferrals recorded (UI build, harness provisioning) — never silent | ✅ PASS |
-| VIII — Continuous control-and-evidence compliance | Perimeter feeds obligation elicitation (FR-IN-014/018) — captured here, resolved downstream | ✅ PASS |
+| I — Spec precedes implementation | FR-AS-* specced; scope confirmed | ✅ PASS |
+| II — Schema is the hardened foundation | One reviewed column add (`intake.data_classification_code`); reuses the existing assessment entity | ✅ PASS |
+| IV — API-only governance boundary | Gated `edit_impact_assessment` / `view`; attribution server-resolved (D6) | ✅ PASS |
+| VI — Slice-first, parity committed | Obligation resolution + access records + mitigations deferred **with reason** (unseeded metamodel) — never silent | ✅ PASS |
+| VIII — Continuous control-and-evidence compliance | Assessment captured + tier computed here; obligation/evidence resolution is the dedicated content slice | ✅ PASS (partial-by-design, recorded) |
 
-No violations. **Process note:** this slice grows the hardened schema — the migration DDL MUST be reviewed (Principle II) before the service layer is wired.
+No violations.
 
 ## Scope
 
 **In scope**
-- Schema growth (data-model.md): `core.application` columns (`code` TLA, `application_status_code`, `data_classification_code`, `line_of_business_code`, `affects_consumers`, `processes_pii`, `consumer_facing`); `core.approval_request.target_application_id`; new joins `application_regulatory_framework` / `_governance_domain` / `_jurisdiction`; new vocabs `reference.application_status` / `jurisdiction` / `line_of_business`; `app_team_role` rename `app_demo_*`→`app_*`; the `application_onboarding` approval kind.
-- Reference seeds: `application_status`, `jurisdiction` (US states + EU/UK + …), `line_of_business`, a starter `regulatory_framework` set; verify/repair `data_classification` to the 4 sensitivity codes.
-- The **minimal approval primitive** (`verity.hub.approval`): open request (kind, target, computed required-roles), record sign-off, resolve when satisfied.
-- Onboarding API (contracts/onboarding-openapi.yaml): propose (`pending`), submit-for-approval, sign-off → `active` + owner grant, reads; **rework** the Slice-1 instant `POST /applications`.
-- Enforcement: non-`active` application can't own promotable intakes/assets; classification-ceiling rule available to intakes.
+- Schema: `core.intake.data_classification_code` (FK `reference.data_classification`, NULL).
+- The 4-tab assessment captured as structured `jsonb` on `intake_impact_assessment`, SCD-2 revisions.
+- Inherent **risk-tier + materiality** computation from the AI-Decision-Impact answers (FR-AS-002/008); `unacceptable` → audited auto-reject (closes the intake-slice FR-IN-004 auto-reject deferral).
+- **Data-classification ceiling** enforcement (intake ≤ app; `processes_pii` ⇒ ≥ confidential) — closes T034.
+- The Data/Security answers are **captured** (stored) even where their downstream machinery is deferred.
 
-**Out of scope (deferred — recorded):** the onboarding UI build (screen is a contract only); harness provisioning + environments (FR-IN-016 management tabs); FR-AP-* approval features beyond the onboarding need; obligation *resolution* (perimeter is captured here; elicitation is the assessment slice).
+**Out of scope (deferred — recorded; blocked on prerequisites)**
+- **Obligation resolution** (FR-AS-001 mapping → `intake_obligation`) — blocked on the unseeded compliance metamodel; a dedicated content slice.
+- **Security & Access approvable records + ITSM export** (FR-AS-004/005) — a focused sub-capability.
+- **Mitigations / risk-treatment + `approve_exception`** (FR-AS-006/007) — needs the `approve_exception` action + evidence linkage.
+- **Risk & Obligations** tab's obligation portion (FR-AS-009) — depends on resolution; the tier/materiality portion is in scope.
 
 ## User-story decomposition (drives /speckit.tasks)
 
-- **Foundational** — schema migration (DDL growth + seeds + `app_*` rename), reviewed first; reconcile the Slice-1 `application` model.
-- **US1 (P1) — Propose an application (MVP):** create a `pending` application capturing identity + ownership + compliance perimeter; reads. *Independent test:* an authorized author proposes an app; it persists `pending` with TLA unique/immutable + perimeter rows + owner recorded; a viewer is denied.
-- **US2 (P2) — Governed approval:** submit-for-approval (open `application_onboarding` request; required roles = AI Governance + business-owner-if-not-proposer), sign-off, resolve → `active` + write the `app_owner` grant. *Independent test:* the required sign-offs flip the app to `active` and grant the owner; an incomplete set leaves it `pending`.
-- **US3 (P3) — Enforcement & lifecycle:** non-`active` app can't own promotable intakes/assets; classification-ceiling check; `suspend`/`retire`. *Independent test:* a `pending` app rejects intake/asset promotion; a ceiling violation is rejected.
+- **Foundational** — `intake.data_classification_code` column (reviewed); `verity.hub.assessment` skeleton.
+- **US1 (P1) — Capture the assessment:** `PUT/GET /intakes/{id}/assessment` — the 4-tab structured body stored as a new SCD-2 revision; GET returns the current revision. *Independent test:* submit → revision 1; resubmit → revision 2 (old closed); GET returns current + history count; viewer denied on PUT.
+- **US2 (P2) — Compute the inherent tier:** the AI-Decision-Impact answers compute `ai_risk_tier` + `naic_materiality` (set on the intake); `unacceptable` → audited auto-reject. *Independent test:* high-risk answers → `intake.ai_risk_tier='high'`; `unacceptable` → intake `rejected` + one `audit.status_transition` row.
+- **US3 (P3) — Data classification + ceiling:** the Data tab sets `intake.data_classification_code`, rejected if it exceeds the app ceiling (or `processes_pii` without ≥ confidential). *Independent test:* within-ceiling persists; over-ceiling → 400.
 
 ## Project structure (additions)
 
 ```
 hub/
-  db/queries/
-    application_onboarding.sql      # propose/read/lifecycle
-    application_perimeter.sql       # perimeter joins (frameworks/domains/jurisdictions)
-    approval.sql                    # open request, signoff, resolve (the primitive)
-  src/verity/hub/
-    application/{models,service,router}.py   # onboarding (supersedes intake.Application bits)
-    approval/{models,service}.py             # minimal approval primitive
-  tests/verity/hub/
-    application/test_onboarding.py           # PG18 e2e: propose→submit→signoff→active
-    approval/test_approval.py                # the primitive in isolation
-  migrations/000X_application_onboarding.sql # hand-written, numbered (ADR-0012)
-specs/schema/                                # DDL growth (structure) + seeds — reviewed first
-  core/{application,approval_request}.sql               # ALTER (new columns)
-  core/{application_regulatory_framework,application_governance_domain,application_jurisdiction}.sql  # NEW
-  reference/{application_status,jurisdiction,line_of_business}.sql                                    # NEW
-  seed/...                                              # vocab seeds + app_team_role rename
+  db/queries/assessment.sql              # upsert revision, get current, list revisions, set intake classification
+  src/verity/hub/assessment/{models,service,router}.py   # the 4-tab models, tier rules, ceiling check
+  tests/verity/hub/assessment/test_assessment.py         # PG18 e2e
+specs/schema/core/intake.sql             # ALTER: + data_classification_code
 ```
 
 ## Complexity Tracking
 
 | Item | Note |
 |---|---|
-| Schema growth on hardened tables | Spec-covered (FR-IN-015…018); migration reviewed before service (Principle II). |
-| `app_demo_*`→`app_*` vocab rename | Touches SC-004 (verbatim-from-v1); recorded as an intentional v2 product rename (research D-ONB-6). |
-| Minimal approval primitive | Built general (reused by intake/change-proposals/exceptions) but feature-scoped to the onboarding need. |
-| Supersedes Slice-1 instant create | The thin `POST /applications` is reworked into propose→approve; Slice-1 tests update accordingly. |
+| Headline outcome (obligations) unbuildable | Metamodel unseeded; captured forward-compatibly, resolution deferred to a content slice (recorded). |
+| Reuse of intake classify/status | The computed tier sets the intake via the existing `classify_intake`; `unacceptable` auto-reject via the existing audited `change_status`. No duplication. |
+| Assessment as jsonb | The questionnaire shape is Pydantic-validated at the boundary, stored as `jsonb` (the entity is designed for it); queryable structuring is deferred until obligation resolution needs it. |
 
 ## Phases
 
-- **Phase 0 — research.md:** D-ONB-1…7.
-- **Phase 1 — data-model.md + contracts/onboarding-openapi.yaml + quickstart.md:** the schema growth, the onboarding/approval API, and the propose→approve→active happy path.
-- **Phase 2 — /speckit.tasks:** task breakdown by the user stories above.
+- **Phase 0 — research.md:** D-ASM-1…6.
+- **Phase 1 — data-model.md + contracts/assessment-openapi.yaml + quickstart.md.**
+- **Phase 2 — /speckit.tasks.**
