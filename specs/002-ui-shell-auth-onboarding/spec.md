@@ -31,6 +31,17 @@ Deliverables are sequenced as four milestones, each independently releasable:
 
 ---
 
+## Clarifications
+
+### Session 2026-06-05
+
+- Q: For M4's intake sign-off view — the shipped intake-approval backend has no withdraw/return route. Reject-only, or also "Return for revision"? → A: **Reject-only** (approve/reject). The M3 "Return for revision" button is omitted for `kind=intake`; a rejected sign-off resolves the request as rejected. (Stays inside M4's shipped-only scope.)
+- Q: How should the UI save the two shipped assessment tabs? → A: **Per-tab save** — saving a tab fires a PUT carrying the **full assessment snapshot** (the backend captures the whole assessment as one SCD-2 revision; there is no partial-PUT), so each tab save writes a revision and recomputes the tier.
+- Q: The backend allows editing an assessment while an approval is open (`in_review`), which would recompute the tier under reviewers. What should M4 do? → A: **Allow, but warn** — edits stay enabled (following the backend), but while an approval is open the intake surfaces a banner that re-saving may change the tier/quorum.
+- Q: Which permission gates the "New intake" CTA? → A: **`create_intake`** (resolved from the backend route gate — same action as onboarding's CTA; not a user decision, recorded for traceability).
+
+---
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 — Sign in and land in Verity (Priority: P1)
@@ -127,7 +138,7 @@ From an intake's detail page the user opens the assessment and fills the two shi
 **Acceptance Scenarios**:
 
 1. **Given** the intake detail page, **when** the user opens the assessment, **then** exactly two tabs are shown — "AI Decision Impact" and "Data" — and no unbuilt tabs (Security & Access, Mitigations, Risk & Obligations) are present.
-2. **Given** the assessment tabs, **when** the user completes required fields and saves, **then** `PUT /intakes/{intake_id}/assessment` is called and the response's computed `ai_risk_tier` + materiality + rationale render in a read-only summary panel.
+2. **Given** the assessment tabs, **when** the user saves a tab, **then** `PUT /intakes/{intake_id}/assessment` is called with the full assessment snapshot (one new revision) and the response's computed `ai_risk_tier` + materiality + rationale render in a read-only summary panel.
 3. **Given** a saved assessment, **when** the assessment is re-opened, **then** `GET /intakes/{intake_id}/assessment` reloads the captured answers and the latest computed tier; prior revisions are listed from `GET /intakes/{intake_id}/assessment/revisions`.
 4. **Given** an assessment whose answers compute an `unacceptable` tier, **when** it is saved, **then** the UI surfaces that the intake is auto-rejected and offers no submit affordance.
 5. **Given** an assessment with incomplete required fields, **when** the user attempts to save, **then** inline validation is shown and no request is sent until the tab is valid.
@@ -146,7 +157,7 @@ An author submits an assessed intake for approval, which opens a `kind=intake` a
 
 1. **Given** an intake with a computed tier and no open approval, **when** the author clicks "Submit for approval", **then** `POST /intakes/{intake_id}/submit` is called; on success the intake advances to `in_review` and the returned `required_roles` (the tier quorum) are shown.
 2. **Given** an intake with no computed tier, **when** the user views it, **then** the "Submit for approval" affordance is disabled with copy explaining the assessment must be completed first.
-3. **Given** an open `kind=intake` approval, **when** an approver opens the approval view, **then** it reuses the M3 scroll-gated view (`intake.usecase-review`) sourced from `GET /approvals/{approval_request_id}`, showing the composed intake and the quorum progress (which roles have signed).
+3. **Given** an open `kind=intake` approval, **when** an approver opens the approval view, **then** it reuses the M3 scroll-gated view (`intake.usecase-review`) sourced from `GET /approvals/{approval_request_id}`, showing the composed intake and the quorum progress (which roles have signed), with **approve/reject** actions only — no "Return for revision" button.
 4. **Given** the approval view, **when** the signed-in approver is the same actor who submitted, **then** the sign-off action is disabled/forbidden (separation of duty — the backend returns 403 and the UI reflects it as a disabled affordance, not a takeover).
 5. **Given** the approval view with the scroll-gate satisfied, **when** an approver holding a required role signs "approve", **then** `POST /approvals/{approval_request_id}/signoff` is called with `decision_code: "approved"`; the quorum progress updates.
 6. **Given** the final required sign-off, **when** it is recorded, **then** the intake transitions to `approved` and the approver is returned to the intake detail page showing the `approved` status.
@@ -168,6 +179,7 @@ An author submits an assessed intake for approval, which opens a `kind=intake` a
 - What happens when a user tries to submit an intake that already has an open approval? → The backend returns 409; the UI shows the existing approval rather than opening a second one.
 - What happens when the submitter opens the approval view for their own intake? → The sign-off action is disabled (separation of duty); no full-screen takeover.
 - What happens when an assessment computes an `unacceptable` tier? → The intake is auto-rejected; the UI shows the rejected outcome and offers no submit path.
+- What happens when the author edits the assessment while an approval is open (`in_review`)? → Edits stay enabled (the backend blocks only terminal status), but a banner warns that re-saving may change the computed tier and the required quorum (FR-032).
 - What happens when an intake list for an application is empty? → The Use Cases tab shows the empty-state CTA ("Create the first intake").
 
 ---
@@ -209,15 +221,16 @@ An author submits an assessed intake for approval, which opens a `kind=intake` a
 
 **Milestone 4 — Intake lifecycle**
 
-- **FR-023**: The application detail Use Cases tab MUST list the application's intakes from `GET /applications/{application_id}/intakes` (title + status badge) with an empty-state CTA, and show a "New intake" CTA only to users with an intake-authoring permission.
+- **FR-023**: The application detail Use Cases tab MUST list the application's intakes from `GET /applications/{application_id}/intakes` (title + status badge) with an empty-state CTA, and show a "New intake" CTA only to users with the `create_intake` permission (the action the backend route gates on).
 - **FR-024**: The intake create form (`intake.usecase-create`) MUST submit via `POST /applications/{application_id}/intakes`; on success it MUST route to `/intakes/{intake_id}` (the detail page).
 - **FR-025**: The intake detail page (`intake.usecase-detail`) MUST source from `GET /intakes/{intake_id}` and render title, status badge, the requirements list (`GET /intakes/{intake_id}/requirements`), and an assessment-progress indicator; adding a requirement MUST call `POST /intakes/{intake_id}/requirements` and update the list in place.
 - **FR-026**: The assessment surface MUST render exactly the two shipped tabs — "AI Decision Impact" and "Data" — and MUST NOT render the Security & Access, Mitigations, or Risk & Obligations tabs (their backend is not built; they belong to feature `003`).
-- **FR-027**: Saving the assessment MUST call `PUT /intakes/{intake_id}/assessment`; the response's computed risk tier, NAIC materiality, and rationale MUST render in a read-only summary panel. Re-opening MUST reload captured answers via `GET /intakes/{intake_id}/assessment`, with prior revisions available from `GET /intakes/{intake_id}/assessment/revisions`.
+- **FR-027**: The assessment saves **per tab** — saving a tab MUST call `PUT /intakes/{intake_id}/assessment` carrying the **full assessment snapshot** (both shipped tabs' current values; the backend captures the whole assessment as one SCD-2 revision — there is no partial PUT). Each tab save therefore writes a new revision and recomputes the tier. The response's computed risk tier, NAIC materiality, and rationale MUST render in a read-only summary panel after each save. Re-opening MUST reload captured answers via `GET /intakes/{intake_id}/assessment`, with prior revisions available from `GET /intakes/{intake_id}/assessment/revisions`.
 - **FR-028**: The "Submit for approval" affordance MUST be disabled until a risk tier has been computed; it MUST call `POST /intakes/{intake_id}/submit` and surface the returned tier-quorum `required_roles`. An `unacceptable` tier MUST show the auto-rejected outcome and offer no submit path.
-- **FR-029**: The intake approval/sign-off view (`intake.usecase-review`) MUST reuse the Milestone 3 scroll-gated approval view with `kind=intake`, sourced from `GET /approvals/{approval_request_id}`, showing the composed intake and quorum progress; sign-off MUST call `POST /approvals/{approval_request_id}/signoff`.
+- **FR-029**: The intake approval/sign-off view (`intake.usecase-review`) MUST reuse the Milestone 3 scroll-gated approval view with `kind=intake`, sourced from `GET /approvals/{approval_request_id}`, showing the composed intake and quorum progress; sign-off MUST call `POST /approvals/{approval_request_id}/signoff`. The view MUST offer **approve/reject only** — the M3 "Return for revision" button MUST be omitted for `kind=intake` (the shipped backend has no withdraw/return route for intake); a "rejected" sign-off resolves the request as rejected.
 - **FR-030**: When the signed-in approver is the actor who submitted the intake, the sign-off action MUST be presented as a disabled affordance (separation of duty); the backend 403 MUST NOT trigger the route-level forbidden takeover.
 - **FR-031**: Every M4 screen MUST have a defined empty state and MUST disable all write affordances for an intake in a terminal status (`rejected`/`retired`).
+- **FR-032**: While an approval is open (`in_review`), assessment and requirement edits MUST remain enabled (following the backend, which blocks only terminal status), but the intake detail and assessment surfaces MUST show a banner warning that an approval is open and re-saving may change the computed tier and required quorum.
 
 ### Key Entities *(include if feature involves data)*
 
