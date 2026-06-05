@@ -14,6 +14,7 @@ from psycopg.errors import ForeignKeyViolation, UniqueViolation
 
 from verity.hub.application import service
 from verity.hub.application.models import Application, ApplicationPropose
+from verity.hub.approval.models import ApprovalRequest, SubmitForApproval
 from verity.hub.auth.dependencies import require_action
 from verity.hub.auth.models import AuthContext
 
@@ -73,3 +74,19 @@ async def get_application(
     if application is None:
         raise HTTPException(404, "application not found")
     return application
+
+
+@router.post("/applications/{application_id}/submit", status_code=201, response_model=ApprovalRequest)
+async def submit_for_approval(
+    application_id: UUID,
+    body: SubmitForApproval,
+    conn: AsyncConnection = Depends(get_conn),
+    ctx: AuthContext = Depends(require_action("onboard_application")),
+) -> ApprovalRequest:
+    try:
+        request = await service.submit_for_approval(conn, application_id, ctx)
+    except service.OnboardingConflict as exc:
+        raise HTTPException(409, str(exc)) from exc
+    if request is None:
+        raise HTTPException(404, "application not found")
+    return request

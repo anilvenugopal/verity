@@ -15,6 +15,18 @@ from verity.hub.config import get_settings
 
 AUTHOR_OID = "cccccccc-cccc-cccc-cccc-cccccccccccc"
 VIEWER_OID = "dddddddd-dddd-dddd-dddd-dddddddddddd"
+AIGOV_OID = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"
+PRIV_OID = "ffffffff-ffff-ffff-ffff-ffffffffffff"
+
+
+def _seed_actor(pg_url, name):
+    with psycopg.connect(pg_url, autocommit=True) as conn:
+        return str(
+            conn.execute(
+                "INSERT INTO core.actor (actor_type_code, display_name) VALUES ('human', %s) RETURNING actor_id",
+                (name,),
+            ).fetchone()[0]
+        )
 
 
 @pytest.fixture(scope="module")
@@ -129,3 +141,66 @@ def test_duplicate_tla_conflict(pg_url):
         assert c.post("/applications", json=_propose_body("DUP", owner_id)).status_code == 201
         dup = c.post("/applications", json=_propose_body("DUP", owner_id, name="A Different Name"))
         assert dup.status_code == 409
+
+
+def test_submit_signoff_activates_application(pg_url):
+    # owner == proposer -> required quorum is AI Governance only.
+    author = _app(pg_url, oid=AUTHOR_OID, roles="business_owner")
+    with TestClient(author) as c:
+        owner_id = c.get("/me").json()["actor_id"]
+        application_id = c.post("/applications", json=_propose_body("ACT", owner_id)).json()["application_id"]
+        req = c.post(f"/applications/{application_id}/submit", json={})
+        assert req.status_code == 201, req.text
+        assert req.json()["status_code"] == "pending"
+        assert req.json()["required_roles"] == ["ai_governance"]
+        request_id = req.json()["approval_request_id"]
+
+    aigov = _app(pg_url, oid=AIGOV_OID, roles="ai_governance")
+    with TestClient(aigov) as c:
+        s = c.post(f"/approvals/{request_id}/signoff", json={"decision_code": "approved"})
+        assert s.status_code == 200, s.text
+        assert s.json()["status_code"] == "approved"
+        # signing an already-resolved request -> 409
+        assert c.post(f"/approvals/{request_id}/signoff", json={"decision_code": "approved"}).status_code == 409
+
+    # Application activated + the owner's app_owner grant written (FR-IN-015).
+    with psycopg.connect(pg_url) as conn:
+        status = conn.execute(
+            "SELECT application_status_code FROM core.application WHERE application_id = %s",
+            (application_id,),
+        ).fetchone()[0]
+        assert status == "active"
+        grants = conn.execute(
+            "SELECT count(*) FROM core.actor_app_role_grant WHERE application_id = %s AND app_team_role_code = 'app_owner'",
+            (application_id,),
+        ).fetchone()[0]
+        assert grants == 1
+
+
+def test_owner_needed_quorum_and_non_required_denied(pg_url):
+    # owner != proposer -> quorum is AI Governance + the named business owner.
+    other_owner = _seed_actor(pg_url, "Distinct Business Owner")
+    author = _app(pg_url, oid=AUTHOR_OID, roles="business_owner")
+    with TestClient(author) as c:
+        application_id = c.post("/applications", json=_propose_body("OWN", other_owner)).json()["application_id"]
+        req = c.post(f"/applications/{application_id}/submit", json={}).json()
+        assert sorted(req["required_roles"]) == ["ai_governance", "business_owner"]
+        request_id = req["approval_request_id"]
+
+    # AI Governance signs -> still pending (the named owner has not signed).
+    aigov = _app(pg_url, oid=AIGOV_OID, roles="ai_governance")
+    with TestClient(aigov) as c:
+        s = c.post(f"/approvals/{request_id}/signoff", json={"decision_code": "approved"})
+        assert s.status_code == 200
+        assert s.json()["status_code"] == "pending"
+
+    # An approval-capable role who is neither AI-Gov nor the named owner -> 403.
+    priv = _app(pg_url, oid=PRIV_OID, roles="privacy")
+    with TestClient(priv) as c:
+        assert c.post(f"/approvals/{request_id}/signoff", json={"decision_code": "approved"}).status_code == 403
+
+    with psycopg.connect(pg_url) as conn:
+        assert conn.execute(
+            "SELECT application_status_code FROM core.application WHERE application_id = %s",
+            (application_id,),
+        ).fetchone()[0] == "pending"

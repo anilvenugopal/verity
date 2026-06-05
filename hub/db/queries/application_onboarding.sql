@@ -25,6 +25,13 @@ SELECT application_id, code, name, description, application_status_code, line_of
 FROM core.application
 WHERE application_id = %(application_id)s;
 
+-- name: get_application_gate^
+-- The fields needed to gate submit + compute the onboarding quorum (US2): status, the designated
+-- owner, and the proposer (created_by). owner != proposer => the business owner must also approve.
+SELECT application_status_code, business_owner_actor_id, created_by_actor_id
+FROM core.application
+WHERE application_id = %(application_id)s;
+
 -- name: list_applications
 SELECT application_id, code, name, description, application_status_code, line_of_business_code,
        data_classification_code, business_owner_actor_id,

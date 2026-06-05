@@ -12,8 +12,16 @@ from uuid import UUID
 from psycopg import AsyncConnection
 
 from verity.hub.application.models import Application, ApplicationPropose
-from verity.hub.auth.models import AuthContext
+from verity.hub.approval import service as approval_service
+from verity.hub.approval.models import ApprovalRequest
+from verity.hub.auth.models import AuthContext, AuthError
 from verity.hub.db import queries
+
+_ONBOARDING_KIND = "application_onboarding"
+
+
+class OnboardingConflict(Exception):
+    """A 409 — e.g. submitting a non-pending application, or signing a resolved request."""
 
 # reference.data_classification is ordered by tier (tier1_public < … < tier4_pii_restricted).
 _CLASSIFICATION_RANK = {
@@ -91,3 +99,101 @@ async def list_applications(conn: AsyncConnection) -> list[Application]:
         frameworks, domains, jurisdictions = await _perimeter(conn, row["application_id"])
         out.append(_to_model(row, frameworks, domains, jurisdictions))
     return out
+
+
+# --- US2: governed onboarding approval (over the reusable approval primitive) -------------------
+
+def _required_roles(owner_needed: bool) -> list[str]:
+    """The onboarding quorum (D-ONB-1): AI Governance always; the business owner too when they
+    were not the proposer."""
+    return ["ai_governance"] + (["business_owner"] if owner_needed else [])
+
+
+def _satisfied(signoffs: list[dict], owner: UUID, owner_needed: bool) -> bool:
+    has_ai_gov = any(s["signed_as_role_code"] == "ai_governance" and s["decision_code"] == "approved" for s in signoffs)
+    has_owner = (not owner_needed) or any(
+        str(s["approver_actor_id"]) == str(owner) and s["decision_code"] == "approved" for s in signoffs
+    )
+    return has_ai_gov and has_owner
+
+
+async def submit_for_approval(conn: AsyncConnection, application_id: UUID, ctx: AuthContext) -> ApprovalRequest | None:
+    """Open the `application_onboarding` approval for a pending application. None => 404."""
+    gate = await queries.get_application_gate(conn, application_id=application_id)
+    if gate is None:
+        return None
+    if gate["application_status_code"] != "pending":
+        raise OnboardingConflict(f"application is '{gate['application_status_code']}', not pending")
+    owner_needed = gate["business_owner_actor_id"] != gate["created_by_actor_id"]
+    async with conn.transaction():
+        row = await approval_service.open_request(
+            conn, request_kind_code=_ONBOARDING_KIND, target_application_id=application_id,
+            opened_by_actor_id=ctx.principal.actor_id, opened_role_code=ctx.acting_role,
+        )
+    return approval_service.build_view(row, [], _required_roles(owner_needed))
+
+
+async def get_request_view(conn: AsyncConnection, approval_request_id: UUID) -> ApprovalRequest | None:
+    """The approval read view with the computed onboarding quorum. None => 404."""
+    request = await approval_service.get_request(conn, approval_request_id)
+    if request is None:
+        return None
+    owner_needed = False
+    application_id = request["target_application_id"]
+    if application_id is not None:
+        gate = await queries.get_application_gate(conn, application_id=application_id)
+        if gate is not None:
+            owner_needed = gate["business_owner_actor_id"] != gate["created_by_actor_id"]
+    signoffs = await approval_service.list_signoffs(conn, approval_request_id)
+    return approval_service.build_view(request, signoffs, _required_roles(owner_needed))
+
+
+async def sign_off(conn: AsyncConnection, approval_request_id: UUID, ctx: AuthContext,
+                   decision_code: str, comment: str | None) -> ApprovalRequest | None:
+    """Record a sign-off on an onboarding approval and resolve it. None => 404.
+
+    Eligibility: only an AI-Governance role-holder or the named business owner may sign (else 403).
+    Resolution: any rejection -> rejected; the computed quorum satisfied -> approved + the
+    application is activated + the owner's app_owner grant is written (FR-IN-015)."""
+    request = await approval_service.get_request(conn, approval_request_id)
+    if request is None:
+        return None
+    application_id = request["target_application_id"]
+    if request["request_kind_code"] != _ONBOARDING_KIND or application_id is None:
+        raise OnboardingConflict("not an application onboarding request")
+    if request["status_code"] != "pending":
+        raise OnboardingConflict("approval is already resolved")
+
+    gate = await queries.get_application_gate(conn, application_id=application_id)
+    owner = gate["business_owner_actor_id"]
+    owner_needed = owner != gate["created_by_actor_id"]
+    is_ai_gov = "ai_governance" in ctx.principal.platform_roles
+    is_owner = str(ctx.principal.actor_id) == str(owner)
+    if not (is_ai_gov or is_owner):
+        raise AuthError(403, "not_required_approver", "not a required approver for this onboarding")
+    signed_as = "ai_governance" if is_ai_gov else "business_owner"
+
+    async with conn.transaction():
+        await approval_service.insert_signoff(
+            conn, approval_request_id=approval_request_id, approver_actor_id=ctx.principal.actor_id,
+            signed_as_role_code=signed_as, decision_code=decision_code, comment=comment,
+        )
+        signoffs = await approval_service.list_signoffs(conn, approval_request_id)
+        if any(s["decision_code"] == "rejected" for s in signoffs):
+            await approval_service.set_request_status(conn, approval_request_id, "rejected")
+        elif _satisfied(signoffs, owner, owner_needed):
+            await approval_service.set_request_status(conn, approval_request_id, "approved")
+            await queries.set_application_active(conn, application_id=application_id)
+            granter = next(
+                (s["approver_actor_id"] for s in signoffs
+                 if s["signed_as_role_code"] == "ai_governance" and s["decision_code"] == "approved"),
+                owner,
+            )
+            await queries.insert_app_owner_grant(
+                conn, actor_id=owner, application_id=application_id,
+                granted_by_actor_id=granter, acting_role_code="ai_governance",
+            )
+
+    request = await approval_service.get_request(conn, approval_request_id)
+    signoffs = await approval_service.list_signoffs(conn, approval_request_id)
+    return approval_service.build_view(request, signoffs, _required_roles(owner_needed))

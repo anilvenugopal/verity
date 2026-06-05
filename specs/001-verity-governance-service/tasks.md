@@ -68,13 +68,13 @@ Slice-1 instant `POST /applications` with a governed propose→approve flow.
 **Goal**: submit opens the onboarding approval; the required sign-offs resolve it and activate the app.
 **Independent test**: submit opens an `application_onboarding` request with **computed** required roles (AI Governance + business-owner-if-not-proposer); the required `approve` sign-offs flip the app to `active` and write the `app_owner` grant; an incomplete set leaves it `pending`; a non-required approver is 403.
 
-- [ ] T025 [P] [US2] Raw SQL approval primitive — `hub/db/queries/approval.sql` (`open_request`, `get_request`, `list_signoffs`, `insert_signoff`, `set_request_status`, `set_application_active`, `insert_app_owner_grant`)
-- [ ] T026 [P] [US2] Models `ApprovalRequest` / `Signoff` / `SubmitForApproval` — `hub/src/verity/hub/approval/models.py`
-- [ ] T027 [US2] Approval service — `open_request(kind, target, required_roles)`, `record_signoff`, resolve-when-satisfied (D-ONB-1) — `hub/src/verity/hub/approval/service.py`
-- [ ] T028 [US2] Onboarding submit/resolve in `application/service.py` — compute required = `ai_governance` + business-owner-if-not-proposer; on resolve → status `active` + write the `app_owner` grant (FR-IN-015)
-- [ ] T029 [US2] Routes `POST /applications/{id}/submit` + `GET /approvals/{id}` + `POST /approvals/{id}/signoff` (gated `onboard_application` / `view` / `signoff`) — `hub/src/verity/hub/approval/router.py`, `application/router.py`
-- [ ] T030 [US2] Wire `approval_router`; 403 (non-required approver) / 409 (already resolved) handling — `hub/src/verity/hub/app.py`
-- [ ] T031 [US2] e2e tests — `test_onboarding.py` (submit→signoff→`active` + `app_owner` grant; incomplete set → still `pending`; non-required approver 403) + `hub/tests/verity/hub/approval/test_approval.py` (primitive in isolation: open → signoff → resolve)
+- [X] T025 [P] [US2] Raw SQL approval primitive — `hub/db/queries/approval.sql` (`open_request`, `get_request`, `list_signoffs`, `insert_signoff`, `set_request_status`, `set_application_active`, `insert_app_owner_grant`)
+- [X] T026 [P] [US2] Models `ApprovalRequest` / `Signoff` / `SubmitForApproval` — `hub/src/verity/hub/approval/models.py`
+- [X] T027 [US2] Approval service — `open_request(kind, target, required_roles)`, `record_signoff`, resolve-when-satisfied (D-ONB-1) — `hub/src/verity/hub/approval/service.py`
+- [X] T028 [US2] Onboarding submit/resolve in `application/service.py` — compute required = `ai_governance` + business-owner-if-not-proposer; on resolve → status `active` + write the `app_owner` grant (FR-IN-015)
+- [X] T029 [US2] Routes `POST /applications/{id}/submit` + `GET /approvals/{id}` + `POST /approvals/{id}/signoff` (gated `onboard_application` / `view` / `signoff`) — `hub/src/verity/hub/approval/router.py`, `application/router.py`
+- [X] T030 [US2] Wire `approval_router`; 403 (non-required approver) / 409 (already resolved) handling — `hub/src/verity/hub/app.py`
+- [X] T031 [US2] e2e tests — test_onboarding.py (submit→signoff→active + app_owner grant; incomplete→pending; non-required approver 403; resolved→409). The generic primitive is exercised end-to-end here; no separate test_approval.py.
 
 ---
 
