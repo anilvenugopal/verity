@@ -1,0 +1,8 @@
+/* US1 STUB landing — throwaway (US2 replaces it with the real shell from sample.html).
+   Structure is the master app-shell (.app/.app__topbar/.app__body/.app__canvas/.l-spacer);
+   only genuinely page-specific spacing + welcome type are local here. */
+.landing__brand { display: inline-flex; align-items: center; padding-left: var(--space-4); }
+.landing__utils { padding-right: var(--space-4); }
+.landing__pad { padding: var(--space-7); }
+.landing__welcome { font-size: var(--fs-title); font-weight: var(--fw-semibold); }
+.landing__sub { color: var(--text-secondary); font-size: var(--fs-label); margin-top: 6px; max-width: 60ch; line-height: 1.55; }

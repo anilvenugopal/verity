@@ -10,9 +10,11 @@ from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
+from starlette.middleware.sessions import SessionMiddleware
 
 from verity.hub.auth.dependencies import get_principal, require_action
 from verity.hub.auth.models import AuthContext, AuthError, Principal
+from verity.hub.auth.session import router as session_router
 from verity.hub.config import get_settings, validate_startup
 from verity.hub.db import make_pool, queries
 from verity.hub.application.router import router as application_router
@@ -20,6 +22,10 @@ from verity.hub.approval.router import router as approval_router
 from verity.hub.assessment.router import router as assessment_router
 from verity.hub.intake.router import router as intake_router
 from verity.hub.intake_approval.router import router as intake_approval_router
+
+# Local-dev fallback so SessionMiddleware has a key when session_secret is unset (mock/local).
+# Prod requires a real per-env secret — enforced in config.validate_startup (FR-013a).
+_DEV_SESSION_SECRET = "local-dev-insecure-session-secret-change-me"
 
 logger = logging.getLogger("verity.hub")
 
@@ -40,6 +46,13 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(title="Verity Hub", version="0.1.0", lifespan=lifespan)
+    settings = get_settings()
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=settings.session_secret or _DEV_SESSION_SECRET,
+        same_site="lax",
+        https_only=settings.env != "local",
+    )
 
     @app.exception_handler(AuthError)
     async def _auth_error(request: Request, exc: AuthError):  # 401 unauth / 403 denied, non-leaking
@@ -60,11 +73,21 @@ def create_app() -> FastAPI:
         return {"status": "ready", "reference_roles": roles}
 
     @app.get("/me", tags=["auth"])
-    async def me(principal: Principal = Depends(get_principal)) -> dict[str, object]:
+    async def me(request: Request, principal: Principal = Depends(get_principal)) -> dict[str, object]:
+        # Portal sign-out marks the session logged_out so /me reports unauthenticated, even in mock
+        # mode where the env principal is otherwise always ambient. Direct API callers (tests) have
+        # no session cookie, so this never fires for them.
+        if request.session.get("logged_out"):
+            raise AuthError(401, "unauthenticated", "signed out")
+        s = get_settings()
         return {
             "actor_id": principal.actor_id,
             "display_name": principal.display_name,
+            "email": principal.email,
             "platform_roles": sorted(principal.platform_roles),
+            # app_team_roles surfaced in a later milestone (account-menu pills); empty for now.
+            "app_team_roles": [],
+            "is_mock": s.auth_mode == "mock",
         }
 
     # Example action-gated route: granting a platform role is security-only (FR-023).
@@ -74,6 +97,7 @@ def create_app() -> FastAPI:
     ) -> dict[str, str]:
         return {"status": "authorized", "actor_id": ctx.principal.actor_id, "acting_role": ctx.acting_role}
 
+    app.include_router(session_router)
     app.include_router(application_router)
     app.include_router(approval_router)
     app.include_router(intake_router)
