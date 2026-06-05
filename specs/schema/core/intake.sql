@@ -9,6 +9,7 @@ CREATE TABLE core.intake (
     ai_risk_tier_code    text,                                       -- classification (drives obligations)
     naic_materiality_code text,
     materiality_tier_code text,
+    data_classification_code text,                                  -- the intake's actual data sensitivity (set by the assessment Data tab); <= the app ceiling (FR-IN-018)
     created_at           timestamptz  NOT NULL DEFAULT now(),
     updated_at           timestamptz  NOT NULL DEFAULT now(),
     created_by_actor_id  uuid        NOT NULL,
@@ -19,6 +20,7 @@ CREATE TABLE core.intake (
     CONSTRAINT fk_intake_risk_tier FOREIGN KEY (ai_risk_tier_code) REFERENCES reference.ai_risk_tier (code),
     CONSTRAINT fk_intake_naic FOREIGN KEY (naic_materiality_code) REFERENCES reference.naic_materiality (code),
     CONSTRAINT fk_intake_materiality FOREIGN KEY (materiality_tier_code) REFERENCES reference.materiality_tier (code),
+    CONSTRAINT fk_intake_data_classification FOREIGN KEY (data_classification_code) REFERENCES reference.data_classification (code),
     CONSTRAINT fk_intake_created_by FOREIGN KEY (created_by_actor_id) REFERENCES core.actor (actor_id),
     CONSTRAINT fk_intake_created_role FOREIGN KEY (created_role_code) REFERENCES reference.role (code));
 COMMENT ON TABLE core.intake IS
@@ -50,6 +52,8 @@ COMMENT ON COLUMN core.intake.naic_materiality_code IS
 'NAIC materiality classification feeding obligations. @status reference.naic_materiality';
 COMMENT ON COLUMN core.intake.materiality_tier_code IS
 'Internal materiality tier. @status reference.materiality_tier';
+COMMENT ON COLUMN core.intake.data_classification_code IS
+'The intake''s actual data-sensitivity, declared by the assessment Data tab; MUST NOT exceed the owning application''s ceiling (FR-IN-018). Null until the Data tab is completed. @status reference.data_classification';
 COMMENT ON COLUMN core.intake.created_at IS
 'When created.';
 COMMENT ON COLUMN core.intake.updated_at IS

@@ -23,13 +23,13 @@ slice builds **capture + inherent tier + ceiling**, storing answers forward-comp
 ## Phase 1: Setup
 
 - [X] T001 Hub component + migrate/reset + PG18 testcontainer + Slice-1/2 modules (done)
-- [ ] T002 [P] Create package skeleton `hub/src/verity/hub/assessment/__init__.py` + test dir `hub/tests/verity/hub/assessment/`
+- [X] T002 [P] Create package skeleton `hub/src/verity/hub/assessment/__init__.py` + test dir `hub/tests/verity/hub/assessment/`
 
 ## Phase 2: Foundational — schema growth (BLOCKS all stories; review DDL first — Principle II)
 
-- [ ] T003 ALTER `core.intake`: add `data_classification_code text` (FK `reference.data_classification`, NULL) + catalog comment (the intake's actual sensitivity; ≤ app ceiling) — `specs/schema/core/intake.sql`
-- [ ] T004 Update `specs/schema/DATA-MODEL.md` / `TABLE-INDEX.md` for the new intake column
-- [ ] T005 **Review checkpoint** (Principle II): `migrate` + `reset` on PG18; the existing 21-test suite stays green; new column loads
+- [X] T003 ALTER `core.intake`: add `data_classification_code text` (FK `reference.data_classification`, NULL) + catalog comment (the intake's actual sensitivity; ≤ app ceiling) — `specs/schema/core/intake.sql`
+- [X] T004 Update `specs/schema/DATA-MODEL.md` / `TABLE-INDEX.md` for the new intake column
+- [X] T005 **Review checkpoint** (Principle II): `migrate` + `reset` on PG18; the existing 21-test suite stays green; new column loads
 
 **Checkpoint**: schema grown + reviewed before any story work.
 
@@ -40,11 +40,11 @@ slice builds **capture + inherent tier + ceiling**, storing answers forward-comp
 **Goal**: submit/read the four-tab questionnaire as a versioned record (SCD-2) on `intake_impact_assessment`.
 **Independent test**: PUT the 4-tab body → revision 1 stored (open window); PUT again → revision 2 (revision 1 closed, `valid_to` set); GET returns the current revision; `GET .../revisions` lists both; a viewer-only principal is denied (403) on PUT, allowed on GET.
 
-- [ ] T006 [P] [US1] Raw SQL — `hub/db/queries/assessment.sql` (`next_revision`, `get_current_assessment`, `close_current_assessment`, `insert_assessment_revision`, `list_revisions`)
-- [ ] T007 [P] [US1] Pydantic models — `hub/src/verity/hub/assessment/models.py` (`AssessmentInput` with the 4 tabs + enumerated choices per FR-AS-002/003; `AssessmentView`; `RevisionMeta`)
-- [ ] T008 [US1] Service capture — `hub/src/verity/hub/assessment/service.py`: one transaction (next revision → close current → insert new revision; store answers as `jsonb`); `get_current`; `list_revisions`; attribution server-set (D6)
-- [ ] T009 [US1] Router — `hub/src/verity/hub/assessment/router.py`: `PUT/GET /intakes/{id}/assessment`, `GET /intakes/{id}/assessment/revisions` (gated `edit_impact_assessment` / `view`; 404 on unknown intake); wire `app.include_router` in `hub/src/verity/hub/app.py`
-- [ ] T010 [US1] e2e test (PG18) — `hub/tests/verity/hub/assessment/test_assessment.py`: submit→rev1; resubmit→rev2 (rev1 closed); GET current; revisions list; viewer 403 on PUT / 200 on GET
+- [X] T006 [P] [US1] Raw SQL — `hub/db/queries/assessment.sql` (`next_revision`, `get_current_assessment`, `close_current_assessment`, `insert_assessment_revision`, `list_revisions`)
+- [X] T007 [P] [US1] Pydantic models — `hub/src/verity/hub/assessment/models.py` (`AssessmentInput` with the 4 tabs + enumerated choices per FR-AS-002/003; `AssessmentView`; `RevisionMeta`)
+- [X] T008 [US1] Service capture — `hub/src/verity/hub/assessment/service.py`: one transaction (next revision → close current → insert new revision; store answers as `jsonb`); `get_current`; `list_revisions`; attribution server-set (D6)
+- [X] T009 [US1] Router — `hub/src/verity/hub/assessment/router.py`: `PUT/GET /intakes/{id}/assessment`, `GET /intakes/{id}/assessment/revisions` (gated `edit_impact_assessment` / `view`; 404 on unknown intake); wire `app.include_router` in `hub/src/verity/hub/app.py`
+- [X] T010 [US1] e2e test (PG18) — `hub/tests/verity/hub/assessment/test_assessment.py`: submit→rev1; resubmit→rev2 (rev1 closed); GET current; revisions list; viewer 403 on PUT / 200 on GET
 
 **Checkpoint**: US1 independently runnable + tested.
 

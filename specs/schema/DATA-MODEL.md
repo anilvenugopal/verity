@@ -130,7 +130,7 @@ Every table/view/enum, grouped by subject area, with its purpose. (Index: TABLE-
 | `application` | core | table | tier:1. Business application that owns intakes/use-cases and (via app-team grants) its own team. |
 | `artifact_plan_status` | reference | table |  |
 | `derivation_method` | reference | table |  |
-| `intake` | core | table | tier:1. Use-case intake header. intake_status_code mutable (D4; transitions in audit.status_transition). Risk/materiality drive the obligation set. |
+| `intake` | core | table | tier:1. Use-case intake header. intake_status_code mutable (D4; transitions in audit.status_transition). Risk/materiality drive the obligation set. data_classification_code = the intake's actual sensitivity (assessment Data tab), <= the app ceiling (FR-IN-018). |
 | `intake_artifact_plan` | core | table |  |
 | `intake_artifact_plan_estimate` | core | table |  |
 | `intake_cost_envelope` | core | table |  |
