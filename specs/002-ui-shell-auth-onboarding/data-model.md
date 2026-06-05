@@ -98,39 +98,39 @@ interface AppTeamMember {
 
 ---
 
-## 4. Approval request
+## 4. Approval request (shared — onboarding AND intake)
 
-Mirrors `hub/src/verity/hub/approval/models.py::ApprovalRequest`.
+Mirrors `hub/src/verity/hub/approval/models.py::ApprovalRequest` exactly. **One kind-agnostic shape** is
+returned for both `application_onboarding` and `intake` (dispatched on `request_kind_code`). There is
+no `application_name`/`required_signoffs`/`recorded_signoffs` and **no `returned_for_revision`** — those
+were an earlier draft that diverged from the backend.
 
 ```typescript
 interface ApprovalRequest {
   approval_request_id: string;    // UUID
-  application_id: string;         // UUID
-  application_name: string;
-  status_code: string;            // "pending" | "approved" | "returned_for_revision"
-  required_signoffs: RequiredSignoff[];
-  recorded_signoffs: RecordedSignoff[];
-  submitted_at: string;
-  resolved_at: string | null;
+  request_kind_code: string;      // "application_onboarding" | "intake"
+  status_code: string;            // "pending" | "approved" | "rejected" | "cancelled"
+  target_intake_id: string | null;       // set when kind=intake
+  target_application_id: string | null;   // set when kind=application_onboarding
+  required_roles: string[];        // computed quorum (FR-IN-005 for intake)
+  signoffs: SignoffRecord[];
+  created_at: string;
 }
 
-interface RequiredSignoff {
-  role_code: string;
-  label: string;
-}
-
-interface RecordedSignoff {
-  actor_id: string;
-  display_name: string;
-  role_code: string;
-  decision_code: string;
+interface SignoffRecord {
+  approver_actor_id: string;      // UUID
+  signed_as_role_code: string;
+  decision_code: string;          // "approved" | "rejected" | "requested_changes" | "abstained"
   comment: string | null;
-  recorded_at: string;
 }
 
-// POST /approvals/{id}/signoff body
+// POST /approvals/{id}/signoff body — reference.approval_decision vocabulary.
+// Resolution terminates only on `rejected` (→ rejected) or full-quorum `approved` (→ approved);
+// `requested_changes` / `abstained` leave the request `pending`.
+// UI rule (not an API constraint): onboarding offers Approve / Return-for-revision (requested_changes);
+// intake offers Approve / Reject only (rejected).
 interface Signoff {
-  decision_code: "approved" | "returned_for_revision";
+  decision_code: "approved" | "rejected" | "requested_changes" | "abstained";
   comment: string | null;
 }
 ```
@@ -180,26 +180,31 @@ interface AppLauncherState {
 
 ## 7. State transitions — Application status
 
+Reflects the shipped backend (`application/service.py`). `POST /applications/{id}/submit` opens a
+`kind=application_onboarding` approval but does **not** change the application status — the app stays
+`pending` while the approval is open. Only a full-quorum `approved` activates it.
+
 ```
-[proposed]
-    │ POST /applications/{id}/submit
+[pending]   (created by propose)
+    │ POST /applications/{id}/submit  → opens approval (app stays pending)
     ▼
-[pending_approval]
-    │ POST /approvals/{id}/signoff  decision_code=approved
-    ▼                                (quorum met)
+[pending] + open approval
+    │ POST /approvals/{id}/signoff  decision_code=approved   (quorum satisfied)
+    ▼
 [active]
 
-[pending_approval]
-    │ POST /approvals/{id}/signoff  decision_code=returned_for_revision
+[pending] + open approval
+    │ POST /approvals/{id}/signoff  decision_code=rejected   (any signer)
     ▼
-[pending]  (back to draft/editable)
+approval → rejected;  app stays [pending]   (no auto return-to-draft is enforced today)
+    # decision_code=requested_changes / abstained leave the approval `pending` (no terminal effect yet)
 
 [active] ──POST /applications/{id}/lifecycle to_status=suspended──▶ [suspended]
 [active] ──POST /applications/{id}/lifecycle to_status=retired────▶ [retired]
 ```
 
 Status badge colour mapping (design system tokens):
-- `pending` / `pending_approval` → `--color-warning` pill
+- `pending` → `--color-warning` pill
 - `active` → `--color-positive` pill
 - `suspended` / `retired` → `--text-tertiary` pill (neutral)
 
@@ -323,9 +328,10 @@ The intake approval reuses the shared approval entity. Shape per `hub/src/verity
 ```typescript
 // POST /intakes/{intake_id}/submit → ApprovalRequest (kind=intake)
 // GET /approvals/{approval_request_id} → ApprovalRequest
-// Reuses the M3 ApprovalRequest type; for kind=intake the sign-off decision is approve/reject ONLY.
+// Reuses the shared ApprovalRequest type (§4). UI rule: for kind=intake the sign-off offers
+// approve/reject ONLY (a UI narrowing of the shared Signoff vocabulary — not a separate API shape).
 interface Signoff_Intake {
-  decision_code: "approved" | "rejected";   // NO "returned_for_revision" for intake
+  decision_code: "approved" | "rejected";   // intake UI omits requested_changes/abstained
   comment: string | null;
 }
 ```

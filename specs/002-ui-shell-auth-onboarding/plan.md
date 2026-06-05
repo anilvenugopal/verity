@@ -161,7 +161,7 @@ The spec's auth endpoints are not yet in the running hub. These must be added be
 | `POST /approvals/{id}/signoff` | **EXISTS** | Records approve/return decision |
 
 **Approval flow mapping** (spec vs. actual routes):
-- The spec says `POST /applications/{id}/approve` — actual flow is: `POST /applications/{id}/submit` (submitter) → `GET /approvals/{approval_request_id}` (approver reads) → `POST /approvals/{approval_request_id}/signoff` with `decision_code: "approved"` or `"returned_for_revision"`.
+- The spec (FR-019, now corrected) uses the shared primitive — actual flow is: `POST /applications/{id}/submit` (submitter) → `GET /approvals/{approval_request_id}` (approver reads) → `POST /approvals/{approval_request_id}/signoff` with `decision_code: "approved"` or `"requested_changes"` (real vocab; no `returned_for_revision`, no `/approve` or `/withdraw` route).
 - The portal must first call `/submit` to get the `approval_request_id`, then surface the approval view from `GET /approvals/{id}`.
 - The `tasks.md` must sequence this correctly.
 

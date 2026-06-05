@@ -91,7 +91,7 @@ A governance user navigates to the Applications section, sees a searchable regis
 
 **Why this priority**: Application onboarding is the first product-value screen and the root of all downstream governance work (use cases, models, approvals).
 
-**Independent Test**: Mock-auth with `ai_governance` role → navigate to `/applications` → click "Onboard application" → complete all steps → assert `POST /applications` fires and success state shown. Switch to approver mock role → find pending application → scroll to end of proposal → click "Approve" → assert `POST /applications/{id}/approve` fires and status updates to `active`.
+**Independent Test**: Mock-auth with `ai_governance` role → navigate to `/applications` → click "Onboard application" → complete all steps → assert `POST /applications` fires and success state shown. Submit it for approval (`POST /applications/{id}/submit`) to obtain the `approval_request_id`. Switch to an approver mock role → open the approval view → scroll to end of proposal → click "Approve" → assert `POST /approvals/{approval_request_id}/signoff` fires with `decision_code: "approved"`; once the quorum is satisfied the application updates to `active`.
 
 **Acceptance Scenarios**:
 
@@ -103,8 +103,8 @@ A governance user navigates to the Applications section, sees a searchable regis
 6. **Given** incomplete required fields on a form step, **when** the user tries to advance, **then** inline validation errors are shown and the step does not advance.
 7. **Given** unsaved form data, **when** the user attempts to navigate away, **then** a "Discard changes?" confirmation is shown; confirming discards without sending any request.
 8. **Given** a pending application awaiting approval, **when** an approver opens its approval view, **then** the read-only composed proposal is shown and both action buttons ("Approve" / "Return for revision") are disabled until the approver has scrolled to the end.
-9. **Given** the approval view with buttons enabled, **when** the approver clicks "Approve", **then** `POST /applications/{id}/approve` is called; on success the application transitions to `active` and the approver is returned to the registry.
-10. **Given** the approval view, **when** the approver clicks "Return for revision", **then** `POST /applications/{id}/withdraw` is called; on success the application transitions to `draft`.
+9. **Given** the approval view with buttons enabled, **when** the approver clicks "Approve", **then** `POST /approvals/{approval_request_id}/signoff` is called with `decision_code: "approved"`; once the quorum is satisfied the application transitions to `active` and the approver is returned to the registry.
+10. **Given** the approval view, **when** the approver clicks "Return for revision", **then** `POST /approvals/{approval_request_id}/signoff` is called with `decision_code: "requested_changes"`; the request remains open for revision (the backend does not auto-transition the application status today).
 11. **Given** an `active` application, **when** the user navigates to `/applications/{id}`, **then** the detail page renders four tabs (Overview, Compliance Perimeter, Use Cases, Team) faithful to `application-detail.html`; the Use Cases tab shows an empty-state CTA if no use cases exist.
 
 ---
@@ -214,7 +214,7 @@ An author submits an assessed intake for approval, which opens a `kind=intake` a
 - **FR-016**: The onboard form MUST be a multi-step flow with flow indicators per `specs/ui/kit/pages/flows.html`; step advance requires valid required fields; final submit calls `POST /applications`.
 - **FR-017**: Navigating away from an in-progress form MUST show a "Discard changes?" confirmation before discarding without sending any request.
 - **FR-018**: The approval view MUST be read-only; action buttons MUST be disabled until the approver scrolls to the end of the composed proposal.
-- **FR-019**: "Approve" MUST call `POST /applications/{id}/approve`; "Return for revision" MUST call `POST /applications/{id}/withdraw`.
+- **FR-019**: The approval decision MUST be recorded via the shared approval primitive `POST /approvals/{approval_request_id}/signoff` (the `approval_request_id` comes from the prior `POST /applications/{application_id}/submit`). "Approve" sends `decision_code: "approved"`; "Return for revision" sends `decision_code: "requested_changes"`. There is **no** `/applications/{id}/approve` or `/applications/{id}/withdraw` route and **no** `returned_for_revision` decision code (the real `reference.approval_decision` vocabulary is `approved` | `rejected` | `requested_changes` | `abstained`). Backend resolution today terminates the request only on `rejected` (→ rejected) or a full quorum of `approved` (→ approved + application `active`); `requested_changes` leaves the request `pending` (auto return-to-draft is not yet enforced).
 - **FR-020**: The application detail page MUST render four tabs (Overview, Compliance Perimeter, Use Cases, Team) sourced from `GET /applications/{id}`, with an empty-state CTA on the Use Cases tab when none exist.
 - **FR-021**: Every screen in scope MUST have a defined empty state; no screen may be blank or show only an error when data is absent.
 - **FR-022**: All API calls MUST go through a single typed API client; it MUST intercept 401 to trigger the session-expired takeover and route-level 403 to trigger the forbidden takeover.
@@ -237,7 +237,7 @@ An author submits an assessed intake for approval, which opens a `kind=intake` a
 - **Session**: authenticated principal context — `display_name`, `email`, platform roles, app-team roles, `is_mock`; held in React context, never persisted to local/session storage.
 - **Application**: governed tenant — `application_id`, `application_name`, `status` (`draft` | `pending_approval` | `active` | `rejected`), `owner_user_id`, `compliance_perimeter`, `submitted_at`.
 - **Auth state**: one of `unauthenticated` | `authenticated` | `session_expired` | `forbidden` | `disabled`; drives which full-screen surface renders.
-- **Intake**: a proposed AI use case under an application — `intake_id`, `application_id`, `title`, `intake_status` (`proposed` | `in_review` | `approved` | `rejected` | `retired`), `ai_risk_tier` (computed, nullable until assessed), requirements list.
+- **Intake**: a proposed AI use case under an application — `intake_id`, `application_id`, `title`, `intake_status_code` (`proposed` | `in_review` | `approved` | `rejected` | `retired`), `ai_risk_tier_code` (computed, nullable until assessed), requirements list.
 - **Assessment**: the captured classification input for an intake — the two shipped tabs (AI Decision Impact, Data) plus the computed read-back (`ai_risk_tier`, materiality, rationale, inherent tier); revisioned (SCD-2 on the backend).
 - **Intake approval**: a `kind=intake` instance of the shared approval entity — `approval_request_id`, `required_roles` (the tier quorum), per-role sign-off progress, resolved status; same primitive as application onboarding.
 

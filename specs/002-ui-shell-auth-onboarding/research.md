@@ -78,7 +78,7 @@
 **Decision**: The portal implements the two-step approval flow using the existing routes:
 
 1. **Submitter**: `POST /applications/{id}/submit` → receives `{approval_request_id, ...}` → navigate to the approval view URL `/approvals/{approval_request_id}`.
-2. **Approver**: `GET /approvals/{approval_request_id}` → read the composed proposal → `POST /approvals/{approval_request_id}/signoff` with `{decision_code: "approved" | "returned_for_revision", comment: "..."}`.
+2. **Approver**: `GET /approvals/{approval_request_id}` → read the composed proposal → `POST /approvals/{approval_request_id}/signoff` with `{decision_code: "approved" | "requested_changes", comment: "..."}` (real `reference.approval_decision` vocabulary; there is no `returned_for_revision`). For `kind=intake` the UI offers approve/`rejected` only.
 
 The spec's simplified route names (`/applications/{id}/approve`) are updated in `data-model.md` and `contracts/portal-api.yaml` to reflect the actual routes. The `tasks.md` sequences submit → signoff correctly.
 

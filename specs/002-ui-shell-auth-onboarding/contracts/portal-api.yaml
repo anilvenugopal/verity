@@ -436,21 +436,18 @@ paths:
           description: Intake approval request created (kind=intake)
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/IntakeApprovalRequest" }
+              schema: { $ref: "#/components/schemas/ApprovalRequest" }
         "400": { $ref: "#/components/responses/BadRequest" }   # not yet classified (no tier)
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }     # terminal intake / duplicate open approval / empty quorum
 
-# NOTE (contract reconciliation): GET /approvals/{id} and POST …/signoff are SHARED with M3 and
-# return the kind-agnostic backend shape `IntakeApprovalRequest` (request_kind_code, required_roles[],
-# signoffs[]) for BOTH kinds — NOT the application-centric `ApprovalRequest` schema above. The M3
-# `ApprovalRequest`/`Signoff` schemas diverge from the real backend model
-# (hub/src/verity/hub/approval/models.py) and the real decision vocabulary
-# (approved|rejected|requested_changes|abstained, NOT returned_for_revision). Flagged for /speckit.analyze
-# to reconcile M3's contract; left intact here to honour "keep M1–M3 intact". For kind=intake the UI
-# offers approve/reject only.
+# NOTE: GET /approvals/{id} and POST …/signoff are SHARED by onboarding and intake and return the
+# single kind-agnostic `ApprovalRequest` shape (dispatched on `request_kind_code`). The UI restricts
+# the negative action per kind: onboarding → Return-for-revision (`requested_changes`); intake →
+# Reject (`rejected`). This is a UI rule, not an API constraint — the API accepts the full
+# `reference.approval_decision` vocabulary.
 
 # ─────────────────────────────────────────────
 # COMPONENTS
@@ -554,53 +551,44 @@ components:
 
     ApprovalRequest:
       type: object
-      required:
-        - approval_request_id
-        - application_id
-        - application_name
-        - status_code
-        - required_signoffs
-        - recorded_signoffs
-        - submitted_at
+      description: >
+        The single kind-agnostic approval shape returned by the hub for BOTH onboarding and intake
+        (hub/src/verity/hub/approval/models.py::ApprovalRequest). `required_roles` is the computed
+        quorum (FR-IN-005 for intake); `signoffs` are the recorded decisions. Exactly one of
+        target_intake_id / target_application_id is set per `request_kind_code`.
+      required: [approval_request_id, request_kind_code, status_code, required_roles, signoffs, created_at]
       properties:
         approval_request_id:   { type: string, format: uuid }
-        application_id:        { type: string, format: uuid }
-        application_name:      { type: string }
-        status_code:
-          type: string
-          enum: [pending, approved, returned_for_revision]
-        required_signoffs:
+        request_kind_code:     { type: string, enum: [intake, application_onboarding] }
+        status_code:           { type: string, enum: [pending, approved, rejected, cancelled] }
+        target_intake_id:      { type: string, format: uuid, nullable: true }
+        target_application_id: { type: string, format: uuid, nullable: true }
+        required_roles:        { type: array, items: { type: string } }
+        signoffs:
           type: array
           items:
             type: object
-            required: [role_code, label]
+            required: [approver_actor_id, signed_as_role_code, decision_code]
             properties:
-              role_code: { type: string }
-              label:     { type: string }
-        recorded_signoffs:
-          type: array
-          items:
-            type: object
-            required: [actor_id, display_name, role_code, decision_code, recorded_at]
-            properties:
-              actor_id:     { type: string, format: uuid }
-              display_name: { type: string }
-              role_code:    { type: string }
-              decision_code:
-                type: string
-                enum: [approved, returned_for_revision]
-              comment:      { type: string, nullable: true }
-              recorded_at:  { type: string, format: date-time }
-        submitted_at:  { type: string, format: date-time }
-        resolved_at:   { type: string, format: date-time, nullable: true }
+              approver_actor_id:   { type: string, format: uuid }
+              signed_as_role_code: { type: string }
+              decision_code:       { type: string, enum: [approved, rejected, requested_changes, abstained] }
+              comment:             { type: string, nullable: true }
+        created_at:            { type: string, format: date-time }
 
     Signoff:
       type: object
+      description: >
+        Sign-off body for the shared POST /approvals/{id}/signoff (both kinds). `decision_code` is a
+        `reference.approval_decision` value. Resolution terminates the request only on `rejected`
+        (→ rejected) or a full quorum of `approved` (→ approved); `requested_changes` / `abstained`
+        leave it `pending`. UI note: the onboarding view offers Approve / Return-for-revision
+        (`requested_changes`); the intake view offers Approve / Reject only (`rejected`).
       required: [decision_code]
       properties:
         decision_code:
           type: string
-          enum: [approved, returned_for_revision]
+          enum: [approved, rejected, requested_changes, abstained]
         comment:
           type: string
           nullable: true
@@ -726,39 +714,6 @@ components:
       type: object
       properties:
         note: { type: string, nullable: true }
-
-    IntakeApprovalRequest:
-      type: object
-      description: >
-        The real kind-agnostic approval shape (hub/src/verity/hub/approval/models.py::ApprovalRequest).
-        Returned by POST /intakes/{id}/submit and the shared GET /approvals/{id} for kind=intake.
-      required: [approval_request_id, request_kind_code, status_code, required_roles, signoffs, created_at]
-      properties:
-        approval_request_id:   { type: string, format: uuid }
-        request_kind_code:     { type: string, enum: [intake, application_onboarding] }
-        status_code:           { type: string, enum: [pending, approved, rejected] }
-        target_intake_id:      { type: string, format: uuid, nullable: true }
-        target_application_id: { type: string, format: uuid, nullable: true }
-        required_roles:        { type: array, items: { type: string }, description: the FR-IN-005 tier quorum }
-        signoffs:
-          type: array
-          items:
-            type: object
-            required: [approver_actor_id, signed_as_role_code, decision_code]
-            properties:
-              approver_actor_id: { type: string, format: uuid }
-              signed_as_role_code: { type: string }
-              decision_code:     { type: string, enum: [approved, rejected, requested_changes, abstained] }
-              comment:           { type: string, nullable: true }
-        created_at:            { type: string, format: date-time }
-
-    IntakeSignoff:
-      type: object
-      description: Sign-off body for kind=intake — approve/reject only (no returned_for_revision).
-      required: [decision_code]
-      properties:
-        decision_code: { type: string, enum: [approved, rejected] }
-        comment:       { type: string, nullable: true }
 
     ApiError:
       type: object
