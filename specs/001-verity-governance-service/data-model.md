@@ -1,75 +1,65 @@
-# Phase 1 — Data Model: Intake Assessment slice (capture + tier + ceiling)
+# Phase 1 — Data Model: Intake Approval slice
 
-Field names are schema column names verbatim (naming gate). This slice **reuses** the existing
-assessment entity and adds **one column** to `core.intake`. Obligation-resolution entities are
-**not** touched (deferred — unseeded metamodel).
+**No new tables, no new columns.** This slice reuses the Slice-2 approval entities and the Slice-1
+intake/audit entities. The only data-layer change is **generalizing the `open_request` query** to
+bind `target_intake_id`.
 
-## Grown: `core.intake` (one column)
+## Reused as-is
 
-| Column | Type | Notes |
-|---|---|---|
-| `data_classification_code` | text NULL | FK → `reference.data_classification`; the intake's actual sensitivity (set by the Data tab). MUST NOT exceed the owning application's ceiling (FR-IN-018, D-ASM-5). |
-
-Existing intake columns reused: `ai_risk_tier_code`, `naic_materiality_code` (set by the computed
-tier, D-ASM-3), `intake_status_code` (auto-reject path, D-ASM-4).
-
-## Reused as-is: `core.intake_impact_assessment` (+ `_current` view)
-
+### `core.approval_request`
 | Column | Role this slice |
 |---|---|
-| `intake_id` | FK → `core.intake` (cascade) |
-| `revision` | 1,2,3… immutable; new revision per submit; UNIQUE `(intake_id, revision)` |
-| `assessment` | `jsonb` — the **four-tab structured answers** (AI Decision Impact · Data · Security & Access · captured) |
-| `valid_from` / `valid_to` | SCD-2 window; `valid_to = '2099-12-31'` is the open/current revision |
-| `created_by_actor_id` / `created_role_code` | attribution (D6) |
+| `request_kind_code` | `'intake'` (already seeded) |
+| `target_intake_id` | the intake under approval (FK exists; the one-target CHECK already allows intake XOR version XOR application) |
+| `status_code` | `pending` → `approved`/`rejected` |
+| `opened_by_actor_id` / `opened_role_code` | the submitter (server-resolved) |
 
-`core.intake_impact_assessment_current` (view, `valid_to = '2099-12-31'`) is the read path.
+### `core.approval_signoff`
+`approval_request_id`, `approver_actor_id`, `signed_as_role_code` (a required role for the tier),
+`decision_code` (→ `reference.approval_decision`), `comment`. `uq_approval_signoff_request_role`
+gives one sign-off per role slot.
 
-## The `assessment` jsonb shape (boundary-validated, D-ASM-2)
+### `core.intake`
+`ai_risk_tier_code` (read — drives the quorum; set by the Slice-3 assessment); `intake_status_code`
+(written → `approved` on a satisfied quorum, via the Slice-1 audited `change_status`).
 
-```
-{
-  "ai_decision_impact": { decision_role, decision_domain, affected_population, adverse_impact,
-                          human_oversight: {strategy, threshold}, reversibility,
-                          gdpr_art22, deployment_scale },
-  "data":              { description, sources[], data_classification_code, pii_presence,
-                         sensitive_categories[], lawful_basis, residency, retention, use },
-  "security_access":   { sources[], targets[], tools[], credential_handling, egress },   # captured, not yet resolved
-  "rationale":         "<free text>"
-}
-```
+### `audit.status_transition`
+One row per intake status change (the approval → `approved` transition), via `change_status`.
 
-## Computation (read-only outputs)
+## The tier → quorum (FR-IN-005; computed, D-IAP-2)
 
-- **Inherent tier** (D-ASM-3): `ai_decision_impact.*` → `ai_risk_tier_code` + `naic_materiality_code`
-  (written to `core.intake` via `intake.service.classify_intake`).
-- **Auto-reject** (D-ASM-4): `ai_risk_tier_code = 'unacceptable'` → `intake_status_code = 'rejected'`
-  + one `audit.status_transition` row (via `intake.service.change_status`).
-- **Ceiling** (D-ASM-5): `data.data_classification_code` rank ≤ `application.data_classification_code`
-  rank (`tier1_public` < … < `tier4_pii_restricted`); `data.pii_presence != none` ⇒ ≥ `tier3_confidential`.
+| `ai_risk_tier_code` | required roles |
+|---|---|
+| `high` | `business_owner, compliance, legal, model_risk, ai_governance` |
+| `limited` | `business_owner, compliance, ai_governance` |
+| `minimal` | `business_owner` |
+| `unacceptable` | `[]` (auto-rejected — cannot be submitted) |
 
 ## Relationships
 
 ```
-application (ceiling: data_classification_code)
-     │ 1───* intake (data_classification_code ≤ app ceiling; ai_risk_tier/naic_materiality computed)
-                   │ 1───* intake_impact_assessment (jsonb answers, SCD-2 revisions)
-                   └── unacceptable tier ──> status=rejected + audit.status_transition
+intake (ai_risk_tier_code) ──submit──> approval_request (kind=intake, target_intake_id, status=pending)
+                                              │ 1───* approval_signoff (signed_as_role, decision)
+                                              └── all required roles approved ──> intake.status = approved
+                                                                                  + audit.status_transition
 ```
 
-## Validation rules (FR-AS-002/003/008, FR-IN-004/018)
+## Validation rules (FR-IN-001/005, D-IAP-3…5)
 
-- The assessment body is Pydantic-validated (enumerated choices); stored as `jsonb`.
-- Each submit creates a new revision (closes the prior open window); reads use the `_current` view.
-- The computed tier is **inherent** and sets the intake's `*_code` columns.
-- `unacceptable` → audited auto-reject (one transaction).
-- Intake `data_classification_code` ≤ app ceiling; `processes_pii` ⇒ ≥ `tier3_confidential` (else 400).
+- Submit requires `intake.ai_risk_tier_code` to be set (else 400); a terminal intake (`rejected`/`retired`) → 409; one open `kind=intake` approval per intake (duplicate → 409).
+- A sign-off is gated `signoff` AND the signer must hold a required role for the tier (else 403); recorded `signed_as` that role; one slot per role.
+- Resolution: approved only when every required role has an `approved` sign-off; any `rejected` → request rejected.
+- The intake → `approved` transition is one audited transaction (`change_status`, D-INT-1).
 - All writes record `created_by/role` server-side (D6).
 
-## Deferred entities (NOT touched — unseeded metamodel)
+## The only query change
 
-`core.intake_obligation` / `intake_obligation_resolution`, `canonical_requirement`,
-`regulatory_provision`, `control`, `evidence_specification`, `requirement_tier`, `domain_maturity` —
-obligation resolution (FR-AS-001 / FR-IN-014) is a dedicated content slice. The Security & Access
-answers are captured in `assessment` jsonb for that later slice; no approvable records / ITSM export
-/ mitigations this slice (FR-AS-004/005/006/007).
+`approval.sql` `open_request` is generalized to bind **`target_intake_id`** alongside
+`target_application_id` (one null). The onboarding caller passes `target_intake_id = NULL`; the
+intake caller passes `target_application_id = NULL`.
+
+## Deferred (NOT touched)
+
+`risk_reclassification` / `business_change` change-proposal kinds + impacted-asset selection +
+draft-fork (FR-IN-013); asset linking / promotion gate (FR-IN-009); the assessment-justification
+completeness gate (FR-AS-010).

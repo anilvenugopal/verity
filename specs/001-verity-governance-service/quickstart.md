@@ -1,67 +1,57 @@
-# Quickstart — Intake Assessment slice (capture + tier + ceiling)
+# Quickstart — Intake Approval slice
 
-Run and verify the assessment locally. Prereqs: Docker, `uv`, the `hub` venv.
+Run and verify intake approval locally. Prereqs: Docker, `uv`, the `hub` venv.
 
 ## 1. Substrate + clean DB
 
 ```bash
 cd tools
 dev stack up pg
-dev db reset            # rebuild from canonical DDL + seeds (incl. intake.data_classification_code)
+dev db reset
 ```
 
-## 2. Run the hub (mock auth; a governance principal that can edit assessments)
+## 2. Run the hub (mock auth; the tier quorum's roles + an author)
 
 ```bash
 cd hub
 VERITY_ENV=local VERITY_AUTH_MODE=mock \
-VERITY_MOCK_PLATFORM_ROLES=ai_governance,business_owner,compliance,viewer \
+VERITY_MOCK_PLATFORM_ROLES=business_owner,compliance,legal,model_risk,ai_governance,viewer \
 VERITY_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/verity \
 .venv/bin/uvicorn verity.hub.app:app --reload
 ```
 
-## 3. Exercise the flow (assumes an active application + an intake under it already exist)
+## 3. Exercise the flow (assumes an active app + an assessed intake with a tier)
 
 ```bash
-# submit the assessment — the AI-Decision-Impact answers compute the inherent tier; the Data tab
-# sets the intake's classification (checked against the app ceiling)
-curl -s -XPUT localhost:8000/intakes/$intake/assessment -H 'content-type: application/json' -d '{
-  "ai_decision_impact": {
-    "decision_role":"recommends_with_signoff","decision_domain":"underwriting",
-    "affected_population":"policyholders_consumers","adverse_impact":"coverage_or_claim_denial",
-    "human_oversight":{"strategy":"in_the_loop","threshold":"all decisions reviewed"},
-    "reversibility":"reversible_with_effort","gdpr_art22":false,"deployment_scale":"limited"
-  },
-  "data": {
-    "description":"Submission documents + prior claims.","sources":["policy_admin","claims_db"],
-    "data_classification_code":"tier3_confidential","pii_presence":"direct",
-    "lawful_basis":"established","residency":"in_region","retention":"7y","use":"inference"
-  },
-  "rationale":"Underwriting recommendation affecting policyholders."
-}' | jq '.computed'
+# submit the intake for approval — opens a kind=intake approval with the tier-based quorum
+req=$(curl -s -XPOST localhost:8000/intakes/$intake/submit -H 'content-type: application/json' \
+  -d '{}' | jq -r .approval_request_id)
 
-# read the current assessment + computed tier
-curl -s localhost:8000/intakes/$intake/assessment | jq '.computed'
+# see the required roles (FR-IN-005, computed from the intake's tier)
+curl -s localhost:8000/approvals/$req | jq '.required_roles'
 
-# revision history (SCD-2)
-curl -s localhost:8000/intakes/$intake/assessment/revisions | jq '.[].revision'
+# each required role signs off; when the quorum is complete the intake is approved
+curl -s -XPOST localhost:8000/approvals/$req/signoff -H 'content-type: application/json' \
+  -d '{"decision_code":"approved"}' | jq '.status_code'
+
+# (repeat as the other required-role principals) … then:
+curl -s localhost:8000/intakes/$intake | jq '.intake_status_code'   # -> "approved" when the quorum is met
 ```
 
 ## 4. Run the tests (the real gate)
 
 ```bash
-cd hub && pytest -q tests/verity/hub/assessment
+cd hub && pytest -q tests/verity/hub/intake_approval
 ```
 
 ## Acceptance (maps to the spec)
 
-- Submitting the assessment stores a new **SCD-2 revision** on `intake_impact_assessment`; a
-  resubmit creates revision 2 and closes revision 1 (FR-AS-010 history).
-- The AI-Decision-Impact answers compute the intake's **inherent `ai_risk_tier` + `naic_materiality`**
-  (FR-AS-002/008); an `unacceptable` pattern **auto-rejects** the intake with one
-  `audit.status_transition` row (FR-IN-004).
-- The Data tab sets the intake's **`data_classification_code`**, rejected (**400**) if it exceeds the
-  application **ceiling** or if `pii_presence != none` without ≥ `tier3_confidential` (FR-IN-018 — closes T034).
-- A `viewer`-only principal is **denied (403)** on PUT, allowed on GET (fail-closed).
-- The **Security & Access** answers are captured in the stored assessment (for the later
-  access/obligation slices) but are **not** resolved here.
+- Submit opens a `kind=intake` `approval_request` whose **required roles are the tier quorum**
+  (FR-IN-005): `high` → 5 roles, `limited` → 3, `minimal` → `business_owner`.
+- Submit **requires a computed tier** (the Slice-3 assessment) — an unassessed intake → **400**.
+- A **terminal** intake (`rejected`/`retired`) or an intake that already has an open approval → **409**.
+- A sign-off requires the signer to **hold a required role** for the tier (else **403**); each role
+  slot is filled once.
+- When **every required role has an `approved` sign-off**, the intake moves to **`approved`** with one
+  `audit.status_transition` row; any `rejected` sign-off → the request is `rejected`.
+- A `viewer`-only principal is **denied (403)** on submit/sign-off.

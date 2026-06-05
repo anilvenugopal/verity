@@ -1,0 +1,84 @@
+openapi: 3.1.0
+info:
+  title: Verity Governance API — Intake Approval slice
+  version: 0.1.0
+  description: >
+    Governed intake approval: submit an assessed intake (one with a computed ai_risk_tier_code) for
+    approval, opening a kind=intake approval_request whose required roles are the tier-based quorum
+    (FR-IN-005). The shared /approvals/{id} read + /approvals/{id}/signoff routes (defined in
+    onboarding-openapi.yaml) dispatch by request_kind_code; for kind=intake the quorum is per-tier
+    and a satisfied quorum moves the intake to `approved` (audited). Action-gated, fail-closed.
+servers:
+  - url: http://localhost:8000
+
+paths:
+  /intakes/{intake_id}/submit:
+    post:
+      summary: Submit an assessed intake for approval (opens the tier-quorum approval)
+      x-action: edit_intake
+      parameters: [ { $ref: '#/components/parameters/IntakeId' } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/SubmitForApproval' } } } }
+      responses:
+        "201": { description: approval opened, content: { application/json: { schema: { $ref: '#/components/schemas/ApprovalRequest' } } } }
+        "400": { description: intake not yet classified (no tier), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        "403": { $ref: '#/components/responses/Denied' }
+        "404": { $ref: '#/components/responses/NotFound' }
+        "409": { description: terminal intake / an open approval already exists, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+  # Shared (see onboarding-openapi.yaml) — listed for completeness; they dispatch by kind:
+  /approvals/{approval_request_id}:
+    get:
+      summary: Get an approval request + sign-offs (kind=intake shows the tier quorum)
+      x-action: view
+      parameters: [ { $ref: '#/components/parameters/ApprovalId' } ]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/ApprovalRequest' } } } }
+        "404": { $ref: '#/components/responses/NotFound' }
+  /approvals/{approval_request_id}/signoff:
+    post:
+      summary: Record a sign-off; resolves + approves the intake when the tier quorum is met
+      x-action: signoff
+      parameters: [ { $ref: '#/components/parameters/ApprovalId' } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Signoff' } } } }
+      responses:
+        "200": { description: recorded, content: { application/json: { schema: { $ref: '#/components/schemas/ApprovalRequest' } } } }
+        "400": { description: invalid decision_code, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        "403": { description: not a required approver for this tier, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        "404": { $ref: '#/components/responses/NotFound' }
+        "409": { description: already resolved, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+components:
+  parameters:
+    IntakeId: { name: intake_id, in: path, required: true, schema: { type: string, format: uuid } }
+    ApprovalId: { name: approval_request_id, in: path, required: true, schema: { type: string, format: uuid } }
+  responses:
+    Denied: { description: action not permitted, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    NotFound: { description: not found, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  schemas:
+    Error: { type: object, properties: { code: { type: string }, detail: { type: string }, request_id: { type: string } } }
+    SubmitForApproval:
+      type: object
+      properties: { note: { type: string } }
+    Signoff:
+      type: object
+      required: [decision_code]
+      properties:
+        decision_code: { type: string, description: a reference.approval_decision code (approved | rejected | requested_changes | abstained) }
+        comment: { type: string }
+    ApprovalRequest:
+      type: object
+      properties:
+        approval_request_id: { type: string, format: uuid }
+        request_kind_code: { type: string, description: intake }
+        status_code: { type: string, description: pending | approved | rejected }
+        target_intake_id: { type: string, format: uuid }
+        required_roles: { type: array, items: { type: string }, description: the FR-IN-005 tier quorum }
+        signoffs:
+          type: array
+          items:
+            type: object
+            properties:
+              approver_actor_id: { type: string, format: uuid }
+              signed_as_role_code: { type: string }
+              decision_code: { type: string }
+              comment: { type: string, nullable: true }
