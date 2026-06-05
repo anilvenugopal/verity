@@ -196,8 +196,8 @@
         },
         {
           "id": "theme",
-          "lucide": "sun-moon",
-          "alt": ["moon", "sun", "contrast"],
+          "lucide": "palette",
+          "alt": ["swatch-book", "gallery-thumbnails", "sun-moon"],
           "label": "Theme toggle",
           "usage": "Light / dark mode toggle (distinct from i-state-shadow)",
           "status": "approved"

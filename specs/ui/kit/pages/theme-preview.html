@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verity — Theme preview</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles/tokens.css">
+<link rel="stylesheet" href="../styles/base.css">
+<link rel="stylesheet" href="../styles/components.css">
+<link rel="stylesheet" href="../styles/utilities.css">
+<style>
+  /* ── PAGE-LOCAL theme-exploration prototype. Not a layer change.
+     Each preset overrides SEMANTIC tokens on .stage (exactly how a real theme /
+     a per-customer override would work). Buttons are re-tokenised here to show
+     the proposed fixes (split brand-fill from brand-text; softer secondary/ghost). ── */
+
+  body { background: var(--surface-recessed); }
+  .bar { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3);
+         padding: var(--space-3) var(--space-5); background: var(--surface-nav); border-bottom: 0.5px solid var(--border-default); }
+  .bar__title { font-weight: var(--fw-semibold); font-size: var(--fs-label); }
+  .seg { display: inline-flex; border: 1px solid var(--border-default); border-radius: var(--radius-md); overflow: hidden; }
+  .seg button { font: inherit; font-size: var(--fs-caption); padding: 5px 11px; background: var(--surface-panel); color: var(--text-secondary); border: 0; border-right: 1px solid var(--border-default); cursor: pointer; }
+  .seg button:last-child { border-right: 0; }
+  .seg button.on { background: var(--color-brand-faint); color: var(--color-brand); font-weight: var(--fw-medium); }
+  .bar__label { font-size: var(--fs-eyebrow); font-weight: var(--fw-semibold); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-tertiary); }
+  /* theme picker (gallery-thumbnail dropdown) */
+  .picker { position: relative; }
+  .picker__btn { display: inline-flex; align-items: center; gap: 8px; padding: 5px 10px; font: inherit; font-size: var(--fs-label);
+                 background: var(--surface-panel); color: var(--text-primary); border: 1px solid var(--border-default); border-radius: var(--radius-md); cursor: pointer; }
+  .picker__btn .icon { width: 15px; height: 15px; color: var(--text-secondary); }
+  .picker__btn .caret { width: 13px; height: 13px; color: var(--text-tertiary); }
+  .picker__menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 20; width: 232px; padding: 6px;
+                  background: var(--surface-panel); border: 0.5px solid var(--border-strong); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); }
+  .picker__menu[hidden] { display: none; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 8px; border-radius: var(--radius-md); border: 0; background: transparent; cursor: pointer; font: inherit; }
+  .opt:hover { background: var(--surface-hover); }
+  .opt.on { background: var(--color-brand-faint); }
+  .opt__sw { display: inline-flex; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border-faint); flex-shrink: 0; }
+  .opt__sw i { width: 12px; height: 22px; display: block; }
+  .opt__name { font-size: var(--fs-label); color: var(--text-primary); }
+  .opt__mode { margin-left: auto; font-size: var(--fs-caption); color: var(--text-tertiary); }
+
+  /* ── the stage holds the gallery and carries the theme variables ── */
+  .stage { padding: var(--space-7); min-height: 70vh; background: var(--surface-page); color: var(--text-primary); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); max-width: 1000px; }
+  @media (max-width: 820px){ .grid { grid-template-columns: 1fr; } }
+  .panel { background: var(--surface-panel); border: 0.5px solid var(--border-default); border-radius: var(--radius-lg); padding: var(--space-5); }
+  .panel__h { font-size: var(--fs-eyebrow); font-weight: var(--fw-semibold); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-tertiary); margin-bottom: var(--space-3); }
+  .row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+  .row + .row { margin-top: var(--space-3); }
+  .t-primary { color: var(--text-primary); } .t-secondary { color: var(--text-secondary); } .t-tertiary { color: var(--text-tertiary); }
+  .swrow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: var(--space-3); }
+  .sw { width: 54px; } .sw__c { height: 34px; border-radius: var(--radius-sm); border: 1px solid var(--border-faint); }
+  .sw__l { font-size: 9px; color: var(--text-tertiary); font-family: var(--font-mono); margin-top: 3px; }
+  .wm { height: 26px; }
+
+  /* ── PROPOSED button treatment (re-tokenised): primary keeps a deep fill;
+        secondary/ghost soften to outline/subtle instead of heavy charcoal ── */
+  .stage .btn--primary  { background: var(--btn-primary-bg); color: var(--btn-primary-fg); border-color: var(--btn-primary-bg); box-shadow: none; }
+  .stage .btn--primary:hover { filter: brightness(1.08); }
+  .stage .btn--secondary { background: transparent; color: var(--color-brand); border-color: var(--color-brand-border); box-shadow: none; }
+  .stage .btn--secondary:hover { background: var(--color-brand-faint); border-color: var(--color-brand); }
+  .stage .btn--ghost { background: transparent; color: var(--text-secondary); border-color: transparent; }
+  .stage .btn--ghost:hover { background: var(--surface-hover); color: var(--text-primary); }
+  .stage .btn--positive { background: var(--btn-positive-bg); border-color: var(--btn-positive-bg); color: #FFFFFF; box-shadow: none; }
+  .stage .btn--danger   { background: var(--btn-danger-bg);   border-color: var(--btn-danger-bg);   color: #FFFFFF; box-shadow: none; }
+
+  /* contrast readout */
+  .contrast { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-3); }
+  .cc { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-caption); padding: 3px 9px; border-radius: var(--radius-sm); border: 1px solid var(--border-default); background: var(--surface-panel); }
+  .cc b { font-variant-numeric: tabular-nums; }
+  .cc .tag { font-size: 9px; font-weight: var(--fw-semibold); padding: 0 5px; border-radius: 3px; }
+  .tag.pass { background: var(--color-positive-bg); color: var(--color-positive); }
+  .tag.large { background: var(--color-warning-bg); color: var(--color-warning); }
+  .tag.fail { background: var(--color-negative-bg); color: var(--color-negative); }
+
+  /* ════════════ PRESETS ════════════ */
+  /* defaults shared (button fg) */
+  .stage { --btn-primary-fg: #FFFFFF; --btn-positive-bg: #2D6A4F; --btn-danger-bg: #7A2233; }
+
+  /* 1 · SLATE */
+  .stage[data-preset="slate"] { --color-brand:#2C4E7E; --color-brand-hover:#3B6091; --color-brand-faint:#EEF4FA; --color-brand-wash:#E0EAF4; --color-brand-border:#C5D5E8; --btn-primary-bg:#2C4E7E; }
+  .stage[data-preset="slate"].dark {
+    --surface-page:#1A1D23; --surface-panel:#22262F; --surface-nav:#13151A; --surface-recessed:#161920; --surface-hover:#2A2F3A;
+    --text-primary:#E8EBF0; --text-secondary:#AEB6C8; --text-tertiary:#828BA0; --text-disabled:#4A5163;
+    --border-default:#343B4A; --border-strong:#4A5266;
+    --color-brand:#7AA3D4; --color-brand-faint:rgba(122,163,212,.12); --color-brand-border:rgba(122,163,212,.32);
+    --btn-primary-bg:#3B6091;
+  }
+
+  /* 2 · WARM (warm stone neutrals · warm-gray neutral · warm-green positive — no candy) */
+  .stage[data-preset="warm"] {
+    --surface-page:#FBFAF8; --surface-panel:#FFFFFF; --surface-nav:#F2EEE9; --surface-recessed:#F5F1EC; --surface-hover:#EFE9E2;
+    --text-primary:#1C1917; --text-secondary:#44403C; --text-tertiary:#78716C; --text-disabled:#A8A29E;
+    --border-default:#E7E1D9; --border-strong:#CFC7BC;
+    --color-brand:#5C544B; --color-brand-faint:#F0ECE7; --color-brand-wash:#E8E2DA; --color-brand-border:#D9D1C6; --btn-primary-bg:#5C544B;
+    --color-positive:#4E6E3C; --color-positive-bg:#EEF1E7; --color-positive-wash:#E2E9D3; --color-positive-border:#D2DDC1;
+    --color-negative:#98463A; --color-negative-bg:#F6ECE9; --color-negative-wash:#EEDAD3; --color-negative-border:#E0C7BD;
+    --color-warning:#8A6420; --color-warning-bg:#F6EFDF; --color-warning-wash:#ECE0C5; --color-warning-border:#DECDA6;
+    --btn-positive-bg:#4E6E3C; --btn-danger-bg:#98463A;
+  }
+  .stage[data-preset="warm"].dark {
+    --surface-page:#1C1A17; --surface-panel:#26231F; --surface-nav:#161412; --surface-recessed:#1A1815; --surface-hover:#2E2A25;
+    --text-primary:#F0EBE4; --text-secondary:#BCB3A6; --text-tertiary:#8E8579; --text-disabled:#544E45;
+    --border-default:#3A352F; --border-strong:#544E45;
+    --color-brand:#B0A89C; --color-brand-faint:rgba(176,168,156,.14); --color-brand-wash:rgba(176,168,156,.18); --color-brand-border:rgba(176,168,156,.32); --btn-primary-bg:#5C544B;
+    --color-positive:#93B27A; --color-positive-bg:rgba(147,178,122,.12); --color-positive-wash:rgba(147,178,122,.18); --color-positive-border:rgba(147,178,122,.30);
+    --color-negative:#D0907E; --color-negative-bg:rgba(208,144,126,.12); --color-negative-wash:rgba(208,144,126,.18); --color-negative-border:rgba(208,144,126,.30);
+    --color-warning:#D2AB66; --color-warning-bg:rgba(210,171,102,.12); --color-warning-wash:rgba(210,171,102,.18); --color-warning-border:rgba(210,171,102,.30);
+    --btn-positive-bg:#4A6B38; --btn-danger-bg:#9A5142;
+  }
+
+  /* 4 · GRAY (the slate theme with blue swapped for neutral gray) */
+  .stage[data-preset="gray"] {
+    --color-brand:#4B5563; --color-brand-faint:#F3F4F6; --color-brand-wash:#E5E7EB; --color-brand-border:#D1D5DB; --btn-primary-bg:#4B5563;
+  }
+  .stage[data-preset="gray"].dark {
+    --surface-page:#1A1D23; --surface-panel:#22262F; --surface-nav:#13151A; --surface-recessed:#161920; --surface-hover:#2A2F3A;
+    --text-primary:#E8EBF0; --text-secondary:#AEB6C8; --text-tertiary:#828BA0; --text-disabled:#4A5163;
+    --border-default:#343B4A; --border-strong:#4A5266;
+    --color-brand:#9CA3AF; --color-brand-faint:rgba(156,163,175,.12); --color-brand-wash:rgba(156,163,175,.18); --color-brand-border:rgba(156,163,175,.30); --btn-primary-bg:#4B5563;
+  }
+</style>
+</head>
+<body>
+
+  <div class="bar">
+    <span class="bar__title">Theme preview</span>
+    <span class="bar__label">Theme</span>
+    <span class="picker">
+      <button class="picker__btn" id="pickerBtn" aria-haspopup="true" aria-expanded="false">
+        <svg class="icon" aria-hidden="true"><use href="#i-theme"></use></svg>
+        <span id="pickerLabel">Gray · Light</span>
+        <svg class="icon caret" aria-hidden="true"><use href="#i-expand"></use></svg>
+      </button>
+      <div class="picker__menu" id="pickerMenu" role="menu" hidden></div>
+    </span>
+    <span class="l-spacer" style="flex:1"></span>
+    <a class="btn btn--ghost btn--sm" href="styleguide.html" style="background:transparent;border-color:var(--border-default);color:var(--text-secondary);">Styleguide ↗</a>
+  </div>
+
+  <div class="stage" id="stage" data-preset="gray">
+    <div class="grid">
+
+      <div class="panel">
+        <div class="panel__h">Brand &amp; surfaces</div>
+        <img class="wm" id="wm" src="../assets/verity-wordmark-gray.png" alt="Verity">
+        <div class="swrow">
+          <div class="sw"><div class="sw__c" style="background:var(--surface-page)"></div><div class="sw__l">page</div></div>
+          <div class="sw"><div class="sw__c" style="background:var(--surface-panel)"></div><div class="sw__l">panel</div></div>
+          <div class="sw"><div class="sw__c" style="background:var(--surface-nav)"></div><div class="sw__l">nav</div></div>
+          <div class="sw"><div class="sw__c" style="background:var(--color-brand)"></div><div class="sw__l">brand</div></div>
+          <div class="sw"><div class="sw__c" style="background:var(--btn-primary-bg)"></div><div class="sw__l">btn-fill</div></div>
+        </div>
+        <div class="contrast" id="contrast"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel__h">Text</div>
+        <div style="font-size:var(--fs-h3);font-weight:var(--fw-semibold);" class="t-primary">Primary — headings &amp; body</div>
+        <div class="t-secondary" style="margin-top:6px;">Secondary — labels and supporting copy.</div>
+        <div class="t-tertiary" style="margin-top:4px;font-size:var(--fs-caption);">Tertiary — hints, timestamps, captions.</div>
+        <div style="margin-top:8px;"><a href="#" style="color:var(--color-brand);">A brand-colored link</a> · <span class="u-mono" style="color:var(--text-secondary);">content_sha256</span></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel__h">Buttons (proposed: deep primary, soft secondary/ghost)</div>
+        <div class="row">
+          <button class="btn btn--primary btn--md">Primary</button>
+          <button class="btn btn--secondary btn--md">Secondary</button>
+          <button class="btn btn--ghost btn--md">Ghost</button>
+        </div>
+        <div class="row">
+          <button class="btn btn--positive btn--md">Positive</button>
+          <button class="btn btn--danger btn--md">Danger</button>
+          <button class="btn btn--primary btn--md" disabled>Disabled</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel__h">Badges · chips</div>
+        <div class="row">
+          <span class="badge badge--candidate"><span class="badge__dot"></span>Candidate</span>
+          <span class="badge badge--champion"><span class="badge__dot"></span>Champion</span>
+          <span class="badge badge--challenger"><span class="badge__dot"></span>Challenger</span>
+          <span class="badge badge--deprecated"><span class="badge__dot"></span>Deprecated</span>
+        </div>
+        <div class="row">
+          <span class="chip is-selected">Model risk</span>
+          <span class="chip">Fairness</span>
+          <span class="chip chip--static">NAIC Model Bulletin</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel__h">Callouts</div>
+        <div class="l-stack l-stack--sm">
+          <div class="callout callout--info"><svg class="icon callout__icon"><use href="#i-callout-info"></use></svg><div class="callout__body"><span class="callout__title">Info.</span>Locks once promoted.</div></div>
+          <div class="callout callout--warning"><svg class="icon callout__icon"><use href="#i-callout-warning"></use></svg><div class="callout__body"><span class="callout__title">Warning.</span>Challenger lagging 16 days.</div></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel__h">Input</div>
+        <div class="form-field"><label class="form-label">Agent name</label><input class="input" value="extractor_system"><span class="input-hint">Lowercase, snake_case.</span></div>
+      </div>
+
+    </div>
+  </div>
+
+<script>
+  // inline the icon sprite (no app.js — theming is owned entirely by the stage)
+  fetch('../icons/sprite.svg').then(r => r.text()).then(t => { const d = document.createElement('div'); d.hidden = true; d.innerHTML = t; document.body.prepend(d); });
+
+  // the 6 shippable themes (3 palettes × light/dark), each with its logo + swatch thumbnail
+  const THEMES = [
+    {name:'Gray',  preset:'gray',  dark:false, logo:'verity-wordmark-gray.png',        sw:['#FAFBFC','#4B5563','#2D6A4F','#FFFFFF']},
+    {name:'Gray',  preset:'gray',  dark:true,  logo:'verity-wordmark-white.png',       sw:['#1A1D23','#9CA3AF','#5DA882','#22262F']},
+    {name:'Slate', preset:'slate', dark:false, logo:'verity-wordmark-slate.png',       sw:['#FAFBFC','#2C4E7E','#2D6A4F','#FFFFFF']},
+    {name:'Slate', preset:'slate', dark:true,  logo:'verity-wordmark-white.png',       sw:['#1A1D23','#7AA3D4','#5DA882','#22262F']},
+    {name:'Warm',  preset:'warm',  dark:false, logo:'verity-wordmark-gold-dark.png',  sw:['#FBFAF8','#5C544B','#4E6E3C','#FFFFFF']},
+    {name:'Warm',  preset:'warm',  dark:true,  logo:'verity-wordmark-gold-light.png', sw:['#1C1A17','#B0A89C','#93B27A','#26231F']},
+  ];
+  const stage = document.getElementById('stage'), wm = document.getElementById('wm');
+  const menu = document.getElementById('pickerMenu'), btn = document.getElementById('pickerBtn'), label = document.getElementById('pickerLabel');
+  menu.innerHTML = THEMES.map((t,i)=>`<button class="opt" role="menuitem" data-i="${i}">`
+    + `<span class="opt__sw">${t.sw.map(c=>`<i style="background:${c}"></i>`).join('')}</span>`
+    + `<span class="opt__name">${t.name}</span><span class="opt__mode">${t.dark?'Dark':'Light'}</span></button>`).join('');
+  function apply(t){
+    stage.dataset.preset = t.preset; stage.classList.toggle('dark', t.dark);
+    wm.src = '../assets/' + t.logo; label.textContent = t.name + ' · ' + (t.dark?'Dark':'Light');
+    [...menu.children].forEach((o,i)=>o.classList.toggle('on', THEMES[i]===t));
+    contrast();
+  }
+  [...menu.children].forEach((o,i)=>o.addEventListener('click', ()=>{ apply(THEMES[i]); toggle(false); }));
+  function toggle(open){ menu.hidden = !open; btn.setAttribute('aria-expanded', String(open)); }
+  btn.addEventListener('click', e=>{ e.stopPropagation(); toggle(menu.hidden); });
+  document.addEventListener('click', e=>{ if(!e.target.closest('.picker')) toggle(false); });
+
+  // ── live contrast (the heart of a future theme customizer) ──
+  const toRGB = s => { s=s.trim();
+    if(s.startsWith('#')){ s=s.slice(1); if(s.length===3)s=s.split('').map(c=>c+c).join(''); return [0,2,4].map(i=>parseInt(s.slice(i,i+2),16)); }
+    const m=s.match(/\d+(\.\d+)?/g); return m?[+m[0],+m[1],+m[2]]:[0,0,0]; };
+  const lin = c => { c/=255; return c<=0.03928?c/12.92:((c+0.055)/1.055)**2.4; };
+  const Lum = rgb => { const [r,g,b]=rgb.map(lin); return .2126*r+.7152*g+.0722*b; };
+  const ratio = (a,b) => { const l1=Lum(toRGB(a)),l2=Lum(toRGB(b)); const hi=Math.max(l1,l2),lo=Math.min(l1,l2); return (hi+.05)/(lo+.05); };
+  function v(name){ return getComputedStyle(stage).getPropertyValue(name); }
+  function contrast() {
+    const pairs = [
+      ['Primary btn', v('--btn-primary-fg'), v('--btn-primary-bg')],
+      ['Body text',   v('--text-primary'),   v('--surface-page')],
+      ['Secondary',   v('--text-secondary'), v('--surface-panel')],
+      ['Tertiary',    v('--text-tertiary'),  v('--surface-panel')],
+      ['Brand link',  v('--color-brand'),    v('--surface-panel')],
+    ];
+    document.getElementById('contrast').innerHTML = pairs.map(([n,fg,bg])=>{
+      const r = ratio(fg,bg); const tag = r>=4.5?'pass':r>=3?'large':'fail';
+      const label = r>=4.5?'AA':r>=3?'AA·lg':'FAIL';
+      return `<span class="cc">${n} <b>${r.toFixed(2)}</b> <span class="tag ${tag}">${label}</span></span>`;
+    }).join('');
+  }
+  apply(THEMES[0]);
+</script>
+</body>
+</html>

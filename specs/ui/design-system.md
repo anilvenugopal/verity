@@ -17,7 +17,9 @@ Verity is a **governance platform for regulated AI**. The aesthetic is precision
 
 **The second rule:** every UI element must be immediately self-explanatory. Every page has a getting-started state. Every field, action, and section has contextual help. No blank screens, no mystery affordances.
 
-**The brand anchor:** slate blue (`--c-blue-700: #2C4E7E`) is the single interactive accent. All buttons, links, active states, and focus rings derive from this hue. No other hue is used for interactive affordance.
+**The interactive accent:** every theme has exactly **one** interactive accent — referenced through `--color-brand` (and the button-fill tokens `--btn-*`). All buttons, links, active states, and focus rings derive from it; no other hue is used for interactive affordance.
+
+**Themes.** The accent (and, for Warm, the neutrals + status hues) is themeable via `[data-theme]` on the root, composed with `.dark`. Three palettes ship — **Gray** (default · neutral graphite accent), **Slate** (the slate-blue heritage accent, `#2C4E7E`), and **Warm** (warm stone neutrals · warm-gray accent · warm-green positive). Components reference semantic tokens only, so a theme — or a future per-customer override — is a `tokens.css` remap, never a component change. Every theme × mode must clear WCAG AA (verify with the contrast check).
 
 ---
 

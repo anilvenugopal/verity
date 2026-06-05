@@ -46,21 +46,22 @@
 .btn--md { padding: 7px 14px; }                 /* default */
 .btn--lg { padding: 9px 18px; font-size: 14px; }
 
-/* Variants — all dark-background, white-text; no light tinted button fills */
-.btn--primary   { background: var(--color-brand); color: #FFFFFF; box-shadow: var(--shadow-sm); }
-.btn--primary:hover { background: var(--color-brand-hover); box-shadow: var(--shadow-md); }
+/* Variants — fills come from button tokens (themeable). Primary is a deep fill;
+   secondary/ghost are light (outline / subtle), so light mode isn't button-heavy. */
+.btn--primary   { background: var(--btn-primary-bg); color: var(--btn-primary-fg); border-color: var(--btn-primary-bg); box-shadow: var(--shadow-sm); }
+.btn--primary:hover { filter: brightness(1.08); box-shadow: var(--shadow-md); }
 
-.btn--secondary { background: #1F2937; color: #FFFFFF; border-color: #374151; box-shadow: var(--shadow-sm); }
-.btn--secondary:hover { background: #111827; border-color: #4B5563; }
+.btn--secondary { background: transparent; color: var(--color-brand); border-color: var(--color-brand-border); }
+.btn--secondary:hover { background: var(--color-brand-faint); border-color: var(--color-brand); }
 
-.btn--ghost     { background: #374151; color: #F9FAFB; border-color: #4B5563; }
-.btn--ghost:hover { background: #1F2937; }
+.btn--ghost     { background: transparent; color: var(--text-secondary); border-color: transparent; }
+.btn--ghost:hover { background: var(--surface-hover); color: var(--text-primary); }
 
-.btn--positive  { background: #2D6A4F; color: #FFFFFF; border-color: #255C43; }
-.btn--positive:hover { background: #255C43; }
+.btn--positive  { background: var(--btn-positive-bg); color: #FFFFFF; border-color: var(--btn-positive-bg); }
+.btn--positive:hover { filter: brightness(1.06); }
 
-.btn--danger    { background: #7A2233; color: #FFFFFF; border-color: #661B2A; }
-.btn--danger:hover { background: #661B2A; }
+.btn--danger    { background: var(--btn-danger-bg); color: #FFFFFF; border-color: var(--btn-danger-bg); }
+.btn--danger:hover { filter: brightness(1.08); }
 
 /* Icon-only button */
 .btn--icon { padding: 6px; }
