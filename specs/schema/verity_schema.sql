@@ -38,6 +38,9 @@ SET search_path = core, reference, audit, public;
 \i reference/app_team_role.sql
 \i reference/derivation_method.sql
 \i reference/governance_domain.sql
+\i reference/application_status.sql
+\i reference/jurisdiction.sql
+\i reference/line_of_business.sql
 \i reference/control_phase.sql
 \i reference/control_type.sql
 \i reference/enforcement_action.sql
@@ -131,6 +134,9 @@ SET search_path = core, reference, audit, public;
 \i core/actor_app_role_grant.sql
 \i core/current_actor_app_role.sql
 \i core/regulatory_framework.sql
+\i core/application_regulatory_framework.sql
+\i core/application_governance_domain.sql
+\i core/application_jurisdiction.sql
 \i core/regulatory_provision.sql
 \i core/canonical_requirement.sql
 \i core/requirement_tier.sql

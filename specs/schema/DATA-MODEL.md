@@ -124,7 +124,7 @@ Every table/view/enum, grouped by subject area, with its purpose. (Index: TABLE-
 
 | Object | Schema | Kind | Purpose |
 |---|---|---|---|
-| `actor_app_role_grant` | core | table | tier:1 append-only. Per-application app-team role grants (app_demo_*). Current via current_actor_app_role. D6. |
+| `actor_app_role_grant` | core | table | tier:1 append-only. Per-application app-team role grants (app_*: owner/lead/dev/sre/ops). Current via current_actor_app_role. D6. |
 | `ai_risk_tier` | reference | table |  |
 | `app_team_role` | reference | table |  |
 | `application` | core | table | tier:1. Business application that owns intakes/use-cases and (via app-team grants) its own team. |

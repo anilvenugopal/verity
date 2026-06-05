@@ -22,25 +22,25 @@ Slice-1 instant `POST /applications` with a governed propose→approve flow.
 ## Phase 1: Setup
 
 - [X] T001 Hub component + migrate/reset + PG18 testcontainer + auth foundation (done, Slice 1)
-- [ ] T002 [P] Create package skeletons `hub/src/verity/hub/application/__init__.py` and `hub/src/verity/hub/approval/__init__.py`
-- [ ] T003 [P] Create test dirs `hub/tests/verity/hub/application/` and `hub/tests/verity/hub/approval/`
+- [X] T002 [P] Create package skeletons `hub/src/verity/hub/application/__init__.py` and `hub/src/verity/hub/approval/__init__.py`
+- [X] T003 [P] Create test dirs `hub/tests/verity/hub/application/` and `hub/tests/verity/hub/approval/`
 
 ## Phase 2: Foundational — schema growth (BLOCKS all stories; review DDL first — Principle II)
 
-- [ ] T004 [P] ALTER `core.application`: add `code` (TLA — `UNIQUE`, `CHECK (code ~ '^[A-Z]{3}$')`), `application_status_code` (FK `reference.application_status`, default `'pending'`), `data_classification_code` (FK `reference.data_classification`), `line_of_business_code` (FK `reference.line_of_business`, NULL), `business_owner_actor_id` (FK `core.actor`, NOT NULL), `affects_consumers`/`processes_pii`/`consumer_facing` (boolean NOT NULL) — `specs/schema/core/application.sql`
-- [ ] T005 [P] ALTER `core.approval_request`: add `target_application_id` (uuid NULL, FK `core.application`) — `specs/schema/core/approval_request.sql`
-- [ ] T006 [P] NEW `reference.application_status` (`pending`/`active`/`suspended`/`retired`) + seed — `specs/schema/reference/application_status.sql`, `specs/schema/seed/reference_seed.sql`
-- [ ] T007 [P] NEW `reference.jurisdiction` (US states + `eu`/`uk`/…) + seed — `specs/schema/reference/jurisdiction.sql`, seed
-- [ ] T008 [P] NEW `reference.line_of_business` (`pc`/`life`/`health`/`annuities`/`commercial`/`reinsurance`/`other`) + seed — `specs/schema/reference/line_of_business.sql`, seed
-- [ ] T009 [P] NEW `core.application_regulatory_framework` join (`application_id`, `framework_code`) — `specs/schema/core/application_regulatory_framework.sql`
-- [ ] T010 [P] NEW `core.application_governance_domain` join (`application_id`, `governance_domain_code`) — `specs/schema/core/application_governance_domain.sql`
-- [ ] T011 [P] NEW `core.application_jurisdiction` join (`application_id`, `jurisdiction_code`) — `specs/schema/core/application_jurisdiction.sql`
-- [ ] T012 Verify/repair `reference.data_classification` seed to `{public, internal, confidential, pii_restricted}` (D-ONB-3) — `specs/schema/seed/reference_seed.sql`
-- [ ] T013 Rename `app_team_role` seed `app_demo_*` → `app_{owner,lead,dev,sre,ops}` + fix references; record the v1→v2 disposition (D-ONB-6) — `specs/schema/reference/app_team_role.sql`, seed, `specs/schema/DATA-MODEL.md`
-- [ ] T014 Seed/validate the `application_onboarding` approval-request kind (D-ONB-7)
-- [ ] T015 Update `data-model.md` (add `business_owner_actor_id`) + `specs/schema/DATA-MODEL.md` / `TABLE-INDEX.md` for the new objects
-- [ ] T016 Hand-written numbered migration applying T004–T014 — `hub/migrations/000X_application_onboarding.sql`
-- [ ] T017 **Review checkpoint** (Principle II): run `migrate` + `reset` on PG18; the existing 13-test suite stays green; new schema loads + seeds idempotent
+- [X] T004 [P] ALTER `core.application`: add `code` (TLA — `UNIQUE`, `CHECK (code ~ '^[A-Z]{3}$')`), `application_status_code` (FK `reference.application_status`, default `'pending'`), `data_classification_code` (FK `reference.data_classification`), `line_of_business_code` (FK `reference.line_of_business`, NULL), `business_owner_actor_id` (FK `core.actor`, NOT NULL), `affects_consumers`/`processes_pii`/`consumer_facing` (boolean NOT NULL) — `specs/schema/core/application.sql`
+- [X] T005 [P] ALTER `core.approval_request`: add `target_application_id` (uuid NULL, FK `core.application`) — `specs/schema/core/approval_request.sql`
+- [X] T006 [P] NEW `reference.application_status` (`pending`/`active`/`suspended`/`retired`) + seed — `specs/schema/reference/application_status.sql`, `specs/schema/seed/reference_seed.sql`
+- [X] T007 [P] NEW `reference.jurisdiction` (US states + `eu`/`uk`/…) + seed — `specs/schema/reference/jurisdiction.sql`, seed
+- [X] T008 [P] NEW `reference.line_of_business` (`pc`/`life`/`health`/`annuities`/`commercial`/`reinsurance`/`other`) + seed — `specs/schema/reference/line_of_business.sql`, seed
+- [X] T009 [P] NEW `core.application_regulatory_framework` join (`application_id`, `framework_code`) — `specs/schema/core/application_regulatory_framework.sql`
+- [X] T010 [P] NEW `core.application_governance_domain` join (`application_id`, `governance_domain_code`) — `specs/schema/core/application_governance_domain.sql`
+- [X] T011 [P] NEW `core.application_jurisdiction` join (`application_id`, `jurisdiction_code`) — `specs/schema/core/application_jurisdiction.sql`
+- [X] T012 Verify/repair `reference.data_classification` seed to `{public, internal, confidential, pii_restricted}` (D-ONB-3) — `specs/schema/seed/reference_seed.sql`
+- [X] T013 Rename `app_team_role` seed `app_demo_*` → `app_{owner,lead,dev,sre,ops}` + fix references; record the v1→v2 disposition (D-ONB-6) — `specs/schema/reference/app_team_role.sql`, seed, `specs/schema/DATA-MODEL.md`
+- [X] T014 Seed/validate the `application_onboarding` approval-request kind (D-ONB-7)
+- [X] T015 Update `data-model.md` (add `business_owner_actor_id`) + `specs/schema/DATA-MODEL.md` / `TABLE-INDEX.md` for the new objects
+- [~] T016 Migration 0002 — SKIPPED (canonical-only strategy; dev is reset-based; no numbered migration this slice)
+- [X] T017 **Review checkpoint** (Principle II): run `migrate` + `reset` on PG18; the existing 13-test suite stays green; new schema loads + seeds idempotent
 
 **Checkpoint**: schema grown + reviewed; all existing tests pass before any story work.
 
@@ -51,13 +51,13 @@ Slice-1 instant `POST /applications` with a governed propose→approve flow.
 **Goal**: propose creates a `pending` application capturing identity + ownership + compliance perimeter; reads work; action-gated.
 **Independent test**: an `onboard_application`-authorized author proposes an app → it persists `pending` with a unique well-formed TLA, the perimeter rows (≥1 framework/domain/jurisdiction), the three attestations, the business owner; a viewer is denied (403) on propose, allowed on GET; a bad perimeter cardinality / missing attestation → 400; a duplicate TLA → 409.
 
-- [ ] T018 [P] [US1] Raw SQL propose/read — `hub/db/queries/application_onboarding.sql` (`propose_application`, `get_application`, `list_applications`)
-- [ ] T019 [P] [US1] Raw SQL perimeter — `hub/db/queries/application_perimeter.sql` (insert + list frameworks / domains / jurisdictions)
-- [ ] T020 [P] [US1] Pydantic models `ApplicationPropose` / `Application` (fields mirror schema; perimeter as code arrays) — `hub/src/verity/hub/application/models.py`
-- [ ] T021 [US1] Service `propose` — insert `pending` app + `business_owner_actor_id` + perimeter rows + initial app-team grants (non-owner) into `core.actor_app_role_grant`; validate ≥1 framework/domain/jurisdiction + all three attestations + TLA shape; attribution server-set (D6) — `hub/src/verity/hub/application/service.py`
-- [ ] T022 [US1] Router `POST/GET /applications`, `GET /applications/{id}` (gated `onboard_application` / `view`; FK→400, cardinality/attestation→400, duplicate TLA→409) — `hub/src/verity/hub/application/router.py`
-- [ ] T023 [US1] Wire `app.include_router(application_router)`; **supersede** the Slice-1 intake `POST /applications` (remove/redirect the instant create) — `hub/src/verity/hub/app.py`, `hub/src/verity/hub/intake/router.py`
-- [ ] T024 [US1] e2e test (PG18) — `hub/tests/verity/hub/application/test_onboarding.py`: propose → `pending` + perimeter + owner; viewer 403 / GET 200; bad cardinality + missing attestation → 400; duplicate TLA → 409
+- [X] T018 [P] [US1] Raw SQL propose/read — `hub/db/queries/application_onboarding.sql` (`propose_application`, `get_application`, `list_applications`)
+- [X] T019 [P] [US1] Raw SQL perimeter — `hub/db/queries/application_perimeter.sql` (insert + list frameworks / domains / jurisdictions)
+- [X] T020 [P] [US1] Pydantic models `ApplicationPropose` / `Application` (fields mirror schema; perimeter as code arrays) — `hub/src/verity/hub/application/models.py`
+- [X] T021 [US1] Service `propose` — insert `pending` app + `business_owner_actor_id` + perimeter rows + initial app-team grants (non-owner) into `core.actor_app_role_grant`; validate ≥1 framework/domain/jurisdiction + all three attestations + TLA shape; attribution server-set (D6) — `hub/src/verity/hub/application/service.py`
+- [X] T022 [US1] Router `POST/GET /applications`, `GET /applications/{id}` (gated `onboard_application` / `view`; FK→400, cardinality/attestation→400, duplicate TLA→409) — `hub/src/verity/hub/application/router.py`
+- [X] T023 [US1] Wire `app.include_router(application_router)`; **supersede** the Slice-1 intake `POST /applications` (remove/redirect the instant create) — `hub/src/verity/hub/app.py`, `hub/src/verity/hub/intake/router.py`
+- [X] T024 [US1] e2e test (PG18) — `hub/tests/verity/hub/application/test_onboarding.py`: propose → `pending` + perimeter + owner; viewer 403 / GET 200; bad cardinality + missing attestation → 400; duplicate TLA → 409
 
 **Checkpoint**: US1 independently runnable + tested (the MVP).
 

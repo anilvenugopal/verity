@@ -17,7 +17,7 @@ CREATE TABLE core.actor_app_role_grant (
     CONSTRAINT fk_actor_app_grant_granted_by FOREIGN KEY (granted_by_actor_id) REFERENCES core.actor (actor_id),
     CONSTRAINT fk_actor_app_grant_acting_role FOREIGN KEY (acting_role_code) REFERENCES reference.role (code));
 COMMENT ON TABLE core.actor_app_role_grant IS
-'The append-only per-application app-team role grant/revoke log (the app_demo_* roles). Mirrors the platform-role pattern but scoped to one application; current state is current_actor_app_role (D6).
+'The append-only per-application app-team role grant/revoke log (the app_* roles: app_owner/lead/dev/sre/ops). Mirrors the platform-role pattern but scoped to one application; current state is current_actor_app_role (D6).
 
 @tier 1
 @lifecycle append-only

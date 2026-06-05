@@ -1,6 +1,6 @@
 -- reference.executable_kind  ·  subject: registry  ·  (table)
 
--- NOTE: app_team_role (per-application: app_demo_owner/sre/dev/lead/ops) is added
+-- NOTE: app_team_role (per-application: app_owner/sre/dev/lead/ops) is added
 -- with the intake/application domain (it pairs with application-scoped grants).
 
 -- REGISTRY-domain vocabularies (used by 02-registry.sql)

@@ -15,6 +15,7 @@ from verity.hub.auth.dependencies import get_principal, require_action
 from verity.hub.auth.models import AuthContext, AuthError, Principal
 from verity.hub.config import get_settings, validate_startup
 from verity.hub.db import make_pool, queries
+from verity.hub.application.router import router as application_router
 from verity.hub.intake.router import router as intake_router
 
 logger = logging.getLogger("verity.hub")
@@ -70,6 +71,7 @@ def create_app() -> FastAPI:
     ) -> dict[str, str]:
         return {"status": "authorized", "actor_id": ctx.principal.actor_id, "acting_role": ctx.acting_role}
 
+    app.include_router(application_router)
     app.include_router(intake_router)
     return app
 

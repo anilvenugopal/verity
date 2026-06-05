@@ -17,8 +17,9 @@ INSERT INTO reference.api_role (code, label, sort_order) VALUES
     ('system','System',1),('user','User',2),('assistant_prefill','Assistant Prefill',3)
     ON CONFLICT (code) DO NOTHING;
 
+-- app-team roles: renamed app_demo_* -> app_* for the product (intentional v2 rename, D-ONB-6).
 INSERT INTO reference.app_team_role (code, label, sort_order) VALUES
-    ('app_demo_owner','App Demo Owner',1),('app_demo_lead','App Demo Lead',2),('app_demo_dev','App Demo Dev',3),('app_demo_sre','App Demo Sre',4),('app_demo_ops','App Demo Ops',5)
+    ('app_owner','App Owner',1),('app_lead','App Lead',2),('app_dev','App Dev',3),('app_sre','App SRE',4),('app_ops','App Ops',5)
     ON CONFLICT (code) DO NOTHING;
 
 INSERT INTO reference.approval_decision (code, label, sort_order) VALUES
@@ -27,6 +28,34 @@ INSERT INTO reference.approval_decision (code, label, sort_order) VALUES
 
 INSERT INTO reference.approval_request_status (code, label, sort_order) VALUES
     ('pending','Pending',1),('approved','Approved',2),('rejected','Rejected',3),('cancelled','Cancelled',4)
+    ON CONFLICT (code) DO NOTHING;
+
+-- approval_request kinds (was unseeded): the gating-request kinds across slices. application_onboarding
+-- is this slice; intake/risk_reclassification/business_change/promote_*/retire are wired by their slices.
+INSERT INTO reference.approval_request_kind (code, label, sort_order) VALUES
+    ('application_onboarding','Application Onboarding',1),('intake','Intake',2),
+    ('risk_reclassification','Risk Reclassification',3),('business_change','Business Change',4),
+    ('promote_champion','Promote Champion',5),('retire','Retire',6)
+    ON CONFLICT (code) DO NOTHING;
+
+-- Application onboarding vocabularies (FR-IN-015/017).
+INSERT INTO reference.application_status (code, label, sort_order) VALUES
+    ('pending','Pending',1),('active','Active',2),('suspended','Suspended',3),('retired','Retired',4)
+    ON CONFLICT (code) DO NOTHING;
+
+INSERT INTO reference.line_of_business (code, label, sort_order) VALUES
+    ('pc','Property & Casualty',1),('life','Life',2),('health','Health',3),('annuities','Annuities',4),
+    ('commercial','Commercial',5),('reinsurance','Reinsurance',6),('other','Other',7)
+    ON CONFLICT (code) DO NOTHING;
+
+-- jurisdictions: representative + extensible (full US-state set completed as needed). @grouping us_state|supranational.
+INSERT INTO reference.jurisdiction (code, label, sort_order, grouping) VALUES
+    ('us_federal','US Federal',1,'supranational'),
+    ('co','Colorado',2,'us_state'),('ny','New York',3,'us_state'),('ca','California',4,'us_state'),
+    ('tx','Texas',5,'us_state'),('fl','Florida',6,'us_state'),('il','Illinois',7,'us_state'),
+    ('nj','New Jersey',8,'us_state'),('pa','Pennsylvania',9,'us_state'),('ma','Massachusetts',10,'us_state'),
+    ('wa','Washington',11,'us_state'),('ga','Georgia',12,'us_state'),
+    ('eu','European Union',13,'supranational'),('uk','United Kingdom',14,'supranational')
     ON CONFLICT (code) DO NOTHING;
 
 INSERT INTO reference.artifact_plan_status (code, label, sort_order) VALUES

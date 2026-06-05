@@ -10,8 +10,9 @@ DDL changes are reviewed before service work (Principle II).
 |---|---|---|
 | `code` | text | TLA; `UNIQUE`, `CHECK (code ~ '^[A-Z]{3}$')`; immutable after `active` (service-enforced) |
 | `application_status_code` | text | FK → `reference.application_status`; default `'pending'` |
-| `data_classification_code` | text | FK → `reference.data_classification` (sensitivity ceiling) |
+| `data_classification_code` | text | FK → `reference.data_classification` (sensitivity ceiling; codes `tier1_public`…`tier4_pii_restricted`) |
 | `line_of_business_code` | text NULL | FK → `reference.line_of_business` (optional) |
+| `business_owner_actor_id` | uuid | FK → `core.actor`; the designated owner + approval-routing target (set at propose) |
 | `affects_consumers` | boolean | NOT NULL, no default (explicit attestation) |
 | `processes_pii` | boolean | NOT NULL, no default |
 | `consumer_facing` | boolean | NOT NULL, no default |

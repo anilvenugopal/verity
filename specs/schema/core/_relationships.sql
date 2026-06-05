@@ -9,6 +9,9 @@ ALTER TABLE core.automation_actor
 ALTER TABLE core.approval_request
     ADD CONSTRAINT fk_approval_request_target_intake
     FOREIGN KEY (target_intake_id) REFERENCES core.intake (intake_id) ON DELETE RESTRICT;
+ALTER TABLE core.approval_request
+    ADD CONSTRAINT fk_approval_request_target_application
+    FOREIGN KEY (target_application_id) REFERENCES core.application (application_id) ON DELETE RESTRICT;
 ALTER TABLE core.intake_obligation
     ADD CONSTRAINT fk_intake_obligation_requirement
     FOREIGN KEY (canonical_requirement_id) REFERENCES core.canonical_requirement (requirement_id) ON DELETE RESTRICT;

@@ -40,14 +40,29 @@ def _app(url, *, oid, roles):
     return create_app()
 
 
-def test_onboard_create_and_read(pg_url):
-    # business_owner authorizes both onboard_application and create_intake.
-    app = _app(pg_url, oid=AUTHOR_OID, roles="business_owner")
-    with TestClient(app) as c:
-        r = c.post("/applications", json={"name": "Underwriting", "description": "demo"})
-        assert r.status_code == 201, r.text
-        application_id = r.json()["application_id"]
+def _seed_active_application(pg_url, code, name):
+    """Insert a valid ACTIVE application directly. Intake tests need a parent application; the
+    governed onboarding flow itself is exercised in test_onboarding.py (Slice 2)."""
+    with psycopg.connect(pg_url, autocommit=True) as conn:
+        owner = conn.execute(
+            "INSERT INTO core.actor (actor_type_code, display_name) VALUES ('human', %s) RETURNING actor_id",
+            (f"{code} owner",),
+        ).fetchone()[0]
+        application_id = conn.execute(
+            "INSERT INTO core.application (code, name, description, application_status_code, "
+            "data_classification_code, business_owner_actor_id, affects_consumers, processes_pii, "
+            "consumer_facing, created_by_actor_id, created_role_code) VALUES "
+            "(%s, %s, %s, 'active', 'tier2_internal', %s, false, false, false, %s, 'business_owner') "
+            "RETURNING application_id",
+            (code, name, f"{name} seeded active application for intake tests.", owner, owner),
+        ).fetchone()[0]
+    return str(application_id)
 
+
+def test_create_intake_and_read(pg_url):
+    app = _app(pg_url, oid=AUTHOR_OID, roles="business_owner")
+    application_id = _seed_active_application(pg_url, "UWA", "Underwriting")
+    with TestClient(app) as c:
         ir = c.post(f"/applications/{application_id}/intakes", json={"title": "Submission triage"})
         assert ir.status_code == 201, ir.text
         intake = ir.json()
@@ -74,13 +89,14 @@ def test_onboard_create_and_read(pg_url):
         assert role == "business_owner"
 
 
-def test_viewer_denied_on_create_allowed_on_read(pg_url):
+def test_viewer_denied_on_intake_create_allowed_on_read(pg_url):
+    application_id = _seed_active_application(pg_url, "VWR", "ViewerScope")
     app = _app(pg_url, oid=VIEWER_OID, roles="viewer")
     with TestClient(app) as c:
-        denied = c.post("/applications", json={"name": "ShouldNotExist"})
+        denied = c.post(f"/applications/{application_id}/intakes", json={"title": "nope"})
         assert denied.status_code == 403
         assert denied.json()["code"] == "forbidden"
-        assert c.get("/applications").status_code == 200
+        assert c.get(f"/applications/{application_id}/intakes").status_code == 200
 
 
 def test_unknown_application_is_404(pg_url):
@@ -95,7 +111,7 @@ def test_classify_sets_codes_partial_and_rejects_bad_code(pg_url):
     # business_owner is in the governance set authorized for reclassify_risk.
     app = _app(pg_url, oid=AUTHOR_OID, roles="business_owner")
     with TestClient(app) as c:
-        application_id = c.post("/applications", json={"name": "Claims"}).json()["application_id"]
+        application_id = _seed_active_application(pg_url, "CLM", "Claims")
         intake_id = c.post(
             f"/applications/{application_id}/intakes", json={"title": "Claims triage"}
         ).json()["intake_id"]
@@ -128,7 +144,7 @@ def test_status_change_is_audited_in_one_txn(pg_url):
     # business_owner is in the governance set authorized for triage_intake.
     app = _app(pg_url, oid=AUTHOR_OID, roles="business_owner")
     with TestClient(app) as c:
-        application_id = c.post("/applications", json={"name": "Audited"}).json()["application_id"]
+        application_id = _seed_active_application(pg_url, "AUD", "Audited")
         intake_id = c.post(
             f"/applications/{application_id}/intakes", json={"title": "Move me"}
         ).json()["intake_id"]
@@ -166,7 +182,7 @@ def test_add_requirement_embedding_null_and_list(pg_url):
     # business_owner is in the authoring set authorized for edit_requirement.
     app = _app(pg_url, oid=AUTHOR_OID, roles="business_owner")
     with TestClient(app) as c:
-        application_id = c.post("/applications", json={"name": "Reqs"}).json()["application_id"]
+        application_id = _seed_active_application(pg_url, "REQ", "Reqs")
         intake_id = c.post(
             f"/applications/{application_id}/intakes", json={"title": "Has requirements"}
         ).json()["intake_id"]
