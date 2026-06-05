@@ -20,6 +20,8 @@ dev = [
   "httpx>=0.27",
   "ruff>=0.5",
   "testcontainers[postgres]>=4.5",
+  "inquirerpy>=0.3",  # arrow-key menu for tools/dev.py
+  "rich>=13",         # pretty tables/output for tools/dev.py
 ]
 
 [build-system]

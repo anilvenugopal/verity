@@ -12,13 +12,35 @@ marking the session `logged_out`; `/me` honours that flag and reports unauthenti
 """
 from __future__ import annotations
 
+import uuid
+
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, RedirectResponse
+from pydantic import BaseModel
 
 from verity.hub.auth.provisioning import jit_provision
 from verity.hub.config import get_settings
 
 router = APIRouter(tags=["auth"])
+
+# A deterministic mock identity per role-set, so each persona is its own actor (clean separation,
+# e.g. a submitter vs a distinct approver) without any DB role-grant bookkeeping.
+_MOCK_OID_NS = uuid.UUID("00000000-0000-0000-0000-0000000000aa")
+
+
+def _mock_oid(roles: list[str]) -> str:
+    return str(uuid.uuid5(_MOCK_OID_NS, ",".join(sorted(roles))))
+
+
+class MockLogin(BaseModel):
+    roles: list[str] | None = None
+
+
+def _mock_unavailable() -> JSONResponse:
+    return JSONResponse(
+        status_code=404,
+        content={"code": "not_found", "detail": "mock auth unavailable", "request_id": "local-dev"},
+    )
 
 
 @router.get("/auth/login")
@@ -39,28 +61,45 @@ async def auth_callback(
     return RedirectResponse(url="/signin?error=entra_not_configured", status_code=302)
 
 
-@router.post("/auth/mock", response_model=None)
-async def auth_mock(request: Request) -> dict[str, bool] | JSONResponse:
-    """Establish a session for the configured synthetic principal. Local-dev only (404 otherwise).
-    Mirrors MockAuthenticator's provisioning path so the actor exists before /me resolves it."""
+@router.get("/auth/roles", response_model=None)
+async def auth_roles(request: Request) -> dict | JSONResponse:
+    """The selectable role vocabulary for the mock sign-in screen (local-dev only)."""
     settings = get_settings()
     if not (settings.auth_mode == "mock" and settings.env == "local"):
-        return JSONResponse(
-            status_code=404,
-            content={"code": "not_found", "detail": "mock auth unavailable", "request_id": "local-dev"},
-        )
+        return _mock_unavailable()
+    async with request.app.state.pool.connection() as conn:
+        cur = await conn.execute("select code from reference.role order by code")
+        rows = await cur.fetchall()
+    return {"roles": [r["code"] for r in rows]}
+
+
+@router.post("/auth/mock", response_model=None)
+async def auth_mock(request: Request, body: MockLogin | None = None) -> dict | JSONResponse:
+    """Establish a mock session with the roles chosen on the sign-in screen (local-dev only).
+
+    The chosen roles are stored in the session and become the principal's roles — switching persona
+    is just signing out and back in with a different set; no restart, no DB grants to accumulate.
+    Falls back to the configured default roles when none are sent."""
+    settings = get_settings()
+    if not (settings.auth_mode == "mock" and settings.env == "local"):
+        return _mock_unavailable()
+    roles = sorted(set(body.roles)) if (body and body.roles) else list(settings.mock_roles)
+    oid = _mock_oid(roles)
+    display = f"Local Dev ({', '.join(roles)})"
     async with request.app.state.pool.connection() as conn:
         actor_id = await jit_provision(
             conn,
             tenant_id=settings.mock_tenant_id,
-            microsoft_oid=settings.mock_microsoft_oid,
-            display_name=settings.mock_display_name,
+            microsoft_oid=oid,
+            display_name=display,
             email=settings.mock_email,
             upn=None,
         )
-    request.session["actor_id"] = actor_id
+    request.session.update(
+        mock_actor_id=actor_id, mock_oid=oid, mock_roles=roles, mock_display_name=display
+    )
     request.session.pop("logged_out", None)
-    return {"ok": True}
+    return {"ok": True, "roles": roles}
 
 
 @router.post("/auth/logout")

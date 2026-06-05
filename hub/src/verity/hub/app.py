@@ -73,12 +73,8 @@ def create_app() -> FastAPI:
         return {"status": "ready", "reference_roles": roles}
 
     @app.get("/me", tags=["auth"])
-    async def me(request: Request, principal: Principal = Depends(get_principal)) -> dict[str, object]:
-        # Portal sign-out marks the session logged_out so /me reports unauthenticated, even in mock
-        # mode where the env principal is otherwise always ambient. Direct API callers (tests) have
-        # no session cookie, so this never fires for them.
-        if request.session.get("logged_out"):
-            raise AuthError(401, "unauthenticated", "signed out")
+    async def me(principal: Principal = Depends(get_principal)) -> dict[str, object]:
+        # logged_out / mock-session resolution lives in get_principal now.
         s = get_settings()
         return {
             "actor_id": principal.actor_id,

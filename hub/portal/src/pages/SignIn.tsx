@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '@/api/client'
 import { useSession } from '@/auth/useSession'
@@ -24,13 +24,35 @@ export function SignIn() {
   const [params] = useSearchParams()
   const { refresh } = useSession()
   const [busy, setBusy] = useState(false)
+  const [allRoles, setAllRoles] = useState<string[]>([])
+  const [picked, setPicked] = useState<Set<string>>(
+    () => new Set(['ai_governance', 'security', 'viewer']),
+  )
   const next = safeNext(params.get('next'))
   const error = params.get('error')
+
+  // Load the selectable role vocabulary (local-dev only) — the choices come from the DB.
+  useEffect(() => {
+    if (!IS_MOCK) return
+    api
+      .get<{ roles: string[] }>('/auth/roles')
+      .then((res) => setAllRoles(res.roles))
+      .catch(() => setAllRoles([]))
+  }, [])
+
+  function toggleRole(role: string) {
+    setPicked((prev) => {
+      const copy = new Set(prev)
+      if (copy.has(role)) copy.delete(role)
+      else copy.add(role)
+      return copy
+    })
+  }
 
   async function continueAsLocalDev() {
     setBusy(true)
     try {
-      await api.post('/auth/mock')
+      await api.post('/auth/mock', { roles: [...picked] })
       await refresh()
       navigate(next, { replace: true })
     } finally {
@@ -71,17 +93,29 @@ export function SignIn() {
                 Mock auth · local dev
               </span>
               <p className="mock__text">
-                A synthetic principal (<code>security, viewer</code>) is injected — it flows through
-                the same provisioning, role-resolution, and action gate as production. Guardrailed to{' '}
-                <code>VERITY_ENV=local</code>.
+                Sign in as a synthetic principal with the roles you choose — it flows through the same
+                provisioning and action gate as production. Guardrailed to <code>VERITY_ENV=local</code>.
               </p>
+              <div className="eyebrow mock__roles-label">Roles</div>
+              <div className="chip-group" role="group" aria-label="Roles to sign in with">
+                {allRoles.map((r) => (
+                  <button
+                    type="button"
+                    key={r}
+                    className={`chip${picked.has(r) ? ' is-selected' : ''}`}
+                    aria-pressed={picked.has(r)}
+                    onClick={() => toggleRole(r)}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
               <button
-                className="btn btn--secondary btn--md"
-                style={{ width: '100%', justifyContent: 'center' }}
+                className="btn btn--secondary btn--md mock__go"
                 onClick={continueAsLocalDev}
-                disabled={busy}
+                disabled={busy || picked.size === 0}
               >
-                {busy ? 'Signing in…' : 'Continue as Local Dev'}
+                {busy ? 'Signing in…' : `Continue as Local Dev (${picked.size})`}
               </button>
             </div>
           </>
