@@ -60,6 +60,25 @@ consolidated under *What changes for production*.
 - Q: Target latency for a decision-log record to become visible in the UI? → A: ≤ 20 seconds (p95), via async/batched ingest.
 - Q: Quota enforcement posture in v2? → A: Per-quota configurable — soft (warn/breach, never refuse) by default, with an optional hard-stop that refuses the run when the budget is exceeded.
 
+### Session 2026-06-04
+
+*(Intake model simplification + assessment — guides the next slice; the shipped US1–US4 stays the thin CRUD foundation.)*
+
+- Q: Is application onboarding in scope for intake, and how is it governed? → A: Yes. `onboard_application` is a documented v2 action (FR-AUTHZ-001 addition). **Any platform author** (`engineer`/`ai_governance`/`business_owner`) MAY propose onboarding; approval requires **AI Governance**, **plus the `business_owner` when they were not the proposer** (the business owner must be proposer or approver). A dedicated **Application Onboarding** screen is added (potentially the app's first screen). See FR-IN-015.
+- Q: Does the intake itself carry `in_build`/`live` states? → A: No. The intake status set is `{proposed, in_review, impact_assessment, approved, rejected, retired}`. `in_build`/`live` are **asset** stages surfaced on the intake by linking, not intake attributes — revises FR-IN-011/FR-IN-012 and removes `in_build`/`live` from `reference.intake_status` for intake use.
+- Q: How do assets relate to an intake, and what gates promotion? → A: Assets **link to an intake** at the **asset level (not asset-version)**. An asset MAY link to at most one intake, only while `draft`/`candidate` and not already linked. Moving an asset **beyond `candidate`** (→ `champion`) requires a link to an **approved** intake; **`draft` is exempt** (free POC). The intake page rolls up each linked asset's most-advanced stage and flags lower-stage versions. Elevates FR-IN-009 as the promotion gate.
+- Q: Are approvals part of intake? → A: Yes — approval is **core** to intake (no longer deferred). The intake approval (`kind=intake`, FR-IN-001) uses the tier→required-roles mapping (FR-IN-005). An approved intake is the unit that unlocks asset promotion.
+- Q: How are post-intake changes (risk reclassification, business changes) handled? → A: As **change proposals** — an `approval_request` of kind `risk_reclassification` (FR-IN-013) or `business_change`, scoped to the intake, selecting **impacted assets**. On approval each impacted asset gets a **new `draft` forked from its champion** (or most-advanced stage). Modeled as an **extension of intake** (reuse `approval_request` + intake↔asset links; at most one small grouping table) — no standalone screen.
+- Q: Is there a structured risk/impact assessment at intake? → A: Yes — a mandatory **Intake Assessment Questionnaire** extending `intake_impact_assessment` (history-keeping), with tabs **AI Decision Impact**, **Data**, **Security & Access**, and a computed **Risk & Obligations** summary. Each answer links to **compliance canonical requirements**, so completing it resolves the **obligation set** (FR-IN-014), computes the **risk tier + NAIC materiality + rationale**, and is the **approval justification**. Required before approval; serves as the `impact_assessment` gate for limited/high tiers. See FR-AS-001..010.
+- Q: Does the assessment cover PII and data sensitivity? → A: Yes — the Data tab captures PII presence (none/direct/indirect/special-category) and sensitive-insurance-data categories; special-category PII triggers DPIA/minimization obligations.
+- Q: How are required system accesses handled? → A: The Security & Access tab enumerates **sources (read), targets (write/act), and tools** as approvable items. On intake approval each is **governance-approved** and exported as an **Access Approval Record** the builder submits to external **ITSM/IAM**. Verity records/approves the **intent**; it does **not** integrate IAM/ITSM directly.
+- Q: Can risk **mitigations** be recorded? → A: Yes — any risk-flagged answer supports one or more **mitigation/risk-treatment** records (procedure, treatment type avoid/reduce/transfer/accept, addressed control, owner, status, residual risk). A mitigation satisfying a required control becomes **evidence**; an `accept` of an unmet required control routes to **`approve_exception`** (FR-RP-009), not a silent pass.
+- Q: Do mitigations lower the risk tier? → A: No. The **inherent EU-AI-Act tier** is fixed by the use case and is not downgraded by mitigations; mitigations **satisfy obligations** and track **residual risk** separately. Both are recorded; classification uses the inherent tier.
+- Q: Requirement field set — schema (`title`/`body`) vs FR-IN-007? → A: **FR-IN-007 is authoritative** — `core.intake_requirement` will **grow** to add `statement`, `acceptance_criteria`, `source`, optional `parent_requirement_id`, and a unique `code` within the intake (spec-then-schema; the shipped slice's `title`/`body` reconciles to this).
+- Q: Is intake-level `materiality_tier` distinct from the agent-level one? → A: Yes — the intake carries its **own** `materiality_tier`, intentionally distinct from the agent/plan-row `materiality_tier` (FR-IN-006); it stays on intake classification.
+- Q: Status-transition action vocabulary (shipped slice)? → A: Gate **initial** classification on `triage_intake` and reserve **`reclassify_risk`** for re-triage (a change proposal); the shipped slice's generic `triage_intake` status gate reconciles to the per-target lifecycle actions.
+- Q: Confirm deferred-with-reason? → A: Deferred — **Plan / estimate / ROI / cost** (and the estimation features); `edit_intake` PATCH beyond create (next slice); requirement **embeddings / semantic dedup**.
+
 ---
 
 ## User Scenarios & Testing *(mandatory)*
@@ -305,7 +324,9 @@ throughout.
   `in_review → impact_assessment` when the tier is `limited` or `high`. Status only moves
   forward. An `unacceptable` tier MUST auto-reject the intake to `rejected` with the note
   `"Auto-rejected: AI risk tier 'unacceptable' under EU AI Act framing — prohibited use
-  case."`.
+  case."`. **Clarified 2026-06-04:** the tier/materiality/rationale are produced by the intake
+  assessment (FR-AS-002, the **inherent** tier — FR-AS-008); triage records them and advances
+  intake status. `in_build`/`live` are not intake states (FR-IN-011/FR-IN-012).
 - **FR-IN-005**: On triage, the system MUST rewrite each open intake approval's
   `required_roles` to the tier-specific set: `high → [business_owner, compliance, legal,
   model_risk, ai_governance]`; `limited → [business_owner, compliance, ai_governance]`;
@@ -314,6 +335,9 @@ throughout.
 - **FR-IN-006**: NAIC materiality MUST be recorded as an orthogonal classification (no
   automated gate) for compliance reporting; it MUST NOT be conflated with the agent-level
   `materiality_tier` (`high`|`medium`|`low`) nor the plan-row `proposed_materiality_tier`.
+  **Clarified 2026-06-04:** the **intake** additionally carries its **own** `materiality_tier`,
+  intentionally distinct from the agent/plan-row one — an intake-level classification that stays
+  on intake classification.
 - **FR-IN-007**: The system MUST support requirements on an intake: add, list, and update,
   each carrying `kind` (`business` | `functional` | `non_functional` | `compliance`),
   `status` (`draft` | `approved` | `implemented` | `verified` | `deprecated`), statement,
@@ -328,23 +352,38 @@ throughout.
   requirement, with a relationship (`implements` default | `tests` | `monitors` |
   `informs`); list and delete links; and reverse-lookup intakes for an entity (consumed by
   the promotion gate). A link edge MUST be unique on `(intake, requirement, entity_type,
-  entity_id, relationship)`.
+  entity_id, relationship)`. **Clarified 2026-06-04 (promotion gate):** linking is at the
+  **asset** level (not asset-version); an asset MAY link to at most one intake, only while
+  `draft`/`candidate` and not already linked. Moving an asset **beyond `candidate`** (→
+  `champion`) MUST require a link to an **approved** intake; `draft` is exempt (POC). The intake
+  page MUST roll up each linked asset's most-advanced stage and flag lower-stage versions.
 - **FR-IN-010**: The system MUST expose a governance dashboard aggregation: intake counts
   by status, counts by risk tier, pending approvals, and unlinked-entity counts.
 - **FR-IN-011**: The intake lifecycle stepper MUST be a computed read over the flow
   `[proposed, in_review, impact_assessment, approved, in_build, live]` exposing per-step
   status (`complete`|`active`|`pending`|`skipped`|`failed`); `minimal`-tier intakes show
   `impact_assessment` as `skipped`; `rejected`/`retired` are terminal badges, not rail
-  stops.
+  stops. **Revised 2026-06-04:** the intake's **own** status set is `{proposed, in_review,
+  impact_assessment, approved, rejected, retired}`; the `in_build` and `live` steps are
+  **derived from the stages of linked assets** (FR-IN-009), not intake attributes — the stepper
+  rolls up the most-advanced linked-asset stage.
 - **FR-IN-012**: The system MUST support intake status transitions `approve_intake`
   (`in_review`/`impact_assessment` → `approved`), `mark_intake_in_build` (`approved` →
   `in_build`), `mark_intake_live` (`approved`/`in_build` → `live`), and `retire_intake`
-  (any → `retired`).
+  (any → `retired`). **Revised 2026-06-04:** intake status transitions are `approve_intake`
+  (→ `approved`) and `retire_intake` (any → `retired`); the former `mark_intake_in_build` /
+  `mark_intake_live` are **not intake transitions** — `in_build`/`live` are properties of linked
+  assets (FR-IN-009), surfaced on the intake by roll-up.
 - **FR-IN-013**: The system MUST support **risk reclassification** of an already-triaged
   intake, authorized by the `reclassify_risk` action code: re-running triage rewrites the
   tier/materiality/rationale and the open intake approval's `required_roles` (FR-IN-005),
   and opens a `kind=risk_reclassification` approval request that blocks promotion until
-  resolved (FR-AP-005).
+  resolved (FR-AP-005). **Clarified 2026-06-04:** risk reclassification and **business-proposed
+  changes** are modeled as **change proposals** — an `approval_request` (kind
+  `risk_reclassification` or `business_change`) scoped to the intake that selects **impacted
+  assets**; on approval each impacted asset gets a **new `draft` forked from its champion** (or
+  most-advanced stage). Change proposals are an **extension of intake** (reuse `approval_request`
+  + intake↔asset links), not a separate surface.
 - **FR-IN-014**: On triage/risk-classification (and on reclassification, FR-IN-013), the
   system MUST resolve the **applicable canonical requirements** for the intake from its
   **governance domains** and risk/materiality tier, producing the **obligation set** — the
@@ -354,6 +393,62 @@ throughout.
   design-/deploy-/static-/execution-time controls (FR-RP-007) enforce it and evidence
   (FR-RP-008) accrues. This is what makes the product implement controls and capture
   evidence **starting from intake**.
+- **FR-IN-015** *(v2-new — clarified 2026-06-04)*: The system MUST support **application
+  onboarding** via the `onboard_application` action (a documented v2 addition to the
+  FR-AUTHZ-001 matrix). Any platform author (`engineer` | `ai_governance` | `business_owner`)
+  MAY propose onboarding; approval MUST require **AI Governance**, **plus the `business_owner`
+  when they were not the proposer** (the business owner MUST be proposer or approver). Until
+  approved, the application is pending and MUST NOT own promotable intakes/assets. An
+  **Application Onboarding** UI surface is provided (potentially the application's first screen).
+
+### Capability area: Intake assessment, obligation elicitation & risk treatment *(v2-new — clarified 2026-06-04)*
+
+The intake assessment is the structured front-end that drives risk classification and the
+obligation set and produces the approval justification. It **extends** the history-keeping
+`intake_impact_assessment` entity, MUST be completed before an intake is approved, and **is** the
+`impact_assessment` gate for `limited`/`high` tiers (FR-IN-004).
+
+- **FR-AS-001**: The system MUST present the assessment as four tabs — **AI Decision Impact**,
+  **Data**, **Security & Access** (inputs), and a computed read-only **Risk & Obligations**
+  summary. Each input answer MUST map to zero or more `canonical_requirement` codes so that
+  completing the assessment **resolves the intake's obligation set** (FR-IN-014).
+- **FR-AS-002**: The **AI Decision Impact** tab MUST capture at least: the AI's decision role
+  (assists | recommends-with-sign-off | autonomous), decision domain, affected population,
+  worst-case adverse impact, human-oversight (HITL) strategy + threshold, reversibility,
+  GDPR-Art.22 automated-decision applicability, and deployment scale. These MUST drive the
+  computed **inherent EU-AI-Act risk tier** and NAIC materiality, with a recorded rationale.
+- **FR-AS-003**: The **Data** tab MUST capture: data description; data sources (a list; later a
+  data-catalog reference); data classification; **PII presence** (none | direct | indirect |
+  special-category); sensitive-insurance-data categories; lawful basis / consent; residency /
+  cross-border transfer; retention & lineage; and training/inference use. Special-category PII
+  MUST raise the risk signal and trigger the privacy obligations (DPIA, minimization, retention).
+- **FR-AS-004**: The **Security & Access** tab MUST enumerate, as discrete approvable items, the
+  **sources** the asset reads, the **targets** it writes/acts on, and the **tools** it invokes
+  (each with scope / classification / egress), plus credential handling and network egress. On
+  intake approval each item MUST be recorded as **governance-approved**.
+- **FR-AS-005**: The approved access items MUST be exportable as an **Access Approval Record**
+  (justification + governance decision) for submission to an external **ITSM/IAM** system. Verity
+  records and approves the access **intent**; it MUST NOT be assumed to provision IAM/ITSM grants
+  directly.
+- **FR-AS-006**: Any risk-flagged answer MUST support one or more **mitigation / risk-treatment**
+  records, each carrying: procedure (text); treatment type (avoid | reduce | transfer | accept);
+  the addressed control / `canonical_requirement` (or "compensating"); owner; status (planned |
+  in-place | verified); and **residual risk**.
+- **FR-AS-007**: A mitigation that satisfies a required control MUST be capturable as **evidence**
+  toward the obligation set ([[0008-compliance-control-evidence-model]]). An `accept` of an unmet
+  **required** control MUST route to a compliance exception via `approve_exception` (FR-RP-009),
+  not silently pass.
+- **FR-AS-008**: The system MUST record both the **inherent tier** (fixed by the use case; NOT
+  downgraded by mitigations) and the **residual risk** (after mitigations) per risk item. Risk
+  classification (FR-IN-004) MUST use the inherent tier.
+- **FR-AS-009**: The **Risk & Obligations** tab MUST present (read-only): the computed tier + NAIC
+  materiality + rationale; the resolved obligation set (each triggered `canonical_requirement`
+  with its source answer); the required approver quorum (FR-IN-005); and any outstanding
+  justifications blocking approval.
+- **FR-AS-010**: The assessment MUST support **progressive disclosure** (follow-up questions
+  appear only when triggered) and MUST keep full revision history (extending
+  `intake_impact_assessment`). The intake MUST NOT be approvable while required justifications
+  are outstanding.
 
 ### Capability area: Registry & composition
 
