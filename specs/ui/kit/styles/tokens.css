@@ -1,0 +1,241 @@
+/* ============================================================================
+   tokens.css — Layer 1 (design-system §2). All design tokens; no selectors.
+   Tiers: 1 primitives → 2 semantic (referenced by components) → 3 component.
+   Load order: tokens → base → layout → components → utilities.
+   ============================================================================ */
+
+:root {
+
+  /* ── TIER 1 — PRIMITIVES ────────────────────────────────────────────────── */
+
+  /* Surfaces — Palantir Foundry register: cool neutral near-white, no warm tint */
+  --c-surface-0:        #FAFBFC;   /* page background */
+  --c-surface-1:        #FFFFFF;   /* card / panel — pure white lifts off bg */
+  --c-surface-2:        #F3F4F6;   /* recessed / input bg */
+  --c-surface-3:        #E9EBF0;   /* hover on surface-1 */
+  --c-surface-nav:      #EBEDF2;   /* topbar / sidebar / rail — darker than canvas */
+
+  /* Borders */
+  --c-border:           #DDE1E7;   /* default border on light */
+  --c-border-faint:     rgba(0,0,0,0.05);
+  --c-border-strong:    #C2C8D4;
+
+  /* Text */
+  --c-text-900:         #111827;   /* primary — near-black, cool */
+  --c-text-700:         #374151;   /* secondary */
+  --c-text-500:         #6B7280;   /* tertiary / placeholder */
+  --c-text-300:         #9CA3AF;   /* disabled / ghost */
+
+  /* Slate blue — the single interactive accent. One hue, disciplined, never bright */
+  --c-blue-900:         #1D3557;   /* deepest — headings, brand marks */
+  --c-blue-700:         #2C4E7E;   /* brand anchor — buttons, links */
+  --c-blue-600:         #3B6091;   /* hover state */
+  --c-blue-500:         #4A72A4;   /* secondary interactive */
+  --c-blue-200:         #C5D5E8;   /* wash / badge bg */
+  --c-blue-100:         #E0EAF4;   /* faint wash */
+  --c-blue-050:         #EEF4FA;   /* very faint tint */
+
+  /* Muted green — positive / success / champion */
+  --c-green-700:        #2D6A4F;
+  --c-green-600:        #3A7D5C;
+  --c-green-500:        #4A9470;
+  --c-green-200:        #C4DDD3;
+  --c-green-100:        #DCF0E8;
+  --c-green-050:        #EDF7F3;
+
+  /* Muted red — negative / error / deprecated */
+  --c-red-700:          #7A2233;
+  --c-red-600:          #8F2B3D;
+  --c-red-500:          #A63D52;
+  --c-red-200:          #DFC0C7;
+  --c-red-100:          #F0D8DC;
+  --c-red-050:          #F8ECEE;
+
+  /* Muted amber — warning / caution / challenger */
+  --c-amber-700:        #7A5020;
+  --c-amber-600:        #8F6128;
+  --c-amber-500:        #A87334;
+  --c-amber-200:        #DECCAE;
+  --c-amber-100:        #EFE0C4;
+  --c-amber-050:        #F7EFE0;
+
+  /* Neutral gray — deprecated badge (must NOT share the red negative palette) */
+  --c-gray-bg:          #EAECF0;
+  --c-gray-text:        #4B5563;
+  --c-gray-border:      #D1D5DB;
+  --c-gray-dot:         #9CA3AF;
+
+
+  /* ── TIER 2 — SEMANTIC (what components reference) ──────────────────────── */
+
+  --color-brand:           var(--c-blue-700);
+  --color-brand-hover:     var(--c-blue-600);
+  --color-brand-faint:     var(--c-blue-050);
+  --color-brand-wash:      var(--c-blue-100);
+  --color-brand-border:    var(--c-blue-200);
+
+  --color-positive:        var(--c-green-700);
+  --color-positive-bg:     var(--c-green-050);
+  --color-positive-wash:   var(--c-green-100);
+  --color-positive-border: var(--c-green-200);
+
+  --color-negative:        var(--c-red-700);
+  --color-negative-bg:     var(--c-red-050);
+  --color-negative-wash:   var(--c-red-100);
+  --color-negative-border: var(--c-red-200);
+
+  --color-warning:         var(--c-amber-700);
+  --color-warning-bg:      var(--c-amber-050);
+  --color-warning-wash:    var(--c-amber-100);
+  --color-warning-border:  var(--c-amber-200);
+
+  --surface-page:          var(--c-surface-0);
+  --surface-panel:         var(--c-surface-1);
+  --surface-recessed:      var(--c-surface-2);
+  --surface-hover:         var(--c-surface-3);
+  --surface-nav:           var(--c-surface-nav);
+
+  --border-default:        var(--c-border);
+  --border-faint:          var(--c-border-faint);
+  --border-strong:         var(--c-border-strong);
+
+  --text-primary:          var(--c-text-900);
+  --text-secondary:        var(--c-text-700);
+  --text-tertiary:         var(--c-text-500);
+  --text-disabled:         var(--c-text-300);
+
+
+  /* ── TIER 3 — COMPONENT TOKENS ──────────────────────────────────────────── */
+  /* Only where a component needs a value that varies independently of any
+     semantic token. Deprecated lifecycle state reads as "retired", not "error". */
+  --badge-deprecated-bg:     var(--c-gray-bg);
+  --badge-deprecated-text:   var(--c-gray-text);
+  --badge-deprecated-border: var(--c-gray-border);
+  --badge-deprecated-dot:    var(--c-gray-dot);
+
+
+  /* ── TYPOGRAPHY (design-system §4) ──────────────────────────────────────── */
+  --font-ui:   "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", "Cascadia Code", "Consolas", monospace;
+
+  /* Weights */
+  --fw-light:    300;
+  --fw-regular:  400;
+  --fw-medium:   500;
+  --fw-semibold: 600;
+
+  /* Type scale — size paired with its canonical weight in components */
+  --fs-hero:    28px;   /* page titles            (600) */
+  --fs-title:   20px;   /* section headings       (600) */
+  --fs-h3:      15px;   /* card / panel titles    (600) */
+  --fs-body:    14px;   /* body copy, form labels (400) */
+  --fs-label:   13px;   /* UI labels, nav items   (500) */
+  --fs-caption: 11px;   /* timestamps, meta       (400) */
+  --fs-eyebrow: 10px;   /* uppercase section tags (600) */
+  --fs-mono:    12px;   /* monospace content      (400) */
+
+  /* Eyebrow tracking — used by every uppercase section label */
+  --tracking-eyebrow: 0.08em;
+
+
+  /* ── SPACING (4px base, design-system §5) ───────────────────────────────── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --space-9: 48px;
+
+
+  /* ── RADIUS (design-system §5) ──────────────────────────────────────────── */
+  --radius-xs:   2px;    /* tight internal elements */
+  --radius-sm:   4px;    /* badges, chips, inputs */
+  --radius-md:   6px;    /* buttons, small cards */
+  --radius-lg:   8px;    /* cards, panels */
+  --radius-xl:   12px;   /* large containers, modals */
+  --radius-pill: 999px;  /* deliberate pill shapes only */
+
+
+  /* ── SHADOWS ────────────────────────────────────────────────────────────── */
+  --shadow-sm: 0 1px 2px rgba(24,24,26,0.06), 0 1px 1px rgba(24,24,26,0.04);
+  --shadow-md: 0 2px 6px rgba(24,24,26,0.08), 0 1px 2px rgba(24,24,26,0.05);
+  --shadow-lg: 0 4px 16px rgba(24,24,26,0.10), 0 2px 4px rgba(24,24,26,0.06);
+
+
+  /* ── FOCUS RING (design-system §2 base, §16 a11y) ───────────────────────── */
+  --ring-focus: 0 0 0 3px rgba(44, 78, 126, 0.22);
+
+
+  /* ── MOTION (design-system §14) ─────────────────────────────────────────── */
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+
+  /* ── LAYOUT DIMENSIONS (design-system §7, referenced by layout.css) ─────── */
+  --topbar-h:      44px;   /* always-visible topbar */
+  --rail-w:        48px;   /* icon-only left app rail */
+  --sidebar-w:     200px;  /* expanded in-app nav, collapsible */
+  --right-panel-w: 280px;  /* contextual right panel */
+  --statusbar-h:   24px;   /* fixed bottom status bar */
+}
+
+
+/* ============================================================================
+   DARK MODE — apply .dark to <html> or <body>. Only semantic tokens remap;
+   component CSS is untouched. Surface hierarchy must keep three visible depth
+   layers: nav (#13151A) → canvas (#1A1D23) → card (#22262F) (design-system §3).
+   ============================================================================ */
+
+.dark {
+  --surface-page:          #1A1D23;   /* canvas — slightly blue-tinted dark */
+  --surface-panel:         #22262F;   /* cards — a clear step up from canvas */
+  --surface-recessed:      #161920;   /* inputs, recessed — a step down */
+  --surface-hover:         #2A2F3A;
+  --surface-nav:           #13151A;   /* topbar + sidebar — darkest */
+
+  --border-default:        #343B4A;
+  --border-faint:          rgba(255,255,255,0.05);
+  --border-strong:         #4A5266;
+
+  --text-primary:          #E8EBF0;   /* near-white, slight blue cast */
+  --text-secondary:        #9BA3B8;
+  --text-tertiary:         #636B80;
+  --text-disabled:         #434A5C;
+
+  /* Brand + semantics lifted ~20% for dark-bg legibility */
+  --color-brand:           #7AA3D4;
+  --color-brand-hover:     #8FB5E0;
+  --color-brand-faint:     rgba(122,163,212,0.10);
+  --color-brand-wash:      rgba(122,163,212,0.16);
+  --color-brand-border:    rgba(122,163,212,0.30);
+
+  --color-positive:        #5DA882;
+  --color-positive-bg:     rgba(93,168,130,0.10);
+  --color-positive-wash:   rgba(93,168,130,0.16);
+  --color-positive-border: rgba(93,168,130,0.30);
+
+  --color-negative:        #C47A88;
+  --color-negative-bg:     rgba(196,122,136,0.10);
+  --color-negative-wash:   rgba(196,122,136,0.16);
+  --color-negative-border: rgba(196,122,136,0.30);
+
+  --color-warning:         #C4A06A;
+  --color-warning-bg:      rgba(196,160,106,0.10);
+  --color-warning-wash:    rgba(196,160,106,0.16);
+  --color-warning-border:  rgba(196,160,106,0.30);
+
+  /* Deprecated badge — neutral gray, lifted for dark */
+  --badge-deprecated-bg:     #2A2F3A;
+  --badge-deprecated-text:   #9BA3B8;
+  --badge-deprecated-border: #4A5266;
+  --badge-deprecated-dot:    #636B80;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.30);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.40);
+  --shadow-lg: 0 4px 20px rgba(0,0,0,0.50);
+  --ring-focus: 0 0 0 3px rgba(122,163,212,0.30);
+}

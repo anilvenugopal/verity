@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verity — Account menu</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles/tokens.css">
+<link rel="stylesheet" href="../styles/base.css">
+<link rel="stylesheet" href="../styles/layout.css">
+<link rel="stylesheet" href="../styles/components.css">
+<link rel="stylesheet" href="../styles/utilities.css">
+<style>
+  .topbar-row { display: flex; align-items: center; gap: var(--space-3); width: 100%; }
+  .rail-apps { display: flex; flex-direction: column; align-items: center; gap: 2px; padding-top: var(--space-3); }
+  .canvas-pad { padding: var(--space-7); }
+  .hint { max-width: 60ch; color: var(--text-secondary); font-size: var(--fs-label); line-height: 1.55; }
+  .hint__title { font-size: var(--fs-title); font-weight: var(--fw-semibold); margin-bottom: 6px; color: var(--text-primary); }
+  .avatar.is-open { box-shadow: var(--ring-focus); }
+  /* dropdown */
+  .menu { position: absolute; top: calc(var(--topbar-h) + 4px); right: var(--space-4); width: 312px; z-index: 40;
+          background: var(--surface-panel); border: 0.5px solid var(--border-strong); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); overflow: hidden; }
+  .menu__mock { display: none; align-items: center; gap: 6px; padding: 7px var(--space-4); font-size: var(--fs-eyebrow); font-weight: var(--fw-semibold);
+                text-transform: uppercase; letter-spacing: 0.06em; background: var(--color-warning-bg); color: var(--color-warning); border-bottom: 1px solid var(--color-warning-border); }
+  .menu__mock .icon { width: 13px; height: 13px; }
+  body.mock .menu__mock { display: flex; }
+  .menu__head { display: flex; gap: var(--space-3); padding: var(--space-4); border-bottom: 0.5px solid var(--border-default); }
+  .menu__head .avatar { width: 36px; height: 36px; font-size: 13px; cursor: default; }
+  .menu__name { font-weight: var(--fw-semibold); font-size: var(--fs-label); }
+  .menu__email { font-size: var(--fs-caption); color: var(--text-tertiary); margin-top: 1px; }
+  .menu__sub { font-size: 10px; color: var(--text-tertiary); font-family: var(--font-mono); margin-top: 3px; }
+  .menu__section { padding: var(--space-3) var(--space-4); border-bottom: 0.5px solid var(--border-faint); }
+  .menu__label { font-size: var(--fs-eyebrow); font-weight: var(--fw-semibold); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-tertiary); margin-bottom: 7px; }
+  .roles { display: flex; flex-wrap: wrap; gap: 6px; }
+  .role { display: inline-flex; align-items: center; font-size: var(--fs-caption); padding: 2px 8px; border-radius: var(--radius-sm);
+          background: var(--color-brand-faint); border: 1px solid var(--color-brand-border); color: var(--color-brand); }
+  .role--app { background: var(--surface-recessed); border-color: var(--border-default); color: var(--text-secondary); }
+  .menu__empty { font-size: var(--fs-caption); color: var(--text-tertiary); }
+  .menu__items { padding: 6px; }
+  .menu__item { display: flex; align-items: center; gap: var(--space-2); padding: 8px 10px; border-radius: var(--radius-md);
+                font-size: var(--fs-label); color: var(--text-secondary); cursor: pointer; }
+  .menu__item:hover { background: var(--surface-hover); color: var(--text-primary); }
+  .menu__item .icon { width: 15px; height: 15px; }
+  .menu__item--danger { color: var(--color-negative); }
+  .menu__item--danger:hover { background: var(--color-negative-bg); }
+  .seg { display: inline-flex; border: 1px solid var(--border-default); border-radius: var(--radius-md); overflow: hidden; margin-top: var(--space-4); }
+  .seg button { font: inherit; font-size: var(--fs-label); padding: 5px 12px; background: var(--surface-panel); color: var(--text-secondary); border: 0; border-right: 1px solid var(--border-default); cursor: pointer; }
+  .seg button:last-child { border-right: 0; }
+  .seg button.on { background: var(--color-brand-faint); color: var(--color-brand); font-weight: var(--fw-medium); }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="app__topbar">
+    <div class="topbar-row">
+      <a class="topbar__logo" href="sample.html" aria-label="Verity — Home" style="padding-left:var(--space-4);">
+        <img class="wordmark wordmark--light" src="../assets/verity-wordmark-dark.png" alt="Verity" width="74" height="22">
+        <img class="wordmark wordmark--dark" src="../assets/verity-wordmark-white.png" alt="" aria-hidden="true" width="74" height="22">
+      </a>
+      <nav class="breadcrumb"><span class="breadcrumb__item breadcrumb__item--current">Home</span></nav>
+      <span class="l-spacer"></span>
+      <div class="topbar__utils" style="padding-right:var(--space-4);">
+        <button class="btn btn--icon btn--ghost" data-theme-toggle aria-label="Toggle theme"><svg class="icon" aria-hidden="true"><use href="#i-theme"></use></svg></button>
+        <button class="btn btn--icon btn--ghost" aria-label="Help"><svg class="icon" aria-hidden="true"><use href="#i-help"></use></svg></button>
+        <span class="avatar is-open" id="avatar" title="Anil Venugopal">AV</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="app__body">
+    <nav class="app__left-rail" aria-label="Apps">
+      <div class="rail-apps">
+        <div class="rail-app-icon is-active" title="Home"><svg class="icon" aria-hidden="true"><use href="#i-app-home"></use></svg></div>
+        <div class="rail-app-icon" title="Intake"><svg class="icon" aria-hidden="true"><use href="#i-app-intake"></use></svg></div>
+        <div class="rail-app-icon" title="Studio"><svg class="icon" aria-hidden="true"><use href="#i-app-studio"></use></svg></div>
+        <div class="rail-app-icon" title="Governance"><svg class="icon" aria-hidden="true"><use href="#i-app-governance"></use></svg></div>
+      </div>
+      <span class="l-spacer"></span>
+      <div class="rail-app-icon" title="Settings" style="margin-bottom:var(--space-3);"><svg class="icon" aria-hidden="true"><use href="#i-app-settings"></use></svg></div>
+    </nav>
+
+    <main class="app__canvas">
+      <div class="canvas-pad">
+        <div class="hint__title">Account menu</div>
+        <p class="hint">Behind the avatar (top-right). This is where identity and <strong>roles</strong> surface — roles are read from Verity's database (append-only grants), never from the sign-in token, so what's shown here is the live authorization. Toggle the auth mode to see the local-dev indicator.</p>
+        <div class="seg" role="group" aria-label="Auth mode">
+          <button class="on" data-mode="real">Real (Entra)</button>
+          <button data-mode="mock">Mock (local dev)</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Account dropdown (shown open) -->
+  <div class="menu" role="menu" aria-label="Account">
+    <div class="menu__mock"><svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg>Mock · Local Dev — synthetic principal</div>
+    <div class="menu__head">
+      <span class="avatar">AV</span>
+      <div>
+        <div class="menu__name">Anil Venugopal</div>
+        <div class="menu__email">venugopal.anil@gmail.com</div>
+        <div class="menu__sub" data-id-line>oid 1f3a… · tenant nw-corp</div>
+      </div>
+    </div>
+    <div class="menu__section">
+      <div class="menu__label">Platform roles</div>
+      <div class="roles">
+        <span class="role">AI Governance</span>
+        <span class="role">Security</span>
+      </div>
+    </div>
+    <div class="menu__section">
+      <div class="menu__label">App-team roles</div>
+      <div class="menu__empty">None — AI Governance grants cross-application oversight.</div>
+    </div>
+    <div class="menu__items">
+      <div class="menu__item"><svg class="icon" aria-hidden="true"><use href="#i-app-settings"></use></svg>Settings</div>
+      <div class="menu__item"><svg class="icon" aria-hidden="true"><use href="#i-help"></use></svg>Help center</div>
+      <div class="menu__item menu__item--danger"><svg class="icon" aria-hidden="true"><use href="#i-open-editor"></use></svg>Sign out</div>
+    </div>
+  </div>
+</div>
+
+<script src="../js/app.js" data-sprite="../icons/sprite.svg"></script>
+<script>
+  // demo: toggle real/mock to show the local-dev indicator + synthetic identity
+  const seg = document.querySelectorAll('.seg button');
+  seg.forEach(b => b.addEventListener('click', () => {
+    seg.forEach(x => x.classList.remove('on')); b.classList.add('on');
+    const mock = b.dataset.mode === 'mock';
+    document.body.classList.toggle('mock', mock);
+    document.querySelector('[data-id-line]').textContent = mock ? 'oid 1111… · tenant 0000… (mock)' : 'oid 1f3a… · tenant nw-corp';
+    document.querySelector('.menu__email').textContent = mock ? 'dev@localhost' : 'venugopal.anil@gmail.com';
+    document.querySelector('.menu__name').textContent = mock ? 'Local Dev' : 'Anil Venugopal';
+  }));
+</script>
+</body>
+</html>

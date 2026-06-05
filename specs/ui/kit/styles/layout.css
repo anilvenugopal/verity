@@ -1,0 +1,127 @@
+/* ============================================================================
+   layout.css — Layer 3 of the five-layer ITCSS architecture (design-system §2)
+   ----------------------------------------------------------------------------
+   App shell + layout primitives. Single-class selectors. POSITIONS things;
+   does not style them visually beyond positioning. Visual styling is Layer 4.
+   ============================================================================ */
+
+/* ── Surface composition modifiers ─────────────────────────────────────────
+   Apply to any container; descendants inherit the correct on-surface colors. */
+.surface-page     { background: var(--surface-page); }
+.surface-panel    { background: var(--surface-panel); }
+.surface-nav      { background: var(--surface-nav); }
+.surface-recessed { background: var(--surface-recessed); }
+
+
+/* ── App shell slots (design-system §2.3, §7) ──────────────────────────────────
+   Top bar spans the full width across the top. Below it, a horizontal band holds
+   rail | sidebar | canvas | right-panel. The status bar is at the base. */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app__topbar {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: var(--topbar-h);
+  background: var(--surface-nav);
+  border-bottom: 0.5px solid var(--border-default);
+}
+
+/* horizontal band holding rail | sidebar | canvas | right-panel */
+.app__body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.app__left-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: var(--rail-w);
+  background: var(--surface-nav);
+  border-right: 0.5px solid var(--border-default);
+}
+
+.app__sidebar {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: var(--sidebar-w);
+  background: var(--surface-nav);
+  border-right: 0.5px solid var(--border-default);
+  overflow-y: auto;
+}
+
+.app__canvas {
+  flex: 1;
+  min-width: 0;
+  background: var(--surface-page);
+  overflow: auto;
+}
+
+.app__right-panel {
+  flex-shrink: 0;
+  width: var(--right-panel-w);
+  background: var(--surface-nav);
+  border-left: 0.5px solid var(--border-default);
+  overflow-y: auto;
+}
+
+.app__statusbar {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: var(--statusbar-h);
+  background: var(--surface-nav);
+  border-top: 0.5px solid var(--border-default);
+}
+
+
+/* ── Layout primitives (Every Layout inspired, design-system §2.3) ─────────── */
+
+/* Vertical rhythm */
+.l-stack { display: flex; flex-direction: column; }
+.l-stack--xs > * + * { margin-top: var(--space-1); }
+.l-stack--sm > * + * { margin-top: var(--space-2); }
+.l-stack--md > * + * { margin-top: var(--space-4); }
+.l-stack--lg > * + * { margin-top: var(--space-6); }
+.l-stack--xl > * + * { margin-top: var(--space-8); }
+
+/* Horizontal flex with alignment */
+.l-cluster { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.l-cluster--start   { justify-content: flex-start; }
+.l-cluster--end     { justify-content: flex-end; }
+.l-cluster--between { justify-content: space-between; }
+
+/* Auto-fit grid */
+.l-grid { display: grid; gap: var(--space-4); }
+.l-grid--2col { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.l-grid--3col { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.l-grid--4col { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+
+/* Sidebar + main */
+.l-sidebar { display: flex; gap: var(--space-6); }
+.l-sidebar > :first-child { flex-shrink: 0; }
+.l-sidebar > :last-child { flex: 1; min-width: 0; }
+
+/* Single-element centering with a max measure */
+.l-center { box-sizing: content-box; max-width: 1100px; margin-inline: auto; padding-inline: var(--space-6); }
+
+/* Flex spacer — pushes siblings apart */
+.l-spacer { flex: 1 1 auto; }
+
+
+/* ── Responsive strategy (design-system §15, desktop-first ≥1280px) ─────────── */
+@media (max-width: 1280px) {
+  .app__sidebar { display: none; }            /* collapse to rail-only */
+}
+@media (max-width: 900px) {
+  .app__right-panel { display: none; }        /* canvas full width */
+}

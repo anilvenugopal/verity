@@ -5,28 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Verity — Agent Studio</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="kit/styles/tokens.css">
 <style>
-:root{
-  --bg:#FAFBFC;--panel:#FFFFFF;--nav:#EBEDF2;--rec:#F3F4F6;--hover:#E9EBF0;
-  --border:#DDE1E7;--bfaint:rgba(0,0,0,.05);--bstrong:#C2C8D4;
-  --t1:#111827;--t2:#374151;--t3:#6B7280;--t4:#9CA3AF;
-  --blue:#2C4E7E;--blue-h:#3B6091;--blue-bg:#EEF4FA;--blue-w:#E0EAF4;--blue-b:#C5D5E8;
-  --green:#2D6A4F;--green-bg:#EDF7F3;--green-b:#C4DDD3;
-  --amber:#7A5020;--amber-bg:#F7EFE0;--amber-b:#DECCAE;
-  --red:#7A2233;--red-bg:#F8ECEE;--red-b:#DFC0C7;
-  --canvas-bg:#1E1E2E;
-  --font:"IBM Plex Sans",system-ui,sans-serif;
-  --mono:"IBM Plex Mono","Cascadia Code","Consolas",monospace;
-  --r4:4px;--r6:6px;--r8:8px;--r10:10px;
-  --sh:0 1px 2px rgba(17,24,39,.06),0 1px 1px rgba(17,24,39,.04);
-  --shm:0 2px 8px rgba(17,24,39,.10),0 1px 2px rgba(17,24,39,.06);
-}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden}
-body{font-family:var(--font);font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+body{font-family:var(--font-ui);font-size:13px;color:var(--text-primary);background:var(--surface-page);-webkit-font-smoothing:antialiased}
 a{color:inherit;text-decoration:none}
 button{font:inherit;cursor:pointer;background:none;border:none;padding:0;color:inherit}
-:focus{outline:none}:focus-visible{box-shadow:0 0 0 2px var(--blue-b);border-radius:var(--r4)}
+:focus{outline:none}:focus-visible{box-shadow:0 0 0 2px var(--color-brand-border);border-radius:var(--radius-sm)}
 
 /* ═══ LAYOUT ═══ */
 .app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
@@ -35,31 +21,31 @@ button{font:inherit;cursor:pointer;background:none;border:none;padding:0;color:i
 .topbar{
   display:flex;align-items:center;gap:0;
   height:44px;flex-shrink:0;
-  background:var(--nav);border-bottom:1px solid var(--border);
+  background:var(--surface-nav);border-bottom:1px solid var(--border-default);
   z-index:20;
 }
-.tb-rail{width:44px;height:100%;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--border);flex-shrink:0;cursor:pointer}
-.tb-logo{width:22px;height:22px;border-radius:5px;background:var(--blue);display:flex;align-items:center;justify-content:center}
+.tb-rail{width:44px;height:100%;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--border-default);flex-shrink:0;cursor:pointer}
+.tb-logo{width:22px;height:22px;border-radius:5px;background:var(--color-brand);display:flex;align-items:center;justify-content:center}
 .tb-logo svg{color:#fff;width:12px;height:12px}
-.tb-bc{display:flex;align-items:center;gap:4px;padding:0 14px;font-size:12px;color:var(--t3);border-right:1px solid var(--border);height:100%}
-.tb-bc a{color:var(--blue);cursor:pointer}.tb-bc a:hover{text-decoration:underline}
+.tb-bc{display:flex;align-items:center;gap:4px;padding:0 14px;font-size:12px;color:var(--text-tertiary);border-right:1px solid var(--border-default);height:100%}
+.tb-bc a{color:var(--color-brand);cursor:pointer}.tb-bc a:hover{text-decoration:underline}
 .tb-bc .sep{opacity:.4;font-size:11px}
-.tb-bc .cur{color:var(--t1);font-weight:500}
+.tb-bc .cur{color:var(--text-primary);font-weight:500}
 .tb-center{flex:1;display:flex;align-items:center;justify-content:center;gap:8px}
-.agent-name{font-size:13px;font-weight:600;color:var(--t1)}
-.agent-ver{font-size:11px;color:var(--t3);font-family:var(--mono)}
-.tb-right{display:flex;align-items:center;gap:6px;padding:0 12px;margin-left:auto;border-left:1px solid var(--border);height:100%}
-.tb-btn{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--r6);font-size:12px;font-weight:500;cursor:pointer;transition:background 100ms,color 100ms;white-space:nowrap}
+.agent-name{font-size:13px;font-weight:600;color:var(--text-primary)}
+.agent-ver{font-size:11px;color:var(--text-tertiary);font-family:var(--font-mono)}
+.tb-right{display:flex;align-items:center;gap:6px;padding:0 12px;margin-left:auto;border-left:1px solid var(--border-default);height:100%}
+.tb-btn{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--radius-md);font-size:12px;font-weight:500;cursor:pointer;transition:background 100ms,color 100ms;white-space:nowrap}
 .tb-btn svg{width:13px;height:13px;flex-shrink:0}
-.btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{background:var(--blue-h)}
+.btn-primary{background:var(--color-brand);color:#fff}.btn-primary:hover{background:var(--color-brand-hover)}
 .btn-secondary{background:#1F2937;color:#F9FAFB;border:1px solid #374151}.btn-secondary:hover{background:#111827}
-.btn-ghost{color:var(--t3)}.btn-ghost:hover{background:var(--hover);color:var(--t1)}
-.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:var(--r4);font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;border:1px solid transparent}
-.b-amber{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-b)}
-.b-blue{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-b)}
-.b-green{background:var(--green-bg);color:var(--green);border-color:var(--green-b)}
-.b-red{background:var(--red-bg);color:var(--red);border-color:var(--red-b)}
-.b-gray{background:var(--rec);color:var(--t3);border-color:var(--border)}
+.btn-ghost{color:var(--text-tertiary)}.btn-ghost:hover{background:var(--surface-hover);color:var(--text-primary)}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:var(--radius-sm);font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;border:1px solid transparent}
+.b-amber{background:var(--color-warning-bg);color:var(--color-warning);border-color:var(--color-warning-border)}
+.b-blue{background:var(--color-brand-faint);color:var(--color-brand);border-color:var(--color-brand-border)}
+.b-green{background:var(--color-positive-bg);color:var(--color-positive);border-color:var(--color-positive-border)}
+.b-red{background:var(--color-negative-bg);color:var(--color-negative);border-color:var(--color-negative-border)}
+.b-gray{background:var(--surface-recessed);color:var(--text-tertiary);border-color:var(--border-default)}
 .dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
 
 /* ═══ BODY = horizontal flex ═══ */
@@ -68,241 +54,241 @@ button{font:inherit;cursor:pointer;background:none;border:none;padding:0;color:i
 /* ═══ LEFT PANE ═══ */
 .left-pane{
   width:220px;flex-shrink:0;
-  background:var(--nav);border-right:1px solid var(--border);
+  background:var(--surface-nav);border-right:1px solid var(--border-default);
   display:flex;flex-direction:column;overflow:hidden;
 }
-.lp-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
-.lp-tab{flex:1;padding:8px 0;font-size:11px;font-weight:500;color:var(--t3);text-align:center;cursor:pointer;border-bottom:2px solid transparent;transition:color 100ms,border-color 100ms}
-.lp-tab.on{color:var(--blue);border-color:var(--blue)}
-.lp-tab:hover:not(.on){color:var(--t1)}
+.lp-tabs{display:flex;border-bottom:1px solid var(--border-default);flex-shrink:0}
+.lp-tab{flex:1;padding:8px 0;font-size:11px;font-weight:500;color:var(--text-tertiary);text-align:center;cursor:pointer;border-bottom:2px solid transparent;transition:color 100ms,border-color 100ms}
+.lp-tab.on{color:var(--color-brand);border-color:var(--color-brand)}
+.lp-tab:hover:not(.on){color:var(--text-primary)}
 .lp-panel{display:none;flex:1;overflow-y:auto;flex-direction:column}
 .lp-panel.on{display:flex}
-.lp-sec{font-size:9px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--t4);padding:10px 12px 3px;flex-shrink:0}
-.lp-item{display:flex;align-items:center;gap:7px;padding:5px 10px;margin:0 4px;border-radius:var(--r6);font-size:12px;color:var(--t2);cursor:pointer;transition:background 80ms,color 80ms}
-.lp-item:hover{background:var(--hover);color:var(--t1)}
-.lp-item.on{background:var(--blue-bg);color:var(--blue);font-weight:500}
+.lp-sec{font-size:9px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--text-disabled);padding:10px 12px 3px;flex-shrink:0}
+.lp-item{display:flex;align-items:center;gap:7px;padding:5px 10px;margin:0 4px;border-radius:var(--radius-md);font-size:12px;color:var(--text-secondary);cursor:pointer;transition:background 80ms,color 80ms}
+.lp-item:hover{background:var(--surface-hover);color:var(--text-primary)}
+.lp-item.on{background:var(--color-brand-faint);color:var(--color-brand);font-weight:500}
 .lp-item svg{width:13px;height:13px;flex-shrink:0;opacity:.7}
 .lp-item.on svg{opacity:1}
 .lp-item .lbadge{margin-left:auto;font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px}
-.lbg{background:var(--green-bg);color:var(--green)}
-.lbb{background:var(--blue-bg);color:var(--blue)}
-.lba{background:var(--amber-bg);color:var(--amber)}
-.lbr{background:var(--red-bg);color:var(--red)}
-.lbn{background:var(--rec);color:var(--t3);border:1px solid var(--border)}
-.lp-item-sub{padding-left:30px;font-size:11px;color:var(--t3)}
+.lbg{background:var(--color-positive-bg);color:var(--color-positive)}
+.lbb{background:var(--color-brand-faint);color:var(--color-brand)}
+.lba{background:var(--color-warning-bg);color:var(--color-warning)}
+.lbr{background:var(--color-negative-bg);color:var(--color-negative)}
+.lbn{background:var(--surface-recessed);color:var(--text-tertiary);border:1px solid var(--border-default)}
+.lp-item-sub{padding-left:30px;font-size:11px;color:var(--text-tertiary)}
 
 /* draggable handle */
 .h-drag{width:4px;flex-shrink:0;cursor:col-resize;background:transparent;transition:background 100ms}
-.h-drag:hover{background:var(--blue-b)}
+.h-drag:hover{background:var(--color-brand-border)}
 
 /* ═══ MIDDLE = canvas + right pane ═══ */
 .middle{display:flex;flex:1;min-width:0;flex-direction:column}
 
 /* ═══ CANVAS AREA ═══ */
 .canvas-area{display:flex;flex:1;min-height:0;overflow:hidden}
-.canvas{flex:1;min-width:0;background:var(--bg);display:flex;flex-direction:column;overflow:hidden}
+.canvas{flex:1;min-width:0;background:var(--surface-page);display:flex;flex-direction:column;overflow:hidden}
 .canvas-scroll{flex:1;overflow-y:auto;padding:20px 24px 32px}
 
 /* section cards on canvas */
-.section-card{border:1px solid var(--border);border-radius:var(--r8);overflow:hidden;margin-bottom:14px;background:var(--panel);box-shadow:var(--sh)}
-.sc-head{display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--rec);border-bottom:1px solid var(--border)}
-.sc-head-title{font-size:12px;font-weight:500;color:var(--t1)}
-.sc-head svg{width:14px;height:14px;color:var(--t3);flex-shrink:0}
+.section-card{border:1px solid var(--border-default);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:14px;background:var(--surface-panel);box-shadow:var(--shadow-sm)}
+.sc-head{display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--surface-recessed);border-bottom:1px solid var(--border-default)}
+.sc-head-title{font-size:12px;font-weight:500;color:var(--text-primary)}
+.sc-head svg{width:14px;height:14px;color:var(--text-tertiary);flex-shrink:0}
 .sc-body{padding:10px 14px;display:flex;flex-direction:column;gap:7px}
 .sc-badge-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 
 /* binding rows */
-.bind-row{display:flex;align-items:flex-start;gap:8px;font-size:11px;padding:5px 0;border-bottom:1px solid var(--bfaint)}
+.bind-row{display:flex;align-items:flex-start;gap:8px;font-size:11px;padding:5px 0;border-bottom:1px solid var(--border-faint)}
 .bind-row:last-child{border-bottom:none}
-.bind-src{padding:2px 8px;border-radius:3px;font-family:var(--mono);font-size:10px;background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-b);flex-shrink:0;white-space:nowrap}
-.bind-dst{padding:2px 8px;border-radius:3px;font-family:var(--mono);font-size:10px;background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-b);flex-shrink:0;white-space:nowrap}
-.bind-arrow{color:var(--t4);font-size:12px;flex-shrink:0;padding-top:1px}
-.bind-meta{margin-left:auto;font-size:10px;color:var(--t3);text-align:right;padding-top:1px}
-.bind-tag{font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px;background:var(--blue-bg);color:var(--blue);flex-shrink:0;white-space:nowrap}
+.bind-src{padding:2px 8px;border-radius:3px;font-family:var(--font-mono);font-size:10px;background:var(--color-warning-bg);color:var(--color-warning);border:1px solid var(--color-warning-border);flex-shrink:0;white-space:nowrap}
+.bind-dst{padding:2px 8px;border-radius:3px;font-family:var(--font-mono);font-size:10px;background:var(--color-brand-faint);color:var(--color-brand);border:1px solid var(--color-brand-border);flex-shrink:0;white-space:nowrap}
+.bind-arrow{color:var(--text-disabled);font-size:12px;flex-shrink:0;padding-top:1px}
+.bind-meta{margin-left:auto;font-size:10px;color:var(--text-tertiary);text-align:right;padding-top:1px}
+.bind-tag{font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px;background:var(--color-brand-faint);color:var(--color-brand);flex-shrink:0;white-space:nowrap}
 .bind-tag.file{background:#F3E8FF;color:#6B21A8;border:1px solid #D8B4FE}
-.bind-tag.text{background:var(--green-bg);color:var(--green)}
+.bind-tag.text{background:var(--color-positive-bg);color:var(--color-positive)}
 /* file binding detail card */
 .bind-detail{
   margin:2px 0 4px 0;
-  border:1px solid var(--border);border-radius:var(--r6);overflow:hidden;
-  font-size:11px;background:var(--panel);
+  border:1px solid var(--border-default);border-radius:var(--radius-md);overflow:hidden;
+  font-size:11px;background:var(--surface-panel);
 }
 .bd-head{
   display:flex;align-items:center;gap:6px;
-  padding:6px 10px;background:var(--rec);border-bottom:1px solid var(--border);
-  font-size:10px;font-weight:500;color:var(--t2);
+  padding:6px 10px;background:var(--surface-recessed);border-bottom:1px solid var(--border-default);
+  font-size:10px;font-weight:500;color:var(--text-secondary);
 }
-.bd-head svg{width:12px;height:12px;color:var(--t3);flex-shrink:0}
+.bd-head svg{width:12px;height:12px;color:var(--text-tertiary);flex-shrink:0}
 .bd-pill{font-size:9px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F3E8FF;color:#6B21A8;border:1px solid #D8B4FE;flex-shrink:0}
-.bd-row{display:flex;align-items:center;justify-content:space-between;padding:4px 10px;border-bottom:1px solid var(--bfaint);font-size:10px}
+.bd-row{display:flex;align-items:center;justify-content:space-between;padding:4px 10px;border-bottom:1px solid var(--border-faint);font-size:10px}
 .bd-row:last-child{border-bottom:none}
-.bd-lbl{color:var(--t3)}.bd-val{color:var(--t1);font-family:var(--mono);font-size:10px}
-.bd-val.muted{color:var(--t3)}.bd-val.ok{color:var(--green)}.bd-val.warn{color:var(--amber)}
-.bd-connector-name{color:var(--blue);font-weight:500}
-.connector-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;display:inline-block;margin-right:4px}
+.bd-lbl{color:var(--text-tertiary)}.bd-val{color:var(--text-primary);font-family:var(--font-mono);font-size:10px}
+.bd-val.muted{color:var(--text-tertiary)}.bd-val.ok{color:var(--color-positive)}.bd-val.warn{color:var(--color-warning)}
+.bd-connector-name{color:var(--color-brand);font-weight:500}
+.connector-dot{width:6px;height:6px;border-radius:50%;background:var(--color-positive);flex-shrink:0;display:inline-block;margin-right:4px}
 
 /* chip */
 .chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:3px;font-size:11px;cursor:pointer;transition:opacity 100ms}
 .chip:hover{opacity:.8}
-.chip-tool{background:var(--green-bg);color:var(--green);border:1px solid var(--green-b)}
-.chip-var{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-b)}
-.chip-add{background:var(--rec);color:var(--t3);border:1px solid var(--border)}
-.chip-agent{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-b)}
+.chip-tool{background:var(--color-positive-bg);color:var(--color-positive);border:1px solid var(--color-positive-border)}
+.chip-var{background:var(--color-warning-bg);color:var(--color-warning);border:1px solid var(--color-warning-border)}
+.chip-add{background:var(--surface-recessed);color:var(--text-tertiary);border:1px solid var(--border-default)}
+.chip-agent{background:var(--color-brand-faint);color:var(--color-brand);border:1px solid var(--color-brand-border)}
 
 /* prompt preview */
 .prompt-preview{
-  font-family:var(--mono);font-size:11px;line-height:1.75;
-  color:var(--t2);background:var(--rec);
-  border-radius:var(--r6);padding:10px 12px;
+  font-family:var(--font-mono);font-size:11px;line-height:1.75;
+  color:var(--text-secondary);background:var(--surface-recessed);
+  border-radius:var(--radius-md);padding:10px 12px;
 }
 .pv-inline{display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:3px;vertical-align:middle;font-size:10px}
 
 /* output schema table */
-.schema-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bfaint);font-size:11px}
+.schema-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border-faint);font-size:11px}
 .schema-row:last-child{border-bottom:none}
-.schema-field{color:var(--t1);font-family:var(--mono);font-size:10px;font-weight:500}
-.schema-type{color:var(--t3);font-size:10px}
-.schema-rule{color:var(--t3);font-size:10px;margin-left:auto}
+.schema-field{color:var(--text-primary);font-family:var(--font-mono);font-size:10px;font-weight:500}
+.schema-type{color:var(--text-tertiary);font-size:10px}
+.schema-rule{color:var(--text-tertiary);font-size:10px;margin-left:auto}
 
 /* canvas header */
 .canvas-header{padding:14px 24px 0;flex-shrink:0}
-.canvas-bc{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--t3);margin-bottom:5px}
-.canvas-bc a{color:var(--blue);cursor:pointer}
+.canvas-bc{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-tertiary);margin-bottom:5px}
+.canvas-bc a{color:var(--color-brand);cursor:pointer}
 .canvas-bc .sep{opacity:.4}
-.canvas-title{font-size:16px;font-weight:600;color:var(--t1);letter-spacing:-.01em;display:flex;align-items:center;gap:10px;margin-bottom:2px}
-.canvas-sub{font-size:11px;color:var(--t3)}
+.canvas-title{font-size:16px;font-weight:600;color:var(--text-primary);letter-spacing:-.01em;display:flex;align-items:center;gap:10px;margin-bottom:2px}
+.canvas-sub{font-size:11px;color:var(--text-tertiary)}
 
 /* ═══ RIGHT PANE ═══ */
 .right-pane{
   width:280px;flex-shrink:0;
-  background:var(--nav);border-left:1px solid var(--border);
+  background:var(--surface-nav);border-left:1px solid var(--border-default);
   display:flex;flex-direction:column;overflow:hidden;
 }
-.rp-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto}
-.rp-tab{padding:8px 12px;font-size:11px;font-weight:500;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;transition:color 100ms,border-color 100ms;white-space:nowrap;flex-shrink:0}
-.rp-tab.on{color:var(--blue);border-color:var(--blue)}
-.rp-tab:hover:not(.on){color:var(--t1)}
+.rp-tabs{display:flex;border-bottom:1px solid var(--border-default);flex-shrink:0;overflow-x:auto}
+.rp-tab{padding:8px 12px;font-size:11px;font-weight:500;color:var(--text-tertiary);cursor:pointer;border-bottom:2px solid transparent;transition:color 100ms,border-color 100ms;white-space:nowrap;flex-shrink:0}
+.rp-tab.on{color:var(--color-brand);border-color:var(--color-brand)}
+.rp-tab:hover:not(.on){color:var(--text-primary)}
 .rp-panel{display:none;flex:1;overflow-y:auto;flex-direction:column;gap:0}
 .rp-panel.on{display:flex}
-.rp-sec{font-size:9px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--t4);padding:10px 13px 4px}
-.rp-row{display:flex;align-items:center;justify-content:space-between;padding:5px 13px;border-bottom:1px solid var(--bfaint);font-size:11px}
+.rp-sec{font-size:9px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--text-disabled);padding:10px 13px 4px}
+.rp-row{display:flex;align-items:center;justify-content:space-between;padding:5px 13px;border-bottom:1px solid var(--border-faint);font-size:11px}
 .rp-row:last-child{border-bottom:none}
-.rp-lbl{color:var(--t3)}.rp-val{color:var(--t1);font-weight:500;font-family:var(--mono);font-size:10px}
-.rp-val.blue{color:var(--blue)}.rp-val.green{color:var(--green)}.rp-val.amber{color:var(--amber)}
-.rp-field{display:flex;flex-direction:column;gap:3px;padding:6px 13px;border-bottom:1px solid var(--bfaint)}
-.rp-flbl{font-size:10px;font-weight:500;color:var(--t3)}
-.rp-input{width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:var(--r6);font-family:var(--font);font-size:12px;color:var(--t1);background:var(--panel)}
-.rp-input:focus{border-color:var(--blue);outline:none;box-shadow:0 0 0 2px rgba(44,78,126,.15)}
-.rp-input.mono{font-family:var(--mono);font-size:11px}
+.rp-lbl{color:var(--text-tertiary)}.rp-val{color:var(--text-primary);font-weight:500;font-family:var(--font-mono);font-size:10px}
+.rp-val.blue{color:var(--color-brand)}.rp-val.green{color:var(--color-positive)}.rp-val.amber{color:var(--color-warning)}
+.rp-field{display:flex;flex-direction:column;gap:3px;padding:6px 13px;border-bottom:1px solid var(--border-faint)}
+.rp-flbl{font-size:10px;font-weight:500;color:var(--text-tertiary)}
+.rp-input{width:100%;padding:5px 8px;border:1px solid var(--border-default);border-radius:var(--radius-md);font-family:var(--font-ui);font-size:12px;color:var(--text-primary);background:var(--surface-panel)}
+.rp-input:focus{border-color:var(--color-brand);outline:none;box-shadow:0 0 0 2px rgba(44,78,126,.15)}
+.rp-input.mono{font-family:var(--font-mono);font-size:11px}
 .rp-input.ta{resize:none;height:52px}
-.run-btn{display:flex;align-items:center;justify-content:center;gap:6px;margin:10px 13px 6px;padding:8px;border-radius:var(--r6);font-size:13px;font-weight:500;background:var(--blue);color:#fff;cursor:pointer;transition:background 100ms}
-.run-btn:hover{background:var(--blue-h)}
+.run-btn{display:flex;align-items:center;justify-content:center;gap:6px;margin:10px 13px 6px;padding:8px;border-radius:var(--radius-md);font-size:13px;font-weight:500;background:var(--color-brand);color:#fff;cursor:pointer;transition:background 100ms}
+.run-btn:hover{background:var(--color-brand-hover)}
 .run-btn svg{width:14px;height:14px}
-.output-block{font-family:var(--mono);font-size:11px;color:var(--t2);background:var(--rec);border-radius:var(--r6);padding:8px 10px;margin:0 13px 8px;line-height:1.65}
-.save-btn{display:flex;align-items:center;justify-content:center;gap:5px;margin:0 13px 10px;padding:6px;border-radius:var(--r6);font-size:11px;font-weight:500;color:var(--blue);border:1px solid var(--blue-b);background:var(--blue-bg);cursor:pointer}
-.save-btn:hover{background:var(--blue-w)}
+.output-block{font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);background:var(--surface-recessed);border-radius:var(--radius-md);padding:8px 10px;margin:0 13px 8px;line-height:1.65}
+.save-btn{display:flex;align-items:center;justify-content:center;gap:5px;margin:0 13px 10px;padding:6px;border-radius:var(--radius-md);font-size:11px;font-weight:500;color:var(--color-brand);border:1px solid var(--color-brand-border);background:var(--color-brand-faint);cursor:pointer}
+.save-btn:hover{background:var(--color-brand-wash)}
 .save-btn svg{width:12px;height:12px}
-.decision-link{padding:0 13px 10px;font-size:11px;color:var(--blue);cursor:pointer;display:flex;align-items:center;gap:4px}
+.decision-link{padding:0 13px 10px;font-size:11px;color:var(--color-brand);cursor:pointer;display:flex;align-items:center;gap:4px}
 .decision-link svg{width:12px;height:12px}
 
 /* history list */
-.hist-item{display:flex;align-items:flex-start;gap:8px;padding:8px 13px;border-bottom:1px solid var(--bfaint);cursor:pointer;transition:background 80ms}
-.hist-item:hover{background:var(--hover)}
-.hist-run{font-family:var(--mono);font-size:10px;color:var(--blue);font-weight:500}
-.hist-meta{font-size:10px;color:var(--t3);margin-top:1px}
-.hist-result{font-size:11px;color:var(--t2);margin-top:2px}
+.hist-item{display:flex;align-items:flex-start;gap:8px;padding:8px 13px;border-bottom:1px solid var(--border-faint);cursor:pointer;transition:background 80ms}
+.hist-item:hover{background:var(--surface-hover)}
+.hist-run{font-family:var(--font-mono);font-size:10px;color:var(--color-brand);font-weight:500}
+.hist-meta{font-size:10px;color:var(--text-tertiary);margin-top:1px}
+.hist-result{font-size:11px;color:var(--text-secondary);margin-top:2px}
 .pulse{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
-.p-g{background:var(--green)}.p-a{background:var(--amber)}.p-r{background:var(--red)}.p-n{background:var(--t4)}
+.p-g{background:var(--color-positive)}.p-a{background:var(--color-warning)}.p-r{background:var(--color-negative)}.p-n{background:var(--text-disabled)}
 
 /* perf tiles */
 .perf-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:8px 13px}
-.perf-tile{background:var(--panel);border:1px solid var(--border);border-radius:var(--r6);padding:8px 10px}
-.perf-val{font-size:18px;font-weight:600;letter-spacing:-.02em;color:var(--t1)}
-.perf-val.green{color:var(--green)}.perf-val.amber{color:var(--amber)}
-.perf-lbl{font-size:9px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--t3);margin-top:4px}
-.perf-delta{font-size:10px;font-weight:500;color:var(--green);margin-top:2px}
-.perf-mini-table{margin:0 13px 8px;border:1px solid var(--border);border-radius:var(--r6);overflow:hidden;font-size:11px}
-.pmt-head{display:flex;padding:4px 10px;background:var(--rec);border-bottom:1px solid var(--border);font-size:9px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--t3)}
-.pmt-row{display:flex;padding:5px 10px;border-bottom:1px solid var(--bfaint);color:var(--t2)}
+.perf-tile{background:var(--surface-panel);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:8px 10px}
+.perf-val{font-size:18px;font-weight:600;letter-spacing:-.02em;color:var(--text-primary)}
+.perf-val.green{color:var(--color-positive)}.perf-val.amber{color:var(--color-warning)}
+.perf-lbl{font-size:9px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text-tertiary);margin-top:4px}
+.perf-delta{font-size:10px;font-weight:500;color:var(--color-positive);margin-top:2px}
+.perf-mini-table{margin:0 13px 8px;border:1px solid var(--border-default);border-radius:var(--radius-md);overflow:hidden;font-size:11px}
+.pmt-head{display:flex;padding:4px 10px;background:var(--surface-recessed);border-bottom:1px solid var(--border-default);font-size:9px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text-tertiary)}
+.pmt-row{display:flex;padding:5px 10px;border-bottom:1px solid var(--border-faint);color:var(--text-secondary)}
 .pmt-row:last-child{border-bottom:none}
 .pc1{flex:2}.pc2{width:40px;text-align:right;flex-shrink:0}.pc3{width:44px;text-align:right;flex-shrink:0}
 
 /* ═══ BOTTOM PANE (VS Code style) ═══ */
 .bottom-pane{
   height:200px;flex-shrink:0;
-  border-top:1px solid var(--border);
-  background:var(--nav);
+  border-top:1px solid var(--border-default);
+  background:var(--surface-nav);
   display:flex;flex-direction:column;
   transition:height 200ms ease;
 }
 .bottom-pane.collapsed{height:32px}
-.bp-tabs{display:flex;align-items:center;border-bottom:1px solid var(--border);height:32px;flex-shrink:0;gap:0;background:var(--nav)}
-.bp-tab{display:flex;align-items:center;gap:5px;padding:0 13px;height:100%;font-size:11px;font-weight:500;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;transition:color 100ms,border-color 100ms;white-space:nowrap;border-right:1px solid var(--bfaint)}
-.bp-tab.on{color:var(--blue);border-color:var(--blue)}
-.bp-tab:hover:not(.on){color:var(--t1)}
+.bp-tabs{display:flex;align-items:center;border-bottom:1px solid var(--border-default);height:32px;flex-shrink:0;gap:0;background:var(--surface-nav)}
+.bp-tab{display:flex;align-items:center;gap:5px;padding:0 13px;height:100%;font-size:11px;font-weight:500;color:var(--text-tertiary);cursor:pointer;border-bottom:2px solid transparent;transition:color 100ms,border-color 100ms;white-space:nowrap;border-right:1px solid var(--border-faint)}
+.bp-tab.on{color:var(--color-brand);border-color:var(--color-brand)}
+.bp-tab:hover:not(.on){color:var(--text-primary)}
 .bp-tab svg{width:12px;height:12px;flex-shrink:0}
-.bp-tab .cnt{font-size:9px;font-weight:700;padding:1px 4px;border-radius:3px;background:var(--blue);color:#fff}
+.bp-tab .cnt{font-size:9px;font-weight:700;padding:1px 4px;border-radius:3px;background:var(--color-brand);color:#fff}
 .bp-right{margin-left:auto;display:flex;align-items:center;gap:4px;padding-right:10px}
-.bp-icon-btn{width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:var(--r4);color:var(--t3);cursor:pointer;transition:background 100ms,color 100ms}
-.bp-icon-btn:hover{background:var(--hover);color:var(--t1)}
+.bp-icon-btn{width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-sm);color:var(--text-tertiary);cursor:pointer;transition:background 100ms,color 100ms}
+.bp-icon-btn:hover{background:var(--surface-hover);color:var(--text-primary)}
 .bp-icon-btn svg{width:14px;height:14px}
 .bp-panel{display:none;flex:1;min-height:0;overflow:hidden}
 .bp-panel.on{display:flex}
 
 /* run progress panel */
 .run-progress{flex:1;display:flex;flex-direction:column;overflow-y:auto;padding:8px 16px;gap:6px}
-.rp-turn{display:flex;align-items:flex-start;gap:10px;padding:6px 10px;border-radius:var(--r6);background:var(--panel);border:1px solid var(--border)}
-.rp-turn.active{border-color:var(--blue-b);background:var(--blue-bg)}
-.rp-turn-icon{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--rec);border:1px solid var(--border)}
-.rp-turn-icon svg{width:11px;height:11px;color:var(--t3)}
-.rp-turn-icon.blue{background:var(--blue-bg);border-color:var(--blue-b)}
-.rp-turn-icon.blue svg{color:var(--blue)}
-.rp-turn-icon.green{background:var(--green-bg);border-color:var(--green-b)}
-.rp-turn-icon.green svg{color:var(--green)}
+.rp-turn{display:flex;align-items:flex-start;gap:10px;padding:6px 10px;border-radius:var(--radius-md);background:var(--surface-panel);border:1px solid var(--border-default)}
+.rp-turn.active{border-color:var(--color-brand-border);background:var(--color-brand-faint)}
+.rp-turn-icon{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--surface-recessed);border:1px solid var(--border-default)}
+.rp-turn-icon svg{width:11px;height:11px;color:var(--text-tertiary)}
+.rp-turn-icon.blue{background:var(--color-brand-faint);border-color:var(--color-brand-border)}
+.rp-turn-icon.blue svg{color:var(--color-brand)}
+.rp-turn-icon.green{background:var(--color-positive-bg);border-color:var(--color-positive-border)}
+.rp-turn-icon.green svg{color:var(--color-positive)}
 .rp-turn-body{flex:1;min-width:0}
-.rp-turn-label{font-size:11px;font-weight:500;color:var(--t1)}
-.rp-turn-meta{font-size:10px;color:var(--t3);margin-top:2px;font-family:var(--mono)}
-.rp-turn-output{font-size:11px;color:var(--t2);margin-top:4px;font-family:var(--mono);background:var(--rec);padding:4px 8px;border-radius:var(--r4);line-height:1.55}
-.spinner{display:inline-block;width:10px;height:10px;border:1.5px solid var(--blue-b);border-top-color:var(--blue);border-radius:50%;animation:spin 600ms linear infinite;flex-shrink:0;margin-top:6px}
+.rp-turn-label{font-size:11px;font-weight:500;color:var(--text-primary)}
+.rp-turn-meta{font-size:10px;color:var(--text-tertiary);margin-top:2px;font-family:var(--font-mono)}
+.rp-turn-output{font-size:11px;color:var(--text-secondary);margin-top:4px;font-family:var(--font-mono);background:var(--surface-recessed);padding:4px 8px;border-radius:var(--radius-sm);line-height:1.55}
+.spinner{display:inline-block;width:10px;height:10px;border:1.5px solid var(--color-brand-border);border-top-color:var(--color-brand);border-radius:50%;animation:spin 600ms linear infinite;flex-shrink:0;margin-top:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* terminal/log */
 .log-panel{flex:1;display:flex;flex-direction:column;overflow:hidden}
-.log-body{flex:1;overflow-y:auto;padding:6px 14px;font-family:var(--mono);font-size:11px;line-height:1.65;color:var(--t2);background:var(--rec)}
+.log-body{flex:1;overflow-y:auto;padding:6px 14px;font-family:var(--font-mono);font-size:11px;line-height:1.65;color:var(--text-secondary);background:var(--surface-recessed)}
 .log-line{display:flex;gap:10px}
-.log-ts{color:var(--t4);flex-shrink:0;width:70px}
+.log-ts{color:var(--text-disabled);flex-shrink:0;width:70px}
 .log-lvl{flex-shrink:0;font-weight:600;width:42px}
-.log-lvl.info{color:var(--blue)}.log-lvl.warn{color:var(--amber)}.log-lvl.err{color:var(--red)}.log-lvl.ok{color:var(--green)}
-.log-msg{color:var(--t2)}
-.log-msg .hl{color:var(--t1);font-weight:500}
-.log-msg .mono{color:var(--blue)}
+.log-lvl.info{color:var(--color-brand)}.log-lvl.warn{color:var(--color-warning)}.log-lvl.err{color:var(--color-negative)}.log-lvl.ok{color:var(--color-positive)}
+.log-msg{color:var(--text-secondary)}
+.log-msg .hl{color:var(--text-primary);font-weight:500}
+.log-msg .mono{color:var(--color-brand)}
 
 /* test suite panel */
 .test-panel{flex:1;overflow-y:auto;display:flex;flex-direction:column}
-.test-row{display:flex;align-items:center;gap:10px;padding:7px 16px;border-bottom:1px solid var(--bfaint);font-size:11px;cursor:pointer;transition:background 80ms}
-.test-row:hover{background:var(--hover)}
+.test-row{display:flex;align-items:center;gap:10px;padding:7px 16px;border-bottom:1px solid var(--border-faint);font-size:11px;cursor:pointer;transition:background 80ms}
+.test-row:hover{background:var(--surface-hover)}
 .test-icon{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.test-icon.pass{background:var(--green-bg)}.test-icon.pass svg{color:var(--green);width:10px;height:10px}
-.test-icon.fail{background:var(--red-bg)}.test-icon.fail svg{color:var(--red);width:10px;height:10px}
-.test-name{flex:1;color:var(--t1)}
+.test-icon.pass{background:var(--color-positive-bg)}.test-icon.pass svg{color:var(--color-positive);width:10px;height:10px}
+.test-icon.fail{background:var(--color-negative-bg)}.test-icon.fail svg{color:var(--color-negative);width:10px;height:10px}
+.test-name{flex:1;color:var(--text-primary)}
 .test-kind{font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.05em}
-.test-kind.adv{background:var(--red-bg);color:var(--red)}
-.test-kind.std{background:var(--rec);color:var(--t3)}
-.test-ms{color:var(--t3);font-family:var(--mono);font-size:10px;width:50px;text-align:right}
+.test-kind.adv{background:var(--color-negative-bg);color:var(--color-negative)}
+.test-kind.std{background:var(--surface-recessed);color:var(--text-tertiary)}
+.test-ms{color:var(--text-tertiary);font-family:var(--font-mono);font-size:10px;width:50px;text-align:right}
 
 /* diff mini */
-.diff-panel{flex:1;overflow-y:auto;padding:8px 16px;font-family:var(--mono);font-size:11px;line-height:1.65}
-.diff-hd{font-size:10px;font-weight:500;color:var(--t3);margin-bottom:6px;padding:4px 8px;background:var(--panel);border-radius:var(--r4);border:1px solid var(--border)}
+.diff-panel{flex:1;overflow-y:auto;padding:8px 16px;font-family:var(--font-mono);font-size:11px;line-height:1.65}
+.diff-hd{font-size:10px;font-weight:500;color:var(--text-tertiary);margin-bottom:6px;padding:4px 8px;background:var(--surface-panel);border-radius:var(--radius-sm);border:1px solid var(--border-default)}
 .dl{display:flex;gap:8px;padding:1px 6px;border-radius:3px}
-.dl.add{background:var(--green-bg);color:var(--green)}
-.dl.del{background:var(--red-bg);color:var(--red);text-decoration:line-through}
-.dl.ctx{color:var(--t3)}
-.dl-g{width:12px;flex-shrink:0;font-size:10px;color:var(--t4);user-select:none}
+.dl.add{background:var(--color-positive-bg);color:var(--color-positive)}
+.dl.del{background:var(--color-negative-bg);color:var(--color-negative);text-decoration:line-through}
+.dl.ctx{color:var(--text-tertiary)}
+.dl-g{width:12px;flex-shrink:0;font-size:10px;color:var(--text-disabled);user-select:none}
 
 /* status bar (VS Code style) */
 .status-bar{
   height:22px;flex-shrink:0;
-  background:var(--blue);
+  background:var(--color-brand);
   display:flex;align-items:center;gap:0;
   font-size:11px;font-weight:500;
   color:rgba(255,255,255,.9);
@@ -313,17 +299,17 @@ button{font:inherit;cursor:pointer;background:none;border:none;padding:0;color:i
 .sb-item svg{width:12px;height:12px;flex-shrink:0}
 .sb-sep{width:1px;height:100%;background:rgba(255,255,255,.2);flex-shrink:0}
 .sb-spacer{flex:1}
-.sb-item.warn{background:var(--amber);color:#fff}
+.sb-item.warn{background:var(--color-warning);color:#fff}
 .sb-item.warn:hover{background:#8F6128}
-.sb-item.ok{background:var(--green);color:#fff}
+.sb-item.ok{background:var(--color-positive);color:#fff}
 .sb-item.ok:hover{background:#255C43}
-.sb-item.err{background:var(--red);color:#fff}
+.sb-item.err{background:var(--color-negative);color:#fff}
 .sb-item.err:hover{background:#661B2A}
 .sb-pulse{display:inline-block;width:6px;height:6px;border-radius:50%;background:#fff;opacity:.8}
 
 /* toggle resize handles */
 .v-drag{height:4px;flex-shrink:0;cursor:row-resize;background:transparent;transition:background 100ms}
-.v-drag:hover{background:var(--blue-b)}
+.v-drag:hover{background:var(--color-brand-border)}
 </style>
 </head>
 <body>
@@ -346,7 +332,7 @@ button{font:inherit;cursor:pointer;background:none;border:none;padding:0;color:i
   <div class="tb-center">
     <span class="agent-name">triage_agent</span>
     <span class="agent-ver">v2.2.0</span>
-    <span class="badge b-amber"><span class="dot" style="background:var(--amber)"></span>Candidate</span>
+    <span class="badge b-amber"><span class="dot" style="background:var(--color-warning)"></span>Candidate</span>
   </div>
 
   <div class="tb-right">
@@ -464,9 +450,9 @@ button{font:inherit;cursor:pointer;background:none;border:none;padding:0;color:i
         <span class="lbadge lbn">depr</span>
       </div>
       <div class="lp-sec">Change &mdash; v2.2.0</div>
-      <div style="padding:6px 12px;font-size:11px;color:var(--t3);line-height:1.6">
+      <div style="padding:6px 12px;font-size:11px;color:var(--text-tertiary);line-height:1.6">
         Add class actions to exclusions list. Wire triage_system_prompt v1.5.<br>
-        <span style="color:var(--t4);font-family:var(--mono);font-size:10px">J. Morris &middot; 28 May 2026</span>
+        <span style="color:var(--text-disabled);font-family:var(--font-mono);font-size:10px">J. Morris &middot; 28 May 2026</span>
       </div>
     </div>
 
@@ -500,8 +486,8 @@ button{font:inherit;cursor:pointer;background:none;border:none;padding:0;color:i
           </div>
           <div class="canvas-title">
             triage_agent
-            <span class="badge b-amber"><span class="dot" style="background:var(--amber)"></span>Candidate</span>
-            <span class="badge b-gray" style="font-size:9px;font-family:var(--mono)">sha: 3e7b8d04</span>
+            <span class="badge b-amber"><span class="dot" style="background:var(--color-warning)"></span>Candidate</span>
+            <span class="badge b-gray" style="font-size:9px;font-family:var(--font-mono)">sha: 3e7b8d04</span>
           </div>
           <div class="canvas-sub">High materiality &middot; claude-sonnet-4 &middot; t=0.1 &middot; D&amp;O underwriting triage</div>
         </div>
@@ -516,26 +502,26 @@ button{font:inherit;cursor:pointer;background:none;border:none;padding:0;color:i
                 <span class="badge b-gray" style="font-size:9px">4 bindings</span>
                 <span class="bind-tag text">2 text</span>
                 <span class="bind-tag file">1 file</span>
-                <span class="bind-tag" style="background:var(--rec);color:var(--t3)">1 const</span>
+                <span class="bind-tag" style="background:var(--surface-recessed);color:var(--text-tertiary)">1 const</span>
               </span>
             </div>
             <div class="sc-body" style="gap:0;padding:0">
 
               <!-- legend strip -->
-              <div style="display:flex;gap:16px;padding:7px 14px 6px;border-bottom:1px solid var(--border);background:var(--rec)">
-                <span style="font-size:10px;color:var(--t3);display:flex;align-items:center;gap:4px">
+              <div style="display:flex;gap:16px;padding:7px 14px 6px;border-bottom:1px solid var(--border-default);background:var(--surface-recessed)">
+                <span style="font-size:10px;color:var(--text-tertiary);display:flex;align-items:center;gap:4px">
                   <span class="bind-src" style="padding:1px 6px">src</span> app input field
                 </span>
-                <span style="font-size:10px;color:var(--t3);display:flex;align-items:center;gap:4px">
-                  <span style="font-size:10px;color:var(--t4)">&rarr;</span> resolution
+                <span style="font-size:10px;color:var(--text-tertiary);display:flex;align-items:center;gap:4px">
+                  <span style="font-size:10px;color:var(--text-disabled)">&rarr;</span> resolution
                 </span>
-                <span style="font-size:10px;color:var(--t3);display:flex;align-items:center;gap:4px">
+                <span style="font-size:10px;color:var(--text-tertiary);display:flex;align-items:center;gap:4px">
                   <span class="bind-dst" style="padding:1px 6px">dst</span> prompt variable
                 </span>
               </div>
 
               <!-- Row 1 — plain input_data field -->
-              <div style="padding:9px 14px;border-bottom:1px solid var(--border)">
+              <div style="padding:9px 14px;border-bottom:1px solid var(--border-default)">
                 <div class="bind-row" style="border:none;padding:0">
                   <span class="bind-src">submission_id</span>
                   <span class="bind-arrow">&rarr;</span>
@@ -543,23 +529,23 @@ button{font:inherit;cursor:pointer;background:none;border:none;padding:0;color:i
                   <span class="bind-tag text" style="margin-left:auto">text</span>
                   <span class="bind-meta" style="margin-left:8px">input_data.submission_id</span>
                 </div>
-                <div style="font-size:10px;color:var(--t4);margin-top:3px;padding-left:2px">String field passed directly from the application payload. Resolved at runtime, injected inline into the prompt template.</div>
+                <div style="font-size:10px;color:var(--text-disabled);margin-top:3px;padding-left:2px">String field passed directly from the application payload. Resolved at runtime, injected inline into the prompt template.</div>
               </div>
 
               <!-- Row 2 — const -->
-              <div style="padding:9px 14px;border-bottom:1px solid var(--border)">
+              <div style="padding:9px 14px;border-bottom:1px solid var(--border-default)">
                 <div class="bind-row" style="border:none;padding:0">
-                  <span class="bind-src" style="background:var(--rec);color:var(--t3);border-color:var(--border)">(none)</span>
+                  <span class="bind-src" style="background:var(--surface-recessed);color:var(--text-tertiary);border-color:var(--border-default)">(none)</span>
                   <span class="bind-arrow">&rarr;</span>
                   <span class="bind-dst">&#123;&#123;line_of_business&#125;&#125;</span>
-                  <span class="bind-tag" style="margin-left:auto;background:var(--rec);color:var(--t3)">const</span>
+                  <span class="bind-tag" style="margin-left:auto;background:var(--surface-recessed);color:var(--text-tertiary)">const</span>
                   <span class="bind-meta" style="margin-left:8px">const: "D&amp;O"</span>
                 </div>
-                <div style="font-size:10px;color:var(--t4);margin-top:3px;padding-left:2px">Fixed constant baked into this agent version. Not sourced from application input.</div>
+                <div style="font-size:10px;color:var(--text-disabled);margin-top:3px;padding-left:2px">Fixed constant baked into this agent version. Not sourced from application input.</div>
               </div>
 
               <!-- Row 3 — connector text fetch -->
-              <div style="padding:9px 14px;border-bottom:1px solid var(--border)">
+              <div style="padding:9px 14px;border-bottom:1px solid var(--border-default)">
                 <div class="bind-row" style="border:none;padding:0">
                   <span class="bind-src">context_ref</span>
                   <span class="bind-arrow">&rarr;</span>
@@ -567,7 +553,7 @@ button{font:inherit;cursor:pointer;background:none;border:none;padding:0;color:i
                   <span class="bind-tag text" style="margin-left:auto">text</span>
                   <span class="bind-meta" style="margin-left:8px">fetch: edms.get_summary</span>
                 </div>
-                <div style="font-size:10px;color:var(--t4);margin-top:3px;padding-left:2px">Connector fetches structured text from EDMS using the reference. Returns a string injected into the prompt template.</div>
+                <div style="font-size:10px;color:var(--text-disabled);margin-top:3px;padding-left:2px">Connector fetches structured text from EDMS using the reference. Returns a string injected into the prompt template.</div>
               </div>
 
               <!-- Row 4 — FILE BINDING (expanded) -->
@@ -589,7 +575,7 @@ button{font:inherit;cursor:pointer;background:none;border:none;padding:0;color:i
                   </div>
 
                   <!-- connector -->
-                  <div class="bd-row" style="padding:6px 10px;background:var(--rec);border-bottom:1px solid var(--border)">
+                  <div class="bd-row" style="padding:6px 10px;background:var(--surface-recessed);border-bottom:1px solid var(--border-default)">
                     <span class="bd-lbl" style="display:flex;align-items:center;gap:5px">
                       <svg viewBox="0 0 14 14" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="12" height="8" rx="1.5"/><path d="M4 4V3a1 1 0 011-1h4a1 1 0 011 1v1"/></svg>
                       Storage connector
@@ -597,7 +583,7 @@ button{font:inherit;cursor:pointer;background:none;border:none;padding:0;color:i
                     <span class="bd-val" style="display:flex;align-items:center;gap:6px">
                       <span class="connector-dot"></span>
                       <span class="bd-connector-name">sharepoint_edms</span>
-                      <span style="font-size:9px;color:var(--t3)">SharePoint Online</span>
+                      <span style="font-size:9px;color:var(--text-tertiary)">SharePoint Online</span>
                     </span>
                   </div>
 
@@ -606,21 +592,21 @@ button{font:inherit;cursor:pointer;background:none;border:none;padding:0;color:i
                     <span class="bd-lbl">File reference</span>
                     <span class="bd-val">input_data.document_ref</span>
                   </div>
-                  <div style="padding:3px 10px 6px;font-size:10px;color:var(--t4)">
-                    Application passes a file reference ID at runtime — e.g. <span style="font-family:var(--mono);color:var(--t3)">sites/uw/docs/SUB-2026-0142/acord25.pdf</span>. Verity does not store the file — it resolves it on demand using the application&rsquo;s own reference.
+                  <div style="padding:3px 10px 6px;font-size:10px;color:var(--text-disabled)">
+                    Application passes a file reference ID at runtime — e.g. <span style="font-family:var(--font-mono);color:var(--text-tertiary)">sites/uw/docs/SUB-2026-0142/acord25.pdf</span>. Verity does not store the file — it resolves it on demand using the application&rsquo;s own reference.
                   </div>
 
                   <!-- access token -->
-                  <div class="bd-row" style="border-top:1px solid var(--bfaint)">
+                  <div class="bd-row" style="border-top:1px solid var(--border-faint)">
                     <span class="bd-lbl">Access token</span>
                     <span class="bd-val">input_data.sp_access_token</span>
                   </div>
-                  <div style="padding:3px 10px 6px;font-size:10px;color:var(--t4)">
+                  <div style="padding:3px 10px 6px;font-size:10px;color:var(--text-disabled)">
                     The application passes its own access token at runtime. Verity uses it for this request only — no token is persisted, logged, or stored in the decision record.
                   </div>
 
                   <!-- what happens -->
-                  <div class="bd-row" style="border-top:1px solid var(--bfaint)">
+                  <div class="bd-row" style="border-top:1px solid var(--border-faint)">
                     <span class="bd-lbl">Fetch result</span>
                     <span class="bd-val ok">PDF &rarr; base64 content_block</span>
                   </div>
@@ -632,18 +618,18 @@ button{font:inherit;cursor:pointer;background:none;border:none;padding:0;color:i
                     <span class="bd-lbl">In prompt template</span>
                     <span class="bd-val muted">variable not injected as text</span>
                   </div>
-                  <div style="padding:4px 10px 7px;font-size:10px;color:var(--t4)">
-                    The resolved file is sent as a native Claude content block (document or image), not injected as text into the prompt template. The variable <span style="font-family:var(--mono);color:var(--t3)">&#123;&#123;submission_document&#125;&#125;</span> in the prompt is a positional marker only — Claude sees the binary alongside the prompt, not embedded inside it.
+                  <div style="padding:4px 10px 7px;font-size:10px;color:var(--text-disabled)">
+                    The resolved file is sent as a native Claude content block (document or image), not injected as text into the prompt template. The variable <span style="font-family:var(--font-mono);color:var(--text-tertiary)">&#123;&#123;submission_document&#125;&#125;</span> in the prompt is a positional marker only — Claude sees the binary alongside the prompt, not embedded inside it.
                   </div>
 
                   <!-- supported types -->
-                  <div style="display:flex;gap:5px;padding:6px 10px 8px;border-top:1px solid var(--bfaint);flex-wrap:wrap">
-                    <span style="font-size:9px;font-weight:600;color:var(--t3);letter-spacing:.05em;text-transform:uppercase;padding-top:2px">Supported:</span>
-                    <span style="font-size:10px;padding:1px 6px;border-radius:3px;background:var(--rec);color:var(--t2);border:1px solid var(--border)">PDF</span>
-                    <span style="font-size:10px;padding:1px 6px;border-radius:3px;background:var(--rec);color:var(--t2);border:1px solid var(--border)">JPEG / PNG</span>
-                    <span style="font-size:10px;padding:1px 6px;border-radius:3px;background:var(--rec);color:var(--t2);border:1px solid var(--border)">TIFF</span>
-                    <span style="font-size:10px;padding:1px 6px;border-radius:3px;background:var(--rec);color:var(--t2);border:1px solid var(--border)">WEBP</span>
-                    <span style="font-size:10px;color:var(--t4);padding-top:3px">via connector fetch &rarr; base64</span>
+                  <div style="display:flex;gap:5px;padding:6px 10px 8px;border-top:1px solid var(--border-faint);flex-wrap:wrap">
+                    <span style="font-size:9px;font-weight:600;color:var(--text-tertiary);letter-spacing:.05em;text-transform:uppercase;padding-top:2px">Supported:</span>
+                    <span style="font-size:10px;padding:1px 6px;border-radius:3px;background:var(--surface-recessed);color:var(--text-secondary);border:1px solid var(--border-default)">PDF</span>
+                    <span style="font-size:10px;padding:1px 6px;border-radius:3px;background:var(--surface-recessed);color:var(--text-secondary);border:1px solid var(--border-default)">JPEG / PNG</span>
+                    <span style="font-size:10px;padding:1px 6px;border-radius:3px;background:var(--surface-recessed);color:var(--text-secondary);border:1px solid var(--border-default)">TIFF</span>
+                    <span style="font-size:10px;padding:1px 6px;border-radius:3px;background:var(--surface-recessed);color:var(--text-secondary);border:1px solid var(--border-default)">WEBP</span>
+                    <span style="font-size:10px;color:var(--text-disabled);padding-top:3px">via connector fetch &rarr; base64</span>
                   </div>
                 </div>
 
@@ -657,8 +643,8 @@ button{font:inherit;cursor:pointer;background:none;border:none;padding:0;color:i
             <div class="sc-head">
               <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3h10v8a1 1 0 01-1 1H4a1 1 0 01-1-1V3z"/><line x1="5" y1="7" x2="11" y2="7"/></svg>
               <span class="sc-head-title">System prompt &mdash; triage_system_prompt</span>
-              <span class="badge b-blue" style="margin-left:8px;font-family:var(--mono)">v1.5.0</span>
-              <button class="tb-btn btn-ghost" style="margin-left:auto;font-size:11px;padding:3px 8px;border:1px solid var(--border)">Open editor</button>
+              <span class="badge b-blue" style="margin-left:8px;font-family:var(--font-mono)">v1.5.0</span>
+              <button class="tb-btn btn-ghost" style="margin-left:auto;font-size:11px;padding:3px 8px;border:1px solid var(--border-default)">Open editor</button>
             </div>
             <div class="sc-body">
               <div class="prompt-preview">
@@ -669,7 +655,7 @@ button{font:inherit;cursor:pointer;background:none;border:none;padding:0;color:i
                 AMBER: loss ratio &gt; 0.65, &lt;3yr trading, prior settled claims with thin financials<br><br>
                 Return: GREEN / AMBER / RED with reasoning and confidence.
               </div>
-              <div style="font-size:10px;color:var(--t3);font-family:var(--mono);margin-top:2px">SHA-256: a3f9c2d1&hellip; &middot; 847 tokens &middot; behavioural tier</div>
+              <div style="font-size:10px;color:var(--text-tertiary);font-family:var(--font-mono);margin-top:2px">SHA-256: a3f9c2d1&hellip; &middot; 847 tokens &middot; behavioural tier</div>
             </div>
           </div>
 
@@ -680,7 +666,7 @@ button{font:inherit;cursor:pointer;background:none;border:none;padding:0;color:i
               <span class="sc-head-title">Authorised tools</span>
               <span class="badge b-green" style="margin-left:auto">4 tools</span>
               <label style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:400;margin-left:14px;cursor:pointer">
-                <input type="checkbox" checked style="accent-color:var(--blue)"> Mock mode
+                <input type="checkbox" checked style="accent-color:var(--color-brand)"> Mock mode
               </label>
             </div>
             <div class="sc-body">
@@ -747,9 +733,9 @@ button{font:inherit;cursor:pointer;background:none;border:none;padding:0;color:i
             </div>
             <div class="sc-body">
               <div class="bind-row">
-                <span style="font-size:11px;font-weight:500;color:var(--t2)">post_run</span>
+                <span style="font-size:11px;font-weight:500;color:var(--text-secondary)">post_run</span>
                 <span class="bind-arrow">&rarr;</span>
-                <span style="font-size:11px;color:var(--t3)">if confidence &lt; 0.80 &rarr; set hitl_required = true</span>
+                <span style="font-size:11px;color:var(--text-tertiary)">if confidence &lt; 0.80 &rarr; set hitl_required = true</span>
               </div>
             </div>
           </div>
@@ -781,11 +767,11 @@ button{font:inherit;cursor:pointer;background:none;border:none;padding:0;color:i
           <div class="rp-field">
             <div class="rp-flbl">Context document</div>
             <div style="display:flex;gap:5px;margin-top:2px">
-              <button class="tb-btn btn-ghost" style="font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:var(--r4);flex:1">
+              <button class="tb-btn btn-ghost" style="font-size:11px;padding:4px 8px;border:1px solid var(--border-default);border-radius:var(--radius-sm);flex:1">
                 <svg viewBox="0 0 14 14" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 2v7M4 6l3 3 3-3"/><rect x="1" y="10" width="12" height="2" rx="1"/></svg>
                 Upload
               </button>
-              <button class="tb-btn btn-ghost" style="font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:var(--r4);flex:1">
+              <button class="tb-btn btn-ghost" style="font-size:11px;padding:4px 8px;border:1px solid var(--border-default);border-radius:var(--radius-sm);flex:1">
                 <svg viewBox="0 0 14 14" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="10" height="10" rx="1.5"/></svg>
                 Vault
               </button>
@@ -799,7 +785,7 @@ button{font:inherit;cursor:pointer;background:none;border:none;padding:0;color:i
 
           <div class="rp-sec">Last output</div>
           <div class="output-block">
-triage_signal: <span style="color:var(--green);font-weight:600">GREEN</span><br>
+triage_signal: <span style="color:var(--color-positive);font-weight:600">GREEN</span><br>
 confidence: 0.91<br>
 reasoning: "Clean loss history,<br>
   established trading, no<br>
@@ -878,7 +864,7 @@ flags: []
           <div class="rp-sec">Test suite</div>
           <div class="rp-row"><span class="rp-lbl">Total cases</span><span class="rp-val">42</span></div>
           <div class="rp-row"><span class="rp-lbl">Passed</span><span class="rp-val green">40</span></div>
-          <div class="rp-row"><span class="rp-lbl">Failed</span><span class="rp-val" style="color:var(--red)">2</span></div>
+          <div class="rp-row"><span class="rp-lbl">Failed</span><span class="rp-val" style="color:var(--color-negative)">2</span></div>
           <div class="rp-row"><span class="rp-lbl">Adversarial</span><span class="rp-val">8 / 10</span></div>
         </div>
 
@@ -894,7 +880,7 @@ flags: []
           <div class="rp-sec">Approval record</div>
           <div class="rp-row"><span class="rp-lbl">Approver</span><span class="rp-val">pending</span></div>
           <div class="rp-row"><span class="rp-lbl">Evidence reviewed</span><span class="rp-val amber">2 / 5</span></div>
-          <div class="rp-row"><span class="rp-lbl">Champion confirm</span><span class="rp-val" style="color:var(--t4)">not required yet</span></div>
+          <div class="rp-row"><span class="rp-lbl">Champion confirm</span><span class="rp-val" style="color:var(--text-disabled)">not required yet</span></div>
         </div>
 
       </div><!-- /right-pane -->
@@ -972,7 +958,7 @@ flags: []
             <div class="rp-turn-body">
               <div class="rp-turn-label">Complete &mdash; Decision logged</div>
               <div class="rp-turn-meta">run_a3f9c2 &middot; 1.2s total &middot; 2,841 tokens &middot; $0.004</div>
-              <div class="rp-turn-output" style="color:var(--green)">OUTPUT: triage_signal=GREEN, confidence=0.91, flags=[]</div>
+              <div class="rp-turn-output" style="color:var(--color-positive)">OUTPUT: triage_signal=GREEN, confidence=0.91, flags=[]</div>
             </div>
           </div>
           <div id="active-turn" style="display:none" class="rp-turn active">
@@ -1006,10 +992,10 @@ flags: []
       <!-- TEST SUITE -->
       <div class="bp-panel" id="bp-tests">
         <div class="test-panel">
-          <div style="display:flex;align-items:center;padding:6px 16px;border-bottom:1px solid var(--border);font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--t3);gap:12px">
+          <div style="display:flex;align-items:center;padding:6px 16px;border-bottom:1px solid var(--border-default);font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text-tertiary);gap:12px">
             <span>Test case</span>
-            <span style="margin-left:auto;color:var(--green)">40 passed</span>
-            <span style="color:var(--red)">2 failed</span>
+            <span style="margin-left:auto;color:var(--color-positive)">40 passed</span>
+            <span style="color:var(--color-negative)">2 failed</span>
           </div>
           <div class="test-row">
             <div class="test-icon fail"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="2" x2="10" y2="10"/><line x1="10" y1="2" x2="2" y2="10"/></svg></div>
@@ -1041,14 +1027,14 @@ flags: []
             <span class="test-kind adv">adversarial</span>
             <span class="test-ms">1.4s</span>
           </div>
-          <div style="padding:5px 16px;font-size:10px;color:var(--t4)">+ 37 more passing cases&hellip;</div>
+          <div style="padding:5px 16px;font-size:10px;color:var(--text-disabled)">+ 37 more passing cases&hellip;</div>
         </div>
       </div>
 
       <!-- PROMPT DIFF -->
       <div class="bp-panel" id="bp-diff">
         <div class="diff-panel">
-          <div class="diff-hd">triage_system_prompt &mdash; v1.4.0 &rarr; v1.5.0 &nbsp;&middot;&nbsp; <span style="color:var(--green)">+2</span> &nbsp;<span style="color:var(--red)">&minus;2</span> &nbsp;&middot;&nbsp; Exclusions block &nbsp;&middot;&nbsp; <span style="color:var(--red)">2 test failures traced here</span></div>
+          <div class="diff-hd">triage_system_prompt &mdash; v1.4.0 &rarr; v1.5.0 &nbsp;&middot;&nbsp; <span style="color:var(--color-positive)">+2</span> &nbsp;<span style="color:var(--color-negative)">&minus;2</span> &nbsp;&middot;&nbsp; Exclusions block &nbsp;&middot;&nbsp; <span style="color:var(--color-negative)">2 test failures traced here</span></div>
           <div class="dl ctx"><span class="dl-g">&nbsp;</span>Apply the following rules before scoring:</div>
           <div class="dl ctx"><span class="dl-g">&nbsp;</span>Hard RED &mdash; decline immediately:</div>
           <div class="dl del"><span class="dl-g">&minus;</span>- Sanctions exposure (OFAC / SDN)</div>

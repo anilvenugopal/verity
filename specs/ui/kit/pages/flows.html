@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verity — UX flows & catalog</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles/tokens.css">
+<link rel="stylesheet" href="../styles/base.css">
+<link rel="stylesheet" href="../styles/layout.css">
+<link rel="stylesheet" href="../styles/components.css">
+<link rel="stylesheet" href="../styles/utilities.css">
+<style>
+  .topbar-row { display: flex; align-items: center; gap: var(--space-3); width: 100%; }
+  .topbar__title { font-size: var(--fs-label); font-weight: var(--fw-medium); color: var(--text-secondary); }
+  .canvas-pad { padding: var(--space-6) var(--space-7) 80px; max-width: 1000px; }
+  .sec__title { font-size: var(--fs-title); font-weight: var(--fw-semibold); letter-spacing: -0.01em; }
+  .sec__lede { color: var(--text-secondary); font-size: var(--fs-label); line-height: 1.55; margin: 6px 0 var(--space-5); max-width: 80ch; }
+  .sub { margin-top: var(--space-6); }
+  .sub__head { display: flex; align-items: baseline; gap: var(--space-3); padding-bottom: var(--space-2); margin-bottom: var(--space-3); border-bottom: 0.5px solid var(--border-default); }
+  .sub__title { font-size: var(--fs-h3); font-weight: var(--fw-semibold); }
+  .sub__ref { font-size: var(--fs-caption); color: var(--text-tertiary); font-family: var(--font-mono); }
+  .sub__desc { font-size: var(--fs-label); color: var(--text-secondary); line-height: 1.5; margin-bottom: var(--space-3); max-width: 80ch; }
+  .diagram { background: var(--surface-panel); border: 0.5px solid var(--border-default); border-radius: var(--radius-lg); padding: var(--space-5); overflow-x: auto; margin-bottom: var(--space-3); }
+  .mermaid { display: flex; justify-content: center; min-height: 40px; }
+  /* status + priority pills */
+  .pill { display: inline-flex; align-items: center; gap: 5px; font-size: var(--fs-eyebrow); font-weight: var(--fw-semibold); letter-spacing: 0.04em;
+          text-transform: uppercase; border-radius: var(--radius-sm); padding: 1px 7px; border: 1px solid transparent; white-space: nowrap; }
+  .pill__dot { width: 6px; height: 6px; border-radius: 50%; }
+  .pill--built { background: var(--color-positive-bg); color: var(--color-positive); border-color: var(--color-positive-border); }
+  .pill--built .pill__dot { background: var(--color-positive); }
+  .pill--proto { background: var(--color-warning-bg); color: var(--color-warning); border-color: var(--color-warning-border); }
+  .pill--proto .pill__dot { background: var(--color-warning); }
+  .pill--none  { background: var(--surface-recessed); color: var(--text-tertiary); border-color: var(--border-default); }
+  .pill--none .pill__dot { background: var(--text-disabled); }
+  .pri { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); }
+  /* screen chips for area sections */
+  .scr { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-3) 0 var(--space-2); }
+  .scr a, .scr span { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--radius-sm); font-size: var(--fs-caption); text-decoration: none; border: 1px solid var(--border-default); }
+  .scr a { background: var(--color-brand-faint); border-color: var(--color-brand-border); color: var(--color-brand); }
+  .scr a:hover { border-color: var(--color-brand); }
+  .scr span.s-proto { background: var(--color-warning-bg); border-color: var(--color-warning-border); color: var(--color-warning); }
+  .scr span.s-none { background: var(--surface-recessed); border-style: dashed; color: var(--text-tertiary); }
+  /* catalog table */
+  .cat { width: 100%; border: 0.5px solid var(--border-default); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface-panel); }
+  .cat__group { background: var(--surface-recessed); padding: 8px 16px; font-size: var(--fs-eyebrow); font-weight: var(--fw-semibold); letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-tertiary); border-top: 0.5px solid var(--border-default); }
+  .cat__row { display: grid; grid-template-columns: 170px 1fr 50px 130px; gap: var(--space-3); align-items: center; padding: 9px 16px; border-top: 0.5px solid var(--border-faint); }
+  .cat__id { font-family: var(--font-mono); font-size: var(--fs-caption); color: var(--text-secondary); }
+  .cat__name { font-size: var(--fs-label); }
+  .cat__name a { color: var(--color-brand); text-decoration: none; }
+  .cat__name a:hover { text-decoration: underline; }
+  .legend { display: flex; flex-wrap: wrap; gap: var(--space-4); margin-bottom: var(--space-5); font-size: var(--fs-caption); color: var(--text-secondary); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  [data-section][hidden] { display: none; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="app__topbar">
+    <div class="topbar-row">
+      <a class="topbar__logo" href="sample.html" aria-label="Verity — Home" style="padding-left:var(--space-4);">
+        <img class="wordmark wordmark--light" src="../assets/verity-wordmark-dark.png" alt="Verity" width="74" height="22">
+        <img class="wordmark wordmark--dark" src="../assets/verity-wordmark-white.png" alt="" aria-hidden="true" width="74" height="22">
+      </a>
+      <span class="topbar__title">UX flows &amp; wireframe catalog</span>
+      <span class="l-spacer"></span>
+      <div class="topbar__utils" style="padding-right:var(--space-4);">
+        <a class="btn btn--ghost btn--sm" href="styleguide.html"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-app-launcher"></use></svg>Styleguide</a>
+        <button class="btn btn--icon btn--ghost" data-theme-toggle aria-label="Toggle theme"><svg class="icon" aria-hidden="true"><use href="#i-theme"></use></svg></button>
+      </div>
+    </div>
+  </header>
+
+  <div class="app__body">
+    <nav class="app__sidebar" aria-label="Flows">
+      <div class="sidebar__section">
+        <div class="sidebar__section-label">Map</div>
+        <div class="nav-item" data-nav="overview"><svg class="icon" aria-hidden="true"><use href="#i-app-home"></use></svg>Overview</div>
+        <div class="nav-item" data-nav="catalog"><svg class="icon" aria-hidden="true"><use href="#i-decision-log"></use></svg>Full catalog</div>
+      </div>
+      <div class="sidebar__section">
+        <div class="sidebar__section-label">Flows by area</div>
+        <div class="nav-item" data-nav="global"><svg class="icon" aria-hidden="true"><use href="#i-app-launcher"></use></svg>Global / shell</div>
+        <div class="nav-item" data-nav="auth"><svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg>Auth &amp; identity</div>
+        <div class="nav-item" data-nav="home"><svg class="icon" aria-hidden="true"><use href="#i-app-home"></use></svg>Home</div>
+        <div class="nav-item" data-nav="intake"><svg class="icon" aria-hidden="true"><use href="#i-app-intake"></use></svg>Intake</div>
+        <div class="nav-item" data-nav="studio"><svg class="icon" aria-hidden="true"><use href="#i-app-studio"></use></svg>Studio</div>
+        <div class="nav-item" data-nav="registry"><svg class="icon" aria-hidden="true"><use href="#i-app-registry"></use></svg>Registry</div>
+        <div class="nav-item" data-nav="observability"><svg class="icon" aria-hidden="true"><use href="#i-app-observability"></use></svg>Observability</div>
+        <div class="nav-item" data-nav="governance"><svg class="icon" aria-hidden="true"><use href="#i-app-governance"></use></svg>Governance</div>
+        <div class="nav-item" data-nav="compliance"><svg class="icon" aria-hidden="true"><use href="#i-app-compliance"></use></svg>Compliance</div>
+        <div class="nav-item" data-nav="harness"><svg class="icon" aria-hidden="true"><use href="#i-app-harness"></use></svg>Harness</div>
+        <div class="nav-item" data-nav="settings"><svg class="icon" aria-hidden="true"><use href="#i-app-settings"></use></svg>Settings</div>
+      </div>
+    </nav>
+
+    <main class="app__canvas">
+      <div class="canvas-pad">
+
+        <!-- ════ OVERVIEW ════ -->
+        <section data-section="overview">
+          <div class="sec__title">UX flows &amp; wireframe catalog</div>
+          <p class="sec__lede">The single place for every screen the product needs and how users move through it. Pick an area on the left for its journeys; <strong>Full catalog</strong> lists all screens with status. Nodes and links in blue open a built wireframe.</p>
+          <div class="legend">
+            <span><span class="pill pill--built"><span class="pill__dot"></span>Built</span> fresh kit page exists</span>
+            <span><span class="pill pill--proto"><span class="pill__dot"></span>Proto</span> only the old prototype</span>
+            <span><span class="pill pill--none"><span class="pill__dot"></span>None</span> not yet designed</span>
+          </div>
+          <div class="sub">
+            <div class="sub__head"><span class="sub__title">Build order</span></div>
+            <div class="sub__desc">
+              1 · <strong>P0 foundation</strong> — shell, styleguide, icon catalog <em>(done)</em>; help popover, toast, error states.<br>
+              2 · <strong>P0 product slices</strong> — Intake application management <em>(done)</em> → use cases → Studio canvas.<br>
+              3 · <strong>P1 governance loop</strong> — Registry · Observability · Governance · Compliance.<br>
+              4 · <strong>P2</strong> — Harness · triage · advanced settings.
+            </div>
+          </div>
+          <div class="sub">
+            <div class="sub__head"><span class="sub__title">Cross-cutting</span></div>
+            <div class="sub__desc">
+              Navigation philosophy (rail = app · sidebar = section · breadcrumb = where · Application Scope = which apps) is shown in the <a href="styleguide.html" style="color:var(--color-brand);">styleguide</a>.
+              Live updates ride the SSE bridge (<code style="font-family:var(--font-mono);font-size:11px;">contract/nats/subjects.md → verity.events.{run_id}</code>). Every screen ships an empty state + contextual help (§8).
+            </div>
+          </div>
+        </section>
+
+        <!-- ════ FULL CATALOG ════ -->
+        <section data-section="catalog" hidden>
+          <div class="sec__title">Full catalog</div>
+          <p class="sec__lede">Every screen, grouped by area. <span class="pri">P0/P1/P2</span> = build priority. Source: <code style="font-family:var(--font-mono);font-size:11px;">specs/ui/wireframe-catalog.md</code>.</p>
+          <div class="cat" id="catalog-table"></div>
+        </section>
+
+        <!-- ════ GLOBAL / SHELL ════ -->
+        <section data-section="global" hidden>
+          <div class="sec__title">Global / shell <span class="pri">P0</span></div>
+          <p class="sec__lede">The chrome every app lives in, and the global entry points.</p>
+          <div class="diagram"><pre class="mermaid">
+flowchart LR
+  U((Any screen)):::built -->|⌘/Ctrl J| P[Command palette]:::built
+  U -->|rail grid| L[App launcher]:::built
+  P --> A[Any app]:::built
+  L --> A
+  U -. "? affordance" .-> H[Help popover]:::todo
+  classDef built fill:#EEF4FA,stroke:#2C4E7E,color:#1D3557;
+  classDef todo fill:#F3F4F6,stroke:#C2C8D4,color:#6B7280,stroke-dasharray:4 3;
+          </pre></div>
+          <div class="scr">
+            <a href="sample.html">App shell ↗</a><a href="sample.html">Launcher ↗</a><a href="sample.html">Command palette ↗</a>
+            <a href="styleguide.html">Empty-state ↗</a><a href="../icons/catalog.html">Icon catalog ↗</a>
+            <span class="s-none">Help popover</span><span class="s-none">Toast / progress</span><span class="s-none">Error / 404</span>
+          </div>
+        </section>
+
+        <!-- ════ AUTH & IDENTITY ════ -->
+        <section data-section="auth" hidden>
+          <div class="sec__title">Auth &amp; identity <span class="pri">P0</span></div>
+          <p class="sec__lede">Sign-in establishes <strong>who</strong> (Microsoft Entra OIDC, or a local-dev mock). <strong>Roles always come from the Verity DB</strong> (append-only grants) — never from the token — so authorization is identical in both paths. Fail-closed everywhere.</p>
+          <div class="diagram"><pre class="mermaid">
+flowchart TD
+  U[User] --> SI[Sign-in landing]:::built
+  SI -->|Sign in with Microsoft| E[Microsoft Entra<br/>OIDC + PKCE]:::ext
+  E -->|callback · code| CB[Validate token<br/>JIT provision]:::none
+  SI -. local dev .-> Mock[Mock principal<br/>config roles seeded as grants]:::built
+  CB --> R[Resolve roles from DB<br/>platform + app-team grants]:::none
+  Mock --> R
+  R --> App([Land in app]):::built
+  R -.->|missing role| Denied[Access denied · 403]:::built
+  click SI "signin.html"
+  click App "sample.html"
+  click Denied "auth-states.html"
+  classDef built fill:#EEF4FA,stroke:#2C4E7E,color:#1D3557;
+  classDef ext fill:#FFFFFF,stroke:#9BA3B8,color:#374151;
+  classDef none fill:#F3F4F6,stroke:#C2C8D4,color:#6B7280,stroke-dasharray:4 3;
+          </pre></div>
+          <div class="scr">
+            <a href="signin.html">Sign-in ↗</a><a href="account-menu.html">Account menu ↗</a><a href="auth-states.html">Fail-closed states ↗</a>
+            <span class="s-none">OAuth callback (no UI)</span>
+          </div>
+        </section>
+
+        <!-- ════ HOME ════ -->
+        <section data-section="home" hidden>
+          <div class="sec__title">Home <span class="pri">P1</span></div>
+          <p class="sec__lede">Landing &amp; getting-started — a work queue of what needs you, recent decisions, jump-back-in.</p>
+          <div class="diagram"><pre class="mermaid">
+flowchart LR
+  H[Home]:::built --> Q[Work queue:<br/>approvals · failures · drift]:::built
+  H --> Rec[Recent decisions]:::built
+  H -->|rail / launcher| Apps[Any app]:::built
+  H --> N[Notifications]:::todo
+  click H "sample.html"
+  classDef built fill:#EEF4FA,stroke:#2C4E7E,color:#1D3557;
+  classDef todo fill:#F3F4F6,stroke:#C2C8D4,color:#6B7280,stroke-dasharray:4 3;
+          </pre></div>
+          <div class="scr"><a href="sample.html">Home ↗</a><span class="s-none">Notifications</span></div>
+        </section>
+
+        <!-- ════ INTAKE ════ -->
+        <section data-section="intake" hidden>
+          <div class="sec__title">Intake <span class="pri">P0</span></div>
+          <p class="sec__lede">"Intake" is the <strong>process</strong> of taking in a new AI <strong>use case</strong> (→ build → deploy). The app owns <strong>applications</strong> (governed tenants) and the <strong>use cases</strong> they take in.</p>
+
+          <div class="sub">
+            <div class="sub__head"><span class="sub__title">Applications — where the link lands</span><span class="sub__ref">landing + registry</span></div>
+            <p class="sub__desc">Applications you own and pending approvals pinned on top; a searchable registry below; <strong>+ New onboarding</strong> top-right. An application you're not a stakeholder of opens read-only in a modal (scope untouched).</p>
+            <div class="diagram"><pre class="mermaid">
+flowchart LR
+  Home([Home]):::built --> Apps[Applications landing]:::built
+  Apps --> Owned[You own]:::region
+  Apps --> Pend[Pending approvals]:::region
+  Apps --> Reg[Searchable registry]:::region
+  Apps --> New([+ New onboarding]):::action
+  Owned --> View[Application detail]:::built
+  Reg --> View
+  New --> Onb[Onboard application]:::built
+  Pend --> Appr[Approval review]:::built
+  click Home "sample.html"
+  click Apps "applications.html"
+  click View "application-detail.html"
+  click Onb "onboard-application.html"
+  click Appr "onboard-approval.html"
+  classDef built fill:#EEF4FA,stroke:#2C4E7E,color:#1D3557;
+  classDef region fill:#FFFFFF,stroke:#DDE1E7,color:#374151;
+  classDef action fill:#2C4E7E,stroke:#2C4E7E,color:#FFFFFF;
+            </pre></div>
+          </div>
+
+          <div class="sub">
+            <div class="sub__head"><span class="sub__title">Requestor &amp; approver — governed onboarding</span><span class="sub__ref">FR-IN-015</span></div>
+            <p class="sub__desc">Any platform author proposes; the application is pending until <strong>AI Governance + the business owner</strong> both sign off.</p>
+            <div class="diagram"><pre class="mermaid">
+flowchart TD
+  A[Applications]:::built -->|+ New onboarding| O[Onboard<br/>requestor]:::built
+  O -->|Save draft| O
+  O -->|Submit| P{{Pending approval}}:::state
+  P --> R[Approver view<br/>read-only + decide]:::built
+  R -->|Approve ×2| Act[Application active]:::state
+  R -->|Reject + reason| O
+  Act --> V[Application detail]:::built
+  click A "applications.html"
+  click O "onboard-application.html"
+  click R "onboard-approval.html"
+  click V "application-detail.html"
+  classDef built fill:#EEF4FA,stroke:#2C4E7E,color:#1D3557;
+  classDef state fill:#F7EFE0,stroke:#A87334,color:#7A5020;
+            </pre></div>
+          </div>
+
+          <div class="sub">
+            <div class="sub__head"><span class="sub__title">Application Scope — locking rules</span><span class="sub__ref">top-bar control</span></div>
+            <div class="diagram"><pre class="mermaid">
+stateDiagram-v2
+  [*] --> AllApps
+  AllApps --> Onboard: start onboarding
+  AllApps --> OwnApp: open / edit your own app
+  AllApps --> Modal: open another app (non-stakeholder)
+  Onboard --> AllApps: leave
+  OwnApp --> AllApps: leave
+  Modal --> AllApps: close modal
+  AllApps: Scope = All applications · selectable
+  Onboard: 🔒 New application
+  OwnApp: 🔒 that application
+  Modal: opens in a MODAL · selector inert
+            </pre></div>
+          </div>
+
+          <div class="sub">
+            <div class="sub__head"><span class="sub__title">Use-case lifecycle</span><span class="sub__ref">the items intake takes in</span></div>
+            <p class="sub__desc">Inside an application, a use case is taken in, classified, has obligations elicited, then is built (Studio) and deployed (Harness).</p>
+            <div class="diagram"><pre class="mermaid">
+flowchart LR
+  App[Application]:::built -->|+ New use case| C[Create use case]:::proto
+  C --> Cl[Classify<br/>risk tier · materiality]:::proto
+  Cl --> Ob[Elicit obligations]:::none
+  Ob --> B[Build in Studio]:::proto
+  B --> D[Deploy via Harness]:::none
+  D --> Run[Runs &amp; decisions]:::proto
+  click App "application-detail.html"
+  classDef built fill:#EEF4FA,stroke:#2C4E7E,color:#1D3557;
+  classDef proto fill:#F7EFE0,stroke:#A87334,color:#7A5020;
+  classDef none fill:#F3F4F6,stroke:#C2C8D4,color:#6B7280,stroke-dasharray:4 3;
+            </pre></div>
+          </div>
+
+          <div class="scr">
+            <a href="applications.html">Applications ↗</a><a href="onboard-application.html">Onboard ↗</a>
+            <a href="onboard-approval.html">Approval ↗</a><a href="application-detail.html">App detail ↗</a>
+            <span class="s-proto">Use-case create</span><span class="s-proto">Use-case detail</span><span class="s-proto">Use-case review / HITL</span>
+          </div>
+        </section>
+
+        <!-- ════ STUDIO ════ -->
+        <section data-section="studio" hidden>
+          <div class="sec__title">Studio <span class="pri">P0/P1</span></div>
+          <p class="sec__lede">The authoring canvas — compose an agent or task from prompts, tools, bindings; test; promote through the lifecycle.</p>
+          <div class="diagram"><pre class="mermaid">
+flowchart TD
+  E[Entity list<br/>agents · tasks · prompts]:::proto -->|New| Canvas[Authoring canvas<br/>library · composition · test]:::proto
+  Canvas --> PE[Prompt block editor]:::proto
+  PE --> Diff[Prompt diff<br/>+ failure attribution]:::proto
+  Canvas --> T[Test panel → run]:::proto
+  T --> Save[Save to test suite]:::none
+  Canvas --> Promote[Promote → lifecycle]:::none
+  classDef proto fill:#F7EFE0,stroke:#A87334,color:#7A5020;
+  classDef none fill:#F3F4F6,stroke:#C2C8D4,color:#6B7280,stroke-dasharray:4 3;
+          </pre></div>
+          <div class="scr"><span class="s-proto">Entity list</span><span class="s-proto">Agent canvas</span><span class="s-proto">Task canvas</span><span class="s-proto">Prompt editor</span><span class="s-proto">Prompt diff</span><span class="s-proto">Test panel</span><span class="s-none">Save-to-suite</span><span class="s-none">Version history</span></div>
+        </section>
+
+        <!-- ════ REGISTRY ════ -->
+        <section data-section="registry" hidden>
+          <div class="sec__title">Registry <span class="pri">P1</span></div>
+          <p class="sec__lede">Entities &amp; versions of record — the source of truth for what exists and how versions differ.</p>
+          <div class="diagram"><pre class="mermaid">
+flowchart LR
+  L[Entity registry<br/>lifecycle · materiality]:::none --> D[Entity detail<br/>composition · versions · perf]:::none
+  D --> VH[Version history]:::none
+  VH --> CD[Composition diff<br/>A vs B]:::none
+  classDef none fill:#F3F4F6,stroke:#C2C8D4,color:#6B7280,stroke-dasharray:4 3;
+          </pre></div>
+          <div class="scr"><span class="s-none">Registry list</span><span class="s-none">Entity detail</span><span class="s-none">Composition diff</span></div>
+        </section>
+
+        <!-- ════ OBSERVABILITY ════ -->
+        <section data-section="observability" hidden>
+          <div class="sec__title">Observability <span class="pri">P1</span></div>
+          <p class="sec__lede">Runs, traces, live monitoring — the decision log is the record; spans and live stream ride OTel / SSE.</p>
+          <div class="diagram"><pre class="mermaid">
+flowchart LR
+  R[Runs list]:::none --> RD[Run detail =<br/>decision log]:::proto
+  RD --> Tr[Trace / spans<br/>OTel · ADR-0013]:::none
+  R --> Live[Live run stream<br/>SSE verity.events]:::none
+  classDef proto fill:#F7EFE0,stroke:#A87334,color:#7A5020;
+  classDef none fill:#F3F4F6,stroke:#C2C8D4,color:#6B7280,stroke-dasharray:4 3;
+          </pre></div>
+          <div class="scr"><span class="s-none">Runs list</span><span class="s-proto">Run detail</span><span class="s-none">Trace / spans</span><span class="s-none">Live stream</span></div>
+        </section>
+
+        <!-- ════ GOVERNANCE ════ -->
+        <section data-section="governance" hidden>
+          <div class="sec__title">Governance <span class="pri">P0/P1</span></div>
+          <p class="sec__lede">Lifecycle, approvals, decisions — the promotion machine and its system-of-record decision log.</p>
+          <div class="diagram"><pre class="mermaid">
+flowchart TD
+  LB[Lifecycle board<br/>entities by state]:::none --> AG[Approval gate<br/>approval_record]:::none
+  AG --> DL[Decision log<br/>system of record]:::proto
+  LB --> Cmp[Challenger vs champion<br/>compare]:::none
+  Tri[Triage queue<br/>failures · HITL · drift]:::proto -.-> LB
+  classDef proto fill:#F7EFE0,stroke:#A87334,color:#7A5020;
+  classDef none fill:#F3F4F6,stroke:#C2C8D4,color:#6B7280,stroke-dasharray:4 3;
+          </pre></div>
+          <div class="scr"><span class="s-none">Lifecycle board</span><span class="s-none">Approval gate</span><span class="s-proto">Decision log</span><span class="s-none">Compare</span><span class="s-proto">Triage queue</span></div>
+        </section>
+
+        <!-- ════ COMPLIANCE ════ -->
+        <section data-section="compliance" hidden>
+          <div class="sec__title">Compliance <span class="pri">P1</span></div>
+          <p class="sec__lede">Audit, evidence, annotation — bundle decision logs + approvals + evidence; unified annotation &amp; visual provenance (ADR-0014).</p>
+          <div class="diagram"><pre class="mermaid">
+flowchart LR
+  P[Audit packages]:::none --> PB[Package builder<br/>logs + approvals + evidence]:::none
+  Ann[Annotation &amp; feedback<br/>ADR-0014]:::none --> Prov[Visual provenance]:::none
+  HQ[HITL override queue]:::none
+  classDef none fill:#F3F4F6,stroke:#C2C8D4,color:#6B7280,stroke-dasharray:4 3;
+          </pre></div>
+          <div class="scr"><span class="s-none">Audit packages</span><span class="s-none">Package builder</span><span class="s-none">Annotation</span><span class="s-none">Provenance</span><span class="s-none">HITL queue</span></div>
+        </section>
+
+        <!-- ════ HARNESS ════ -->
+        <section data-section="harness" hidden>
+          <div class="sec__title">Harness <span class="pri">P2</span></div>
+          <p class="sec__lede">Runtime execution cluster — clusters, workers, dispatch queue.</p>
+          <div class="diagram"><pre class="mermaid">
+flowchart LR
+  C[Clusters list + health]:::none --> CD[Cluster detail<br/>workers · heartbeat · dispatch]:::none
+  classDef none fill:#F3F4F6,stroke:#C2C8D4,color:#6B7280,stroke-dasharray:4 3;
+          </pre></div>
+          <div class="scr"><span class="s-none">Clusters list</span><span class="s-none">Cluster detail</span></div>
+        </section>
+
+        <!-- ════ SETTINGS ════ -->
+        <section data-section="settings" hidden>
+          <div class="sec__title">Settings <span class="pri">P1</span></div>
+          <p class="sec__lede">Workspace &amp; account — members/roles, quotas, connectors, keys.</p>
+          <div class="diagram"><pre class="mermaid">
+flowchart LR
+  S((Settings)):::none --> W[Workspace]:::none
+  S --> M[Members &amp; roles]:::none
+  S --> Q[Quotas &amp; budget]:::none
+  S --> Cn[Data connectors]:::none
+  S --> K[API keys]:::none
+  classDef none fill:#F3F4F6,stroke:#C2C8D4,color:#6B7280,stroke-dasharray:4 3;
+          </pre></div>
+          <div class="scr"><span class="s-none">Workspace</span><span class="s-none">Members &amp; roles</span><span class="s-none">Quotas</span><span class="s-none">Connectors</span><span class="s-none">API keys</span></div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="../js/app.js" data-sprite="../icons/sprite.svg"></script>
+<script>
+// ── catalog data (mirrors specs/ui/wireframe-catalog.md) ──
+const CATALOG = [
+  ["0 · Global / shell — P0", [
+    ["shell.app","App shell (rail · sidebar · topbar · canvas · statusbar)","built","sample.html"],
+    ["shell.launcher","App launcher modal","built","sample.html"],
+    ["shell.palette","Command palette (⌘J)","built","sample.html"],
+    ["shell.empty","Empty-state pattern","built","styleguide.html"],
+    ["style.guide","Living styleguide","built","styleguide.html"],
+    ["icons.catalog","Icon catalog & review","built","../icons/catalog.html"],
+    ["shell.help","Contextual help popover","none",""],
+    ["shell.toast","Toast + progress","none",""],
+    ["shell.error","Error / 404 / denied","none",""],
+  ]],
+  ["0b · Auth & identity — P0", [
+    ["auth.signin","Sign-in landing (Entra + mock)","built","signin.html"],
+    ["auth.account-menu","Account menu (identity · roles)","built","account-menu.html"],
+    ["auth.states","Fail-closed states (expired · 403 · disabled)","built","auth-states.html"],
+    ["auth.callback","OAuth callback (no UI)","none",""],
+  ]],
+  ["1 · Home — P1", [
+    ["home.landing","Welcome / work queue / recent","built","sample.html"],
+    ["home.notifications","Notifications feed","none",""],
+  ]],
+  ["2a · Intake — application management — P0", [
+    ["intake.applications","Applications landing + registry (+ modal)","built","applications.html"],
+    ["intake.onboard","Onboard application (governed proposal)","built","onboard-application.html"],
+    ["intake.onboard-approval","Onboarding approval (approver)","built","onboard-approval.html"],
+    ["intake.app-detail","Application detail","built","application-detail.html"],
+  ]],
+  ["2b · Intake — use cases — P0", [
+    ["intake.usecase-create","Create use case","proto",""],
+    ["intake.usecase-detail","Use-case detail / read","proto",""],
+    ["intake.usecase-review","Use-case review / HITL","proto",""],
+  ]],
+  ["3 · Studio — P0/P1", [
+    ["studio.entities","Entity list (agents/tasks/prompts)","proto",""],
+    ["studio.canvas-agent","Authoring canvas — agent","proto",""],
+    ["studio.canvas-task","Authoring canvas — task","proto",""],
+    ["studio.prompt-editor","Prompt block editor","proto",""],
+    ["studio.prompt-diff","Prompt diff view","proto",""],
+    ["studio.test-panel","Test + inspect panel","proto",""],
+    ["studio.save-suite","Save-to-test-suite modal","none",""],
+    ["studio.version-history","Version history + composition diff","none",""],
+  ]],
+  ["4 · Registry — P1", [
+    ["registry.list","Entity registry","none",""],
+    ["registry.detail","Entity detail","none",""],
+    ["registry.compose-diff","Composition diff","none",""],
+  ]],
+  ["5 · Observability — P1", [
+    ["obs.runs","Runs list","none",""],
+    ["obs.run-detail","Run detail = decision log","proto",""],
+    ["obs.trace","Trace / span view (OTel)","none",""],
+    ["obs.live","Live run stream (SSE)","none",""],
+  ]],
+  ["6 · Governance — P0/P1", [
+    ["gov.lifecycle","Lifecycle board","none",""],
+    ["gov.approval-gate","Promotion / approval gate","none",""],
+    ["gov.decision-log","Global decision log","proto",""],
+    ["gov.compare","Challenger vs champion compare","none",""],
+    ["gov.triage","Pragmatic triage queue","proto",""],
+  ]],
+  ["7 · Compliance — P1", [
+    ["comp.packages","Audit packages list","none",""],
+    ["comp.package","Audit package builder","none",""],
+    ["comp.annotation","Unified annotation & feedback","none",""],
+    ["comp.provenance","Document-anchored provenance","none",""],
+    ["comp.hitl-queue","HITL override queue","none",""],
+  ]],
+  ["8 · Harness — P2", [
+    ["harness.clusters","Cluster list + health","none",""],
+    ["harness.cluster","Cluster detail","none",""],
+  ]],
+  ["9 · Settings — P1", [
+    ["settings.workspace","Workspace settings","none",""],
+    ["settings.members","Members & roles (RBAC)","none",""],
+    ["settings.quotas","Quotas & budget","none",""],
+    ["settings.connectors","Data connectors","none",""],
+    ["settings.keys","API keys / tokens","none",""],
+  ]],
+];
+function renderCatalog() {
+  const el = document.getElementById('catalog-table'); if (!el || el.dataset.done) return;
+  let html = '';
+  for (const [group, rows] of CATALOG) {
+    html += `<div class="cat__group">${group}</div>`;
+    for (const [id, name, status, link] of rows) {
+      const nm = link ? `<a href="${link}">${name} ↗</a>` : name;
+      html += `<div class="cat__row"><span class="cat__id">${id}</span><span class="cat__name">${nm}</span>`
+            + `<span></span><span class="pill pill--${status}"><span class="pill__dot"></span>${status}</span></div>`;
+    }
+  }
+  el.innerHTML = html; el.dataset.done = '1';
+}
+</script>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: false, securityLevel: "loose", theme: "base",
+    themeVariables: { fontFamily: "IBM Plex Sans, system-ui, sans-serif", fontSize: "13px",
+      primaryColor: "#EEF4FA", primaryTextColor: "#111827", primaryBorderColor: "#2C4E7E",
+      lineColor: "#9BA3B8", secondaryColor: "#F3F4F6", tertiaryColor: "#FFFFFF" } });
+
+  const sections = [...document.querySelectorAll('[data-section]')];
+  const navItems = [...document.querySelectorAll('[data-nav]')];
+  async function show(id) {
+    if (!sections.some(s => s.dataset.section === id)) id = 'overview';
+    sections.forEach(s => s.hidden = s.dataset.section !== id);
+    navItems.forEach(n => n.classList.toggle('is-active', n.dataset.nav === id));
+    if (id === 'catalog') renderCatalog();
+    const sec = document.querySelector(`[data-section="${id}"]`);
+    const nodes = [...sec.querySelectorAll('.mermaid:not([data-processed])')];
+    if (nodes.length) { try { await mermaid.run({ nodes }); } catch(e){ console.warn(e); } }
+    history.replaceState(null, '', '#' + id);
+  }
+  navItems.forEach(n => n.addEventListener('click', () => show(n.dataset.nav)));
+  show((location.hash || '').slice(1) || 'overview');
+</script>
+</body>
+</html>

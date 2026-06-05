@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verity — Styleguide</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles/tokens.css">
+<link rel="stylesheet" href="../styles/base.css">
+<link rel="stylesheet" href="../styles/layout.css">
+<link rel="stylesheet" href="../styles/components.css">
+<link rel="stylesheet" href="../styles/utilities.css">
+<style>
+  .sg-top { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: var(--space-4);
+            height: 56px; padding: 0 var(--space-7); background: var(--surface-nav); border-bottom: 0.5px solid var(--border-default); }
+  .sg-top__title { font-size: var(--fs-h3); font-weight: var(--fw-semibold); }
+  .sg-top__meta { font-size: var(--fs-caption); color: var(--text-tertiary); font-family: var(--font-mono); }
+  .sg-wrap { max-width: 1100px; margin: 0 auto; padding: var(--space-7) var(--space-7) 120px; }
+  .sg-sec { margin-bottom: var(--space-9); }
+  .sg-sec__head { display: flex; align-items: baseline; gap: var(--space-3); padding-bottom: var(--space-2);
+                  margin-bottom: var(--space-5); border-bottom: 0.5px solid var(--border-default); }
+  .sg-sec__title { font-size: var(--fs-title); font-weight: var(--fw-semibold); letter-spacing: -0.01em; }
+  .sg-sec__ref { font-size: var(--fs-caption); color: var(--text-tertiary); font-family: var(--font-mono); }
+  .sg-row { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+  .sg-row + .sg-row { margin-top: var(--space-3); }
+  .sg-grid { display: grid; gap: var(--space-3); }
+  .sg-label { font-size: var(--fs-caption); color: var(--text-tertiary); margin-bottom: var(--space-2); }
+  /* swatches */
+  .sw-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: var(--space-3); }
+  .sw { display: flex; flex-direction: column; gap: 4px; }
+  .sw__chip { height: 52px; border-radius: var(--radius-md); border: 1px solid var(--border-faint); }
+  .sw__name { font-size: var(--fs-caption); font-weight: var(--fw-medium); }
+  .sw__var { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); }
+  /* type rows */
+  .ty { display: flex; align-items: baseline; gap: var(--space-5); padding: 6px 0; }
+  .ty__meta { font-family: var(--font-mono); font-size: 10px; color: var(--text-disabled); min-width: 150px; flex-shrink: 0; }
+  /* navigation guide */
+  .navguide { display: grid; grid-template-columns: 1.25fr 1fr; gap: var(--space-6); align-items: start; }
+  @media (max-width: 900px) { .navguide { grid-template-columns: 1fr; } }
+  .mockshell { border: 0.5px solid var(--border-strong); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-md); font-size: 11px; }
+  .mock-top { display: flex; align-items: center; gap: 7px; height: 34px; padding: 0 10px; background: var(--surface-nav); border-bottom: 0.5px solid var(--border-default); }
+  .mock-body { display: flex; height: 214px; }
+  .mock-rail { width: 36px; background: var(--surface-nav); border-right: 0.5px solid var(--border-default); display: flex; flex-direction: column; align-items: center; gap: 5px; padding-top: 8px; }
+  .mock-rico { width: 22px; height: 22px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; color: var(--text-tertiary); }
+  .mock-rico.on { background: var(--color-brand-faint); color: var(--color-brand); }
+  .mock-rico .icon { width: 14px; height: 14px; }
+  .mock-side { width: 124px; background: var(--surface-nav); border-right: 0.5px solid var(--border-default); padding: 8px 6px; display: flex; flex-direction: column; gap: 3px; }
+  .mock-nav { padding: 4px 8px; border-radius: var(--radius-sm); color: var(--text-secondary); }
+  .mock-nav.on { background: var(--color-brand-faint); color: var(--color-brand); font-weight: var(--fw-medium); }
+  .mock-canvas { flex: 1; background: var(--surface-page); padding: 10px 12px; }
+  .mock-crumb { color: var(--text-tertiary); }
+  .mock-crumb b { color: var(--text-primary); }
+  .mock-title { font-size: 15px; font-weight: var(--fw-semibold); margin-top: 6px; }
+  .marker { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%;
+            background: var(--color-brand); color: #fff; font-size: 9px; font-weight: 700; flex-shrink: 0; }
+  .zone-list { display: flex; flex-direction: column; gap: var(--space-3); }
+  .zone { display: flex; gap: 10px; }
+  .zone__q { font-size: var(--fs-label); font-weight: var(--fw-semibold); }
+  .zone__d { font-size: var(--fs-caption); color: var(--text-secondary); line-height: 1.45; margin-top: 1px; }
+  .zone__d code { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); }
+</style>
+</head>
+<body>
+
+<header class="sg-top">
+  <span class="sg-top__title">Verity Styleguide</span>
+  <span class="sg-top__meta">canonical kit · tokens→utilities</span>
+  <span class="l-spacer"></span>
+  <a class="btn btn--ghost btn--sm" href="../icons/catalog.html"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-app-launcher"></use></svg>Icon catalog</a>
+  <button class="btn btn--secondary btn--sm" data-theme-toggle><svg class="icon icon--sm" aria-hidden="true"><use href="#i-theme"></use></svg><span data-theme-label>Dark</span></button>
+</header>
+
+<div class="sg-wrap">
+
+  <!-- COLORS -->
+  <section class="sg-sec">
+    <div class="sg-sec__head"><span class="sg-sec__title">Color</span><span class="sg-sec__ref">design-system §3 · semantic tokens</span></div>
+
+    <div class="sg-label">Surfaces (toggle dark to verify the 3-layer depth: nav → page → panel)</div>
+    <div class="sw-grid">
+      <div class="sw"><div class="sw__chip" style="background:var(--surface-page)"></div><span class="sw__name">Page</span><span class="sw__var">--surface-page</span></div>
+      <div class="sw"><div class="sw__chip" style="background:var(--surface-panel)"></div><span class="sw__name">Panel</span><span class="sw__var">--surface-panel</span></div>
+      <div class="sw"><div class="sw__chip" style="background:var(--surface-nav)"></div><span class="sw__name">Nav</span><span class="sw__var">--surface-nav</span></div>
+      <div class="sw"><div class="sw__chip" style="background:var(--surface-recessed)"></div><span class="sw__name">Recessed</span><span class="sw__var">--surface-recessed</span></div>
+      <div class="sw"><div class="sw__chip" style="background:var(--surface-hover)"></div><span class="sw__name">Hover</span><span class="sw__var">--surface-hover</span></div>
+    </div>
+
+    <div class="sg-label" style="margin-top:var(--space-5)">Brand — slate blue (the single interactive accent)</div>
+    <div class="sw-grid">
+      <div class="sw"><div class="sw__chip" style="background:var(--color-brand)"></div><span class="sw__name">Brand</span><span class="sw__var">--color-brand</span></div>
+      <div class="sw"><div class="sw__chip" style="background:var(--color-brand-hover)"></div><span class="sw__name">Hover</span><span class="sw__var">--color-brand-hover</span></div>
+      <div class="sw"><div class="sw__chip" style="background:var(--color-brand-wash)"></div><span class="sw__name">Wash</span><span class="sw__var">--color-brand-wash</span></div>
+      <div class="sw"><div class="sw__chip" style="background:var(--color-brand-faint)"></div><span class="sw__name">Faint</span><span class="sw__var">--color-brand-faint</span></div>
+      <div class="sw"><div class="sw__chip" style="background:var(--color-brand-border)"></div><span class="sw__name">Border</span><span class="sw__var">--color-brand-border</span></div>
+    </div>
+
+    <div class="sg-label" style="margin-top:var(--space-5)">Status — positive / negative / warning</div>
+    <div class="sw-grid">
+      <div class="sw"><div class="sw__chip" style="background:var(--color-positive)"></div><span class="sw__name">Positive</span><span class="sw__var">--color-positive</span></div>
+      <div class="sw"><div class="sw__chip" style="background:var(--color-positive-wash)"></div><span class="sw__name">Positive wash</span><span class="sw__var">--color-positive-wash</span></div>
+      <div class="sw"><div class="sw__chip" style="background:var(--color-negative)"></div><span class="sw__name">Negative</span><span class="sw__var">--color-negative</span></div>
+      <div class="sw"><div class="sw__chip" style="background:var(--color-negative-wash)"></div><span class="sw__name">Negative wash</span><span class="sw__var">--color-negative-wash</span></div>
+      <div class="sw"><div class="sw__chip" style="background:var(--color-warning)"></div><span class="sw__name">Warning</span><span class="sw__var">--color-warning</span></div>
+      <div class="sw"><div class="sw__chip" style="background:var(--color-warning-wash)"></div><span class="sw__name">Warning wash</span><span class="sw__var">--color-warning-wash</span></div>
+    </div>
+
+    <div class="sg-label" style="margin-top:var(--space-5)">Text &amp; border</div>
+    <div class="sw-grid">
+      <div class="sw"><div class="sw__chip" style="background:var(--text-primary)"></div><span class="sw__name">Primary</span><span class="sw__var">--text-primary</span></div>
+      <div class="sw"><div class="sw__chip" style="background:var(--text-secondary)"></div><span class="sw__name">Secondary</span><span class="sw__var">--text-secondary</span></div>
+      <div class="sw"><div class="sw__chip" style="background:var(--text-tertiary)"></div><span class="sw__name">Tertiary</span><span class="sw__var">--text-tertiary</span></div>
+      <div class="sw"><div class="sw__chip" style="background:var(--border-default)"></div><span class="sw__name">Border</span><span class="sw__var">--border-default</span></div>
+      <div class="sw"><div class="sw__chip" style="background:var(--border-strong)"></div><span class="sw__name">Border strong</span><span class="sw__var">--border-strong</span></div>
+    </div>
+  </section>
+
+  <!-- TYPE -->
+  <section class="sg-sec">
+    <div class="sg-sec__head"><span class="sg-sec__title">Typography</span><span class="sg-sec__ref">design-system §4 · IBM Plex Sans / Mono</span></div>
+    <div class="ty"><span class="ty__meta">hero · 28 / 600</span><span style="font-size:var(--fs-hero);font-weight:var(--fw-semibold);letter-spacing:-.02em;">Governed AI for regulated insurance</span></div>
+    <div class="ty"><span class="ty__meta">title · 20 / 600</span><span style="font-size:var(--fs-title);font-weight:var(--fw-semibold);">Authoring canvas</span></div>
+    <div class="ty"><span class="ty__meta">h3 · 15 / 600</span><span style="font-size:var(--fs-h3);font-weight:var(--fw-semibold);">Output schema</span></div>
+    <div class="ty"><span class="ty__meta">body · 14 / 400</span><span style="font-size:var(--fs-body);">The reference register is Palantir Foundry and VS Code.</span></div>
+    <div class="ty"><span class="ty__meta">label · 13 / 500</span><span style="font-size:var(--fs-label);font-weight:var(--fw-medium);color:var(--text-secondary);">Materiality tier</span></div>
+    <div class="ty"><span class="ty__meta">caption · 11 / 400</span><span style="font-size:var(--fs-caption);color:var(--text-tertiary);">Last edited 2 hours ago</span></div>
+    <div class="ty"><span class="ty__meta">eyebrow · 10 / 600</span><span class="eyebrow">Decision log</span></div>
+    <div class="ty"><span class="ty__meta">mono · 12 / 400</span><span class="u-mono" style="font-size:var(--fs-mono);color:var(--text-secondary);">content_sha256 = 9f3a…b21</span></div>
+  </section>
+
+  <!-- BUTTONS -->
+  <section class="sg-sec">
+    <div class="sg-sec__head"><span class="sg-sec__title">Buttons</span><span class="sg-sec__ref">design-system §6 · 4 variants × 3 sizes</span></div>
+    <div class="sg-row">
+      <button class="btn btn--primary btn--md">Primary</button>
+      <button class="btn btn--secondary btn--md">Secondary</button>
+      <button class="btn btn--ghost btn--md">Ghost</button>
+      <button class="btn btn--positive btn--md">Positive</button>
+      <button class="btn btn--danger btn--md">Danger</button>
+      <button class="btn btn--primary btn--md" disabled>Disabled</button>
+    </div>
+    <div class="sg-row">
+      <button class="btn btn--primary btn--sm">Small</button>
+      <button class="btn btn--primary btn--md">Medium</button>
+      <button class="btn btn--primary btn--lg">Large</button>
+      <button class="btn btn--primary btn--md"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-add"></use></svg>With icon</button>
+      <button class="btn btn--ghost btn--icon" aria-label="More"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-more"></use></svg></button>
+    </div>
+  </section>
+
+  <!-- BADGES -->
+  <section class="sg-sec">
+    <div class="sg-sec__head"><span class="sg-sec__title">Badges</span><span class="sg-sec__ref">design-system §6 · lifecycle + materiality</span></div>
+    <div class="sg-label">Lifecycle states</div>
+    <div class="sg-row">
+      <span class="badge badge--draft"><span class="badge__dot"></span>Draft</span>
+      <span class="badge badge--candidate"><span class="badge__dot"></span>Candidate</span>
+      <span class="badge badge--staging"><span class="badge__dot"></span>Staging</span>
+      <span class="badge badge--shadow"><span class="badge__dot"></span>Shadow</span>
+      <span class="badge badge--challenger"><span class="badge__dot"></span>Challenger</span>
+      <span class="badge badge--champion"><span class="badge__dot"></span>Champion</span>
+      <span class="badge badge--deprecated"><span class="badge__dot"></span>Deprecated</span>
+    </div>
+    <div class="sg-label" style="margin-top:var(--space-4)">Materiality tier</div>
+    <div class="sg-row">
+      <span class="badge badge--high"><span class="badge__dot" style="background:var(--color-negative)"></span>High</span>
+      <span class="badge badge--medium"><span class="badge__dot" style="background:var(--color-warning)"></span>Medium</span>
+      <span class="badge badge--low"><span class="badge__dot" style="background:var(--text-disabled)"></span>Low</span>
+    </div>
+  </section>
+
+  <!-- CALLOUTS -->
+  <section class="sg-sec">
+    <div class="sg-sec__head"><span class="sg-sec__title">Callouts</span><span class="sg-sec__ref">design-system §6</span></div>
+    <div class="l-stack l-stack--sm">
+      <div class="callout callout--info"><svg class="icon callout__icon" aria-hidden="true"><use href="#i-callout-info"></use></svg><div class="callout__body"><span class="callout__title">Heads up.</span>This version locks once promoted to candidate.</div></div>
+      <div class="callout callout--success"><svg class="icon callout__icon" aria-hidden="true"><use href="#i-callout-success"></use></svg><div class="callout__body"><span class="callout__title">Promoted.</span>extractor_system v2.1 is now champion.</div></div>
+      <div class="callout callout--warning"><svg class="icon callout__icon" aria-hidden="true"><use href="#i-callout-warning"></use></svg><div class="callout__body"><span class="callout__title">Challenger lagging.</span>Running head-to-head for 16 days without a decision.</div></div>
+      <div class="callout callout--error"><svg class="icon callout__icon" aria-hidden="true"><use href="#i-callout-error"></use></svg><div class="callout__body"><span class="callout__title">Version 2.1.0 already exists.</span>Use 2.2.0 or later for this agent.</div></div>
+    </div>
+  </section>
+
+  <!-- CARDS -->
+  <section class="sg-sec">
+    <div class="sg-sec__head"><span class="sg-sec__title">Cards</span><span class="sg-sec__ref">design-system §6</span></div>
+    <div class="l-grid l-grid--2col">
+      <div class="card card--interactive">
+        <div class="card__header">
+          <div><div class="card__title">extractor_system</div><div class="card__sub">agent · v2.1.0</div></div>
+          <span class="badge badge--champion"><span class="badge__dot"></span>Champion</span>
+        </div>
+        <p style="font-size:var(--fs-label);color:var(--text-secondary);">Extracts 14 structured fields from broker submissions with field-level confidence.</p>
+        <div class="card__meta"><span class="card__meta-item"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-metric-pass"></use></svg>94% pass</span><span class="card__meta-item"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-metric-latency"></use></svg>1.2s avg</span></div>
+      </div>
+      <div class="card card--interactive">
+        <div class="card__header">
+          <div><div class="card__title">triage_agent</div><div class="card__sub">agent · v2.2.0</div></div>
+          <span class="badge badge--challenger"><span class="badge__dot"></span>Challenger</span>
+        </div>
+        <p style="font-size:var(--fs-label);color:var(--text-secondary);">Routes submissions by appetite and materiality, escalating high-tier cases to HITL.</p>
+        <div class="card__meta"><span class="card__meta-item"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-metric-pass"></use></svg>91% pass</span><span class="card__meta-item"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-hitl"></use></svg>9% HITL</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INPUTS -->
+  <section class="sg-sec">
+    <div class="sg-sec__head"><span class="sg-sec__title">Inputs</span><span class="sg-sec__ref">design-system §6 · §8 field errors</span></div>
+    <div class="l-grid l-grid--2col" style="align-items:start;">
+      <div class="form-field">
+        <label class="form-label" for="f1">Agent name</label>
+        <input class="input" id="f1" placeholder="extractor_system" value="extractor_system">
+        <span class="input-hint">Lowercase, snake_case. Used as the stable identifier.</span>
+      </div>
+      <div class="form-field">
+        <label class="form-label" for="f2">Version</label>
+        <input class="input input--mono input--error" id="f2" value="2.1.0">
+        <span class="input-error-text">Version 2.1.0 already exists — use 2.2.0 or later.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHIPS (page-local prototype) -->
+  <section class="sg-sec">
+    <div class="sg-sec__head"><span class="sg-sec__title">Chips</span><span class="sg-sec__ref">page-local prototype · one visual (radius-sm), 3 behaviors</span></div>
+
+    <div class="sg-label">Multi-select — pick several (≥1). Frameworks · governance domains · jurisdictions.</div>
+    <div class="chip-group" role="group" aria-label="Governance domains" data-chip-mode="multi">
+      <button class="chip is-selected" type="button" role="checkbox" aria-checked="true">Model risk</button>
+      <button class="chip" type="button" role="checkbox" aria-checked="false">Fairness</button>
+      <button class="chip is-selected" type="button" role="checkbox" aria-checked="true">Privacy</button>
+      <button class="chip" type="button" role="checkbox" aria-checked="false">Security</button>
+      <button class="chip" type="button" role="checkbox" aria-checked="false">Transparency</button>
+      <button class="chip" type="button" role="checkbox" aria-checked="false">Human oversight</button>
+    </div>
+
+    <div class="sg-label" style="margin-top:var(--space-5)">Single-select — exactly one. Data classification.</div>
+    <div class="chip-group" role="radiogroup" aria-label="Data classification" data-chip-mode="single">
+      <button class="chip" type="button" role="radio" aria-checked="false">Public</button>
+      <button class="chip" type="button" role="radio" aria-checked="false">Internal</button>
+      <button class="chip is-selected" type="button" role="radio" aria-checked="true">Confidential</button>
+      <button class="chip" type="button" role="radio" aria-checked="false">PII-restricted</button>
+    </div>
+
+    <div class="sg-label" style="margin-top:var(--space-5)">Yes / No attestation — single-select over two options, no default. Consumer-impact flags.</div>
+    <div class="chip-group" role="radiogroup" aria-label="Processes PII or PHI" data-chip-mode="single">
+      <button class="chip is-selected" type="button" role="radio" aria-checked="true">Yes</button>
+      <button class="chip" type="button" role="radio" aria-checked="false">No</button>
+    </div>
+
+    <div class="sg-label" style="margin-top:var(--space-5)">Standalone toggle — on / off.</div>
+    <div class="chip-group">
+      <button class="chip" type="button" aria-pressed="false" data-chip-mode="toggle">Adversarial only</button>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section class="sg-sec">
+    <div class="sg-sec__head"><span class="sg-sec__title">Stat tiles</span><span class="sg-sec__ref">design-system §12</span></div>
+    <div class="l-grid l-grid--4col">
+      <div class="stat"><span class="stat__label">F1 score</span><span class="stat__value">0.942</span><span class="stat__delta stat__delta--up">▲ 0.011</span></div>
+      <div class="stat"><span class="stat__label">Pass rate</span><span class="stat__value">94.2%</span><span class="stat__delta stat__delta--up">▲ 1.1%</span></div>
+      <div class="stat"><span class="stat__label">Avg latency</span><span class="stat__value">1.21s</span><span class="stat__delta stat__delta--down">▼ 0.08s</span></div>
+      <div class="stat"><span class="stat__label">Avg cost</span><span class="stat__value">$0.038</span><span class="stat__delta">— flat</span></div>
+    </div>
+  </section>
+
+  <!-- TABLE -->
+  <section class="sg-sec">
+    <div class="sg-sec__head"><span class="sg-sec__title">Decision log table</span><span class="sg-sec__ref">design-system §6, §12</span></div>
+    <div class="log-table">
+      <div class="log-table__header" style="display:grid;grid-template-columns:150px 130px 1fr 110px;gap:var(--space-4);padding:10px 16px;">
+        <span class="eyebrow">Run</span><span class="eyebrow">State</span><span class="eyebrow">Summary</span><span class="eyebrow">When</span>
+      </div>
+      <div class="log-row" style="display:grid;grid-template-columns:150px 130px 1fr 110px;gap:var(--space-4);padding:12px 16px;align-items:center;">
+        <span class="log-row__id">run_8f3a…</span><span><span class="badge badge--champion"><span class="badge__dot"></span>Champion</span></span><span class="u-truncate">14 fields extracted above threshold</span><span class="card__sub">3 min ago</span>
+      </div>
+      <div class="log-row" style="display:grid;grid-template-columns:150px 130px 1fr 110px;gap:var(--space-4);padding:12px 16px;align-items:center;">
+        <span class="log-row__id">run_2b91…</span><span><span class="badge badge--challenger"><span class="badge__dot"></span>Challenger</span></span><span class="u-truncate">Flagged for review — materiality high</span><span class="card__sub">11 min ago</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- EMPTY STATE -->
+  <section class="sg-sec">
+    <div class="sg-sec__head"><span class="sg-sec__title">Empty state</span><span class="sg-sec__ref">design-system §8 · every app has one</span></div>
+    <div class="card">
+      <div class="empty-state">
+        <span class="empty-state__icon"><svg class="icon" aria-hidden="true"><use href="#i-entity-agent"></use></svg></span>
+        <div class="empty-state__title">You haven't created any agents yet</div>
+        <p class="empty-state__body">Agents compose prompts, tools, and bindings into a governed, versioned unit you can test and promote.</p>
+        <div class="empty-state__actions">
+          <button class="btn btn--primary btn--md"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-add"></use></svg>New agent</button>
+          <button class="btn btn--ghost btn--md">Learn more</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- NAVIGATION PHILOSOPHY -->
+  <section class="sg-sec">
+    <div class="sg-sec__head"><span class="sg-sec__title">Navigation philosophy</span><span class="sg-sec__ref">design-system §7 · apps-based model</span></div>
+
+    <p style="max-width:78ch;color:var(--text-secondary);line-height:1.55;margin-bottom:var(--space-5);">
+      Three navigation zones, each answering one question, nothing reachable two ways. The <strong>left rail</strong> switches apps; the <strong>sidebar</strong> switches sections within an app; the <strong>top bar</strong> tells you where you are (breadcrumb) and what you are scoped to (Application Scope), plus global tools. The top bar is deliberately <strong>not</strong> an app switcher — that would duplicate the rail.
+    </p>
+
+    <div class="navguide">
+      <!-- annotated mini-shell -->
+      <div class="mockshell" aria-label="Annotated app shell">
+        <div class="mock-top">
+          <span style="font-weight:600;">▣&nbsp;Verity</span>
+          <span class="marker">3</span>
+          <span style="color:var(--text-tertiary);white-space:nowrap;">Governance › … › <b style="color:var(--text-primary);">extractor_system</b></span>
+          <span class="l-spacer"></span>
+          <span class="marker">4</span>
+          <span style="color:var(--text-secondary);border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:1px 6px;white-space:nowrap;">All applications ▾</span>
+          <span style="color:var(--text-tertiary);">⌘J</span>
+          <span class="avatar" style="width:18px;height:18px;font-size:8px;">AV</span>
+        </div>
+        <div class="mock-body">
+          <div class="mock-rail">
+            <span class="marker" style="margin-bottom:2px;">1</span>
+            <span class="mock-rico"><svg class="icon" aria-hidden="true"><use href="#i-app-home"></use></svg></span>
+            <span class="mock-rico on"><svg class="icon" aria-hidden="true"><use href="#i-app-studio"></use></svg></span>
+            <span class="mock-rico"><svg class="icon" aria-hidden="true"><use href="#i-app-registry"></use></svg></span>
+            <span class="mock-rico"><svg class="icon" aria-hidden="true"><use href="#i-app-governance"></use></svg></span>
+          </div>
+          <div class="mock-side">
+            <span class="marker" style="margin-bottom:4px;">2</span>
+            <span class="eyebrow" style="padding:0 8px;">Studio</span>
+            <span class="mock-nav on">Agents</span>
+            <span class="mock-nav">Tasks</span>
+            <span class="mock-nav">Prompts</span>
+            <span class="mock-nav">Tools</span>
+          </div>
+          <div class="mock-canvas">
+            <div class="mock-title">extractor_system <span class="badge badge--champion" style="font-size:8px;">champion</span></div>
+            <div style="color:var(--text-tertiary);margin-top:8px;">Composition · Tests · Performance</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- zone responsibilities -->
+      <div class="zone-list">
+        <div class="zone"><span class="marker">1</span><div><div class="zone__q">Left rail → “Which app?”</div><div class="zone__d">Icon-only, global, always present. The single switcher between apps (Home, Studio, Registry…). The brand logo is not here — it lives top-left of the bar.</div></div></div>
+        <div class="zone"><span class="marker">2</span><div><div class="zone__q">Sidebar → “Which section of this app?”</div><div class="zone__d">Labeled, in-app. Sections of the current app only (Studio → Agents / Tasks / Prompts). Collapses to rail-only below 1280px.</div></div></div>
+        <div class="zone"><span class="marker">3</span><div><div class="zone__q">Top-bar breadcrumb → “Where am I?”</div><div class="zone__d"><code>Context › App › Section › Entity</code>. When deep, the middle collapses to <code>first › … › last</code>; the <code>…</code> opens every level. Logo sits to its left.</div></div></div>
+        <div class="zone"><span class="marker">4</span><div><div class="zone__q">Application Scope → “Which application(s)?”</div><div class="zone__d">A <strong>global filter</strong> bounding every page to all applications or a selected set. Set anytime; <strong>locked</strong> to the page’s application on Studio and app-scoped detail screens.</div></div></div>
+      </div>
+    </div>
+
+    <div class="l-stack l-stack--sm" style="margin-top:var(--space-6);max-width:80ch;">
+      <div class="callout callout--success">
+        <svg class="icon callout__icon" aria-hidden="true"><use href="#i-callout-success"></use></svg>
+        <div class="callout__body"><span class="callout__title">The rule.</span>One question per zone; one path per destination. If a place is reachable from two zones, one of them is doing the wrong job.</div>
+      </div>
+      <div class="callout callout--info">
+        <svg class="icon callout__icon" aria-hidden="true"><use href="#i-callout-info"></use></svg>
+        <div class="callout__body"><span class="callout__title">Application Scope.</span>A portal-wide filter, not a location. Selecting application(s) constrains the data shown on every page at once; it is disabled and locked to the current application inside Studio and app-scoped detail screens.</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script src="../js/app.js" data-sprite="../icons/sprite.svg"></script>
+<script>
+// page-local chip behaviour (prototype): multi = independent, single = radio, toggle = on/off
+document.querySelectorAll('[data-chip-mode]').forEach(el => {
+  if (el.dataset.chipMode === 'toggle') {
+    el.addEventListener('click', () => { const on = el.classList.toggle('is-selected'); el.setAttribute('aria-pressed', on); });
+    return;
+  }
+  el.querySelectorAll('.chip').forEach(chip => chip.addEventListener('click', () => {
+    if (el.dataset.chipMode === 'single') {
+      el.querySelectorAll('.chip').forEach(c => { c.classList.remove('is-selected'); c.setAttribute('aria-checked', 'false'); });
+      chip.classList.add('is-selected'); chip.setAttribute('aria-checked', 'true');
+    } else {
+      const on = chip.classList.toggle('is-selected'); chip.setAttribute('aria-checked', on);
+    }
+  }));
+});
+</script>
+</body>
+</html>

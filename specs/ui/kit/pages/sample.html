@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verity — Home</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles/tokens.css">
+<link rel="stylesheet" href="../styles/base.css">
+<link rel="stylesheet" href="../styles/layout.css">
+<link rel="stylesheet" href="../styles/components.css">
+<link rel="stylesheet" href="../styles/utilities.css">
+<style>
+  /* page-local composition only */
+  .rail-apps { display: flex; flex-direction: column; align-items: center; gap: 2px; padding-top: var(--space-3); }
+  .canvas-pad { padding: var(--space-6) var(--space-7); max-width: 1000px; }
+  .page-head { margin-bottom: var(--space-6); }
+  .page-head__title { font-size: var(--fs-hero); font-weight: var(--fw-semibold); letter-spacing: -0.02em; }
+  .page-head__sub { font-size: var(--fs-label); color: var(--text-secondary); margin-top: 4px; }
+  .section { margin-top: var(--space-7); }
+  .section__head { display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-3); }
+  .app-tile { display: flex; gap: var(--space-3); align-items: flex-start; }
+  .app-tile__icon { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: var(--radius-md);
+                    background: var(--color-brand-faint); color: var(--color-brand); flex-shrink: 0; }
+  .app-tile__name { font-size: var(--fs-body); font-weight: var(--fw-semibold); }
+  .app-tile__desc { font-size: var(--fs-caption); color: var(--text-tertiary); margin-top: 2px; line-height: 1.45; }
+  .log-grid { display: grid; grid-template-columns: 150px 130px 1fr 110px; gap: var(--space-4); align-items: center; padding: 11px 16px; }
+  .topbar-row { display: flex; align-items: center; gap: var(--space-3); width: 100%; }
+  /* overlays */
+  .overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-start; justify-content: center; padding-top: 12vh; background: rgba(17,24,39,0.45); }
+  .dark .overlay { background: rgba(0,0,0,0.6); }
+  .modal { width: min(620px, 92vw); background: var(--surface-panel); border: 0.5px solid var(--border-strong); border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); overflow: hidden; }
+  .modal__search { display: flex; align-items: center; gap: var(--space-2); padding: 12px 16px; border-bottom: 0.5px solid var(--border-default); }
+  .modal__search input { flex: 1; border: none; background: transparent; font-size: 15px; color: var(--text-primary); }
+  .modal__search .icon { color: var(--text-tertiary); }
+  .modal__body { max-height: 52vh; overflow-y: auto; padding: var(--space-2); }
+  .modal__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--space-2); padding: var(--space-3); }
+  .launch-tile { display: flex; flex-direction: column; gap: 6px; padding: var(--space-4); border-radius: var(--radius-lg); border: 0.5px solid var(--border-default); background: var(--surface-panel); cursor: pointer; transition: border-color var(--dur-fast); }
+  .launch-tile:hover { border-color: var(--color-brand); }
+  .launch-tile__icon { color: var(--color-brand); }
+  .launch-tile__name { font-size: var(--fs-label); font-weight: var(--fw-semibold); }
+  .launch-tile__desc { font-size: var(--fs-caption); color: var(--text-tertiary); line-height: 1.4; }
+  .pgroup__label { padding: 8px 12px 4px; }
+  .presult { display: flex; align-items: center; gap: var(--space-3); padding: 8px 12px; border-radius: var(--radius-md); cursor: pointer; }
+  .presult:hover { background: var(--surface-hover); }
+  .presult .icon { color: var(--text-secondary); }
+  .presult__name { font-size: var(--fs-label); }
+  .presult__hint { margin-left: auto; font-size: var(--fs-caption); color: var(--text-tertiary); font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ── Top bar (full width) — logo · breadcrumb · scope · global utils ── -->
+  <header class="app__topbar">
+    <div class="topbar-row">
+      <a class="topbar__logo" href="#" aria-label="Verity — Home">
+        <img class="wordmark wordmark--light" src="../assets/verity-wordmark-dark.png" alt="Verity" width="74" height="22">
+        <img class="wordmark wordmark--dark" src="../assets/verity-wordmark-white.png" alt="" aria-hidden="true" width="74" height="22">
+      </a>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <span class="breadcrumb__item breadcrumb__item--current">Home</span>
+      </nav>
+      <span class="l-spacer"></span>
+      <button class="topbar__scope" aria-label="Application scope — filters every page">
+        <svg class="icon" aria-hidden="true"><use href="#i-entity-application"></use></svg>
+        <span class="topbar__scope__label">All applications</span>
+        <svg class="icon" aria-hidden="true"><use href="#i-expand"></use></svg>
+      </button>
+      <div class="topbar__utils">
+        <button class="search-field" data-open="palette" aria-label="Open command palette" style="width:220px;">
+          <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
+          <span style="flex:1;text-align:left;color:var(--text-tertiary);font-size:var(--fs-label);">Search…</span>
+          <kbd>⌘J</kbd>
+        </button>
+        <button class="btn btn--icon btn--ghost" data-theme-toggle aria-label="Toggle light/dark theme"><svg class="icon" aria-hidden="true"><use href="#i-theme"></use></svg></button>
+        <button class="btn btn--icon btn--ghost" aria-label="Notifications"><svg class="icon" aria-hidden="true"><use href="#i-notifications"></use></svg></button>
+        <button class="btn btn--icon btn--ghost" aria-label="Help"><svg class="icon" aria-hidden="true"><use href="#i-help"></use></svg></button>
+        <span class="avatar" title="Anil Venugopal">AV</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="app__body">
+
+    <!-- ── Left rail — apps only (no logo; the logo lives in the top bar) ── -->
+    <nav class="app__left-rail" aria-label="Apps">
+      <div class="rail-apps">
+        <div class="rail-app-icon is-active" title="Home"><svg class="icon" aria-hidden="true"><use href="#i-app-home"></use></svg></div>
+        <div class="rail-app-icon" title="Intake"><svg class="icon" aria-hidden="true"><use href="#i-app-intake"></use></svg></div>
+        <div class="rail-app-icon" title="Studio"><svg class="icon" aria-hidden="true"><use href="#i-app-studio"></use></svg></div>
+        <div class="rail-app-icon" title="Registry"><svg class="icon" aria-hidden="true"><use href="#i-app-registry"></use></svg></div>
+        <div class="rail-app-icon" title="Observability"><svg class="icon" aria-hidden="true"><use href="#i-app-observability"></use></svg></div>
+        <div class="rail-app-icon" title="Governance"><svg class="icon" aria-hidden="true"><use href="#i-app-governance"></use></svg></div>
+        <div class="rail-app-icon" title="Compliance"><svg class="icon" aria-hidden="true"><use href="#i-app-compliance"></use></svg></div>
+        <div class="rail-app-icon" title="Harness"><svg class="icon" aria-hidden="true"><use href="#i-app-harness"></use></svg></div>
+      </div>
+      <span class="l-spacer"></span>
+      <div class="rail-app-icon" data-open="launcher" title="App launcher" style="margin-bottom:var(--space-2);"><svg class="icon" aria-hidden="true"><use href="#i-app-launcher"></use></svg></div>
+      <div class="rail-app-icon" title="Settings" style="margin-bottom:var(--space-3);"><svg class="icon" aria-hidden="true"><use href="#i-app-settings"></use></svg></div>
+    </nav>
+
+    <!-- ── Canvas — Home ── -->
+    <main class="app__canvas">
+      <div class="canvas-pad">
+
+        <div class="page-head">
+          <div class="page-head__title">Welcome back, Anil</div>
+        </div>
+
+        <div class="callout callout--info">
+          <svg class="icon callout__icon" aria-hidden="true"><use href="#i-callout-info"></use></svg>
+          <div class="callout__body"><span class="callout__title">2 challengers awaiting a promotion decision.</span>extractor_system v2.1 and triage_agent v2.2 have run head-to-head for over 14 days.</div>
+        </div>
+
+        <!-- Stat tiles -->
+        <section class="section">
+          <div class="section__head"><span class="eyebrow">This week</span></div>
+          <div class="l-grid l-grid--4col">
+            <div class="stat"><span class="stat__label">Live agents</span><span class="stat__value">14</span><span class="stat__delta stat__delta--up">▲ 2 promoted</span></div>
+            <div class="stat"><span class="stat__label">Pass rate</span><span class="stat__value">94.2%</span><span class="stat__delta stat__delta--up">▲ 1.1%</span></div>
+            <div class="stat"><span class="stat__label">HITL rate</span><span class="stat__value">6.8%</span><span class="stat__delta stat__delta--down">▼ 0.4%</span></div>
+            <div class="stat"><span class="stat__label">Avg cost / run</span><span class="stat__value">$0.038</span><span class="stat__delta">— flat</span></div>
+          </div>
+        </section>
+
+        <!-- App quick-start cards -->
+        <section class="section">
+          <div class="section__head"><span class="eyebrow">Jump back in</span></div>
+          <div class="l-grid l-grid--2col">
+            <div class="card card--interactive">
+              <div class="app-tile">
+                <span class="app-tile__icon"><svg class="icon icon--lg" aria-hidden="true"><use href="#i-app-studio"></use></svg></span>
+                <div><div class="app-tile__name">Studio</div><div class="app-tile__desc">Compose agents and tasks on the authoring canvas.</div></div>
+              </div>
+              <div class="card__meta"><span class="card__meta-item"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-edit"></use></svg>3 drafts</span><span class="card__meta-item">last edited 2h ago</span></div>
+            </div>
+            <div class="card card--interactive">
+              <div class="app-tile">
+                <span class="app-tile__icon"><svg class="icon icon--lg" aria-hidden="true"><use href="#i-app-intake"></use></svg></span>
+                <div><div class="app-tile__name">Intake</div><div class="app-tile__desc">Onboard applications and create governed use cases.</div></div>
+              </div>
+              <div class="card__meta"><span class="card__meta-item"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-entity-application"></use></svg>5 applications</span><span class="card__meta-item">2 pending</span></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Recent decisions -->
+        <section class="section">
+          <div class="section__head">
+            <span class="eyebrow">Recent decisions</span>
+            <span class="l-spacer"></span>
+            <button class="btn btn--ghost btn--sm"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-filter"></use></svg>Filter</button>
+          </div>
+          <div class="log-table">
+            <div class="log-table__header log-grid">
+              <span class="eyebrow">Run</span><span class="eyebrow">State</span><span class="eyebrow">Summary</span><span class="eyebrow">When</span>
+            </div>
+            <div class="log-row log-grid">
+              <span class="log-row__id">run_8f3a…</span>
+              <span><span class="badge badge--champion"><span class="badge__dot"></span>Champion</span></span>
+              <span class="u-truncate">extractor_system extracted 14 fields, all above confidence threshold</span>
+              <span class="card__sub">3 min ago</span>
+            </div>
+            <div class="log-row log-grid">
+              <span class="log-row__id">run_2b91…</span>
+              <span><span class="badge badge--challenger"><span class="badge__dot"></span>Challenger</span></span>
+              <span class="u-truncate">triage_agent flagged a submission for review — materiality high</span>
+              <span class="card__sub">11 min ago</span>
+            </div>
+            <div class="log-row log-grid">
+              <span class="log-row__id">run_55c0…</span>
+              <span><span class="badge badge--shadow"><span class="badge__dot"></span>Shadow</span></span>
+              <span class="u-truncate">appetite_agent (shadow) disagreed with champion on 1 of 8 fields</span>
+              <span class="card__sub">24 min ago</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Empty-state example -->
+        <section class="section">
+          <div class="section__head"><span class="eyebrow">Compliance</span></div>
+          <div class="card">
+            <div class="empty-state">
+              <span class="empty-state__icon"><svg class="icon" aria-hidden="true"><use href="#i-app-compliance"></use></svg></span>
+              <div class="empty-state__title">No audit packages yet</div>
+              <p class="empty-state__body">Audit packages bundle decision logs, approvals, and evidence for a regulator. Generate one from any champion entity.</p>
+              <div class="empty-state__actions">
+                <button class="btn btn--primary btn--md"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-add"></use></svg>Create package</button>
+                <button class="btn btn--ghost btn--md">Learn more</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ── Status bar ── -->
+  <footer class="app__statusbar">
+    <div class="topbar-row" style="padding:0 var(--space-4);font-size:var(--fs-caption);color:var(--text-tertiary);">
+      <span class="l-cluster" style="gap:5px;"><span class="badge__dot" style="background:var(--color-positive);"></span>Connected · live updates</span>
+      <span class="l-spacer"></span>
+      <span class="u-mono">v2.0.0-dev</span>
+    </div>
+  </footer>
+
+</div>
+
+
+<!-- ── App launcher ── -->
+<div class="overlay" id="launcher" data-overlay data-close hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-label="App launcher">
+    <div class="modal__search">
+      <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
+      <input type="text" placeholder="Search apps…" aria-label="Search apps">
+      <button class="btn btn--icon btn--ghost" data-close-btn aria-label="Close"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-clear"></use></svg></button>
+    </div>
+    <div class="modal__grid">
+      <div class="launch-tile"><span class="launch-tile__icon"><svg class="icon icon--lg" aria-hidden="true"><use href="#i-app-home"></use></svg></span><span class="launch-tile__name">Home</span><span class="launch-tile__desc">Landing &amp; getting started</span></div>
+      <div class="launch-tile"><span class="launch-tile__icon"><svg class="icon icon--lg" aria-hidden="true"><use href="#i-app-intake"></use></svg></span><span class="launch-tile__name">Intake</span><span class="launch-tile__desc">Onboard applications</span></div>
+      <div class="launch-tile"><span class="launch-tile__icon"><svg class="icon icon--lg" aria-hidden="true"><use href="#i-app-studio"></use></svg></span><span class="launch-tile__name">Studio</span><span class="launch-tile__desc">Author agents &amp; tasks</span></div>
+      <div class="launch-tile"><span class="launch-tile__icon"><svg class="icon icon--lg" aria-hidden="true"><use href="#i-app-registry"></use></svg></span><span class="launch-tile__name">Registry</span><span class="launch-tile__desc">Entities &amp; versions</span></div>
+      <div class="launch-tile"><span class="launch-tile__icon"><svg class="icon icon--lg" aria-hidden="true"><use href="#i-app-observability"></use></svg></span><span class="launch-tile__name">Observability</span><span class="launch-tile__desc">Runs &amp; traces</span></div>
+      <div class="launch-tile"><span class="launch-tile__icon"><svg class="icon icon--lg" aria-hidden="true"><use href="#i-app-governance"></use></svg></span><span class="launch-tile__name">Governance</span><span class="launch-tile__desc">Lifecycle &amp; approvals</span></div>
+      <div class="launch-tile"><span class="launch-tile__icon"><svg class="icon icon--lg" aria-hidden="true"><use href="#i-app-compliance"></use></svg></span><span class="launch-tile__name">Compliance</span><span class="launch-tile__desc">Audit &amp; evidence</span></div>
+      <div class="launch-tile"><span class="launch-tile__icon"><svg class="icon icon--lg" aria-hidden="true"><use href="#i-app-harness"></use></svg></span><span class="launch-tile__name">Harness</span><span class="launch-tile__desc">Runtime cluster</span></div>
+      <div class="launch-tile"><span class="launch-tile__icon"><svg class="icon icon--lg" aria-hidden="true"><use href="#i-app-settings"></use></svg></span><span class="launch-tile__name">Settings</span><span class="launch-tile__desc">Workspace &amp; account</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Command palette ── -->
+<div class="overlay" id="palette" data-overlay data-close hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Command palette">
+    <div class="modal__search">
+      <svg class="icon" aria-hidden="true"><use href="#i-command"></use></svg>
+      <input type="text" placeholder="Search apps, entities, runs, settings…" aria-label="Command palette" data-palette-input>
+      <kbd style="font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary);border:1px solid var(--border-default);border-radius:var(--radius-xs);padding:1px 5px;">esc</kbd>
+    </div>
+    <div class="modal__body">
+      <div data-palette-group>
+        <div class="pgroup__label"><span class="eyebrow">Apps</span></div>
+        <div class="presult" data-palette-row="home"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-app-home"></use></svg><span class="presult__name">Home</span><span class="presult__hint">app</span></div>
+        <div class="presult" data-palette-row="studio author agent"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-app-studio"></use></svg><span class="presult__name">Studio</span><span class="presult__hint">app</span></div>
+        <div class="presult" data-palette-row="registry"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-app-registry"></use></svg><span class="presult__name">Registry</span><span class="presult__hint">app</span></div>
+      </div>
+      <div data-palette-group>
+        <div class="pgroup__label"><span class="eyebrow">Entities</span></div>
+        <div class="presult" data-palette-row="extractor_system agent"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-entity-agent"></use></svg><span class="presult__name">extractor_system</span><span class="presult__hint">agent · v2.1</span></div>
+        <div class="presult" data-palette-row="triage_agent"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-entity-agent"></use></svg><span class="presult__name">triage_agent</span><span class="presult__hint">agent · v2.2</span></div>
+        <div class="presult" data-palette-row="triage_system_prompt"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-entity-prompt"></use></svg><span class="presult__name">triage_system_prompt</span><span class="presult__hint">prompt · v1.5</span></div>
+      </div>
+      <div data-palette-group>
+        <div class="pgroup__label"><span class="eyebrow">Actions</span></div>
+        <div class="presult" data-palette-row="toggle theme dark light"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-theme"></use></svg><span class="presult__name">Toggle theme</span><span class="presult__hint">action</span></div>
+      </div>
+      <div class="empty-state" data-palette-empty hidden style="padding:var(--space-6);">
+        <div class="empty-state__body">No matches.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../js/app.js" data-sprite="../icons/sprite.svg"></script>
+</body>
+</html>

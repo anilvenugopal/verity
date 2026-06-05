@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verity — Personal Auto Underwriting</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles/tokens.css">
+<link rel="stylesheet" href="../styles/base.css">
+<link rel="stylesheet" href="../styles/layout.css">
+<link rel="stylesheet" href="../styles/components.css">
+<link rel="stylesheet" href="../styles/utilities.css">
+<style>
+  .rail-apps { display: flex; flex-direction: column; align-items: center; gap: 2px; padding-top: var(--space-3); }
+  .topbar-row { display: flex; align-items: center; gap: var(--space-3); width: 100%; }
+  .canvas-pad { padding: var(--space-6) var(--space-7) 48px; max-width: 940px; }
+  .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-3); }
+  .page-head__title { font-size: var(--fs-hero); font-weight: var(--fw-semibold); letter-spacing: -0.02em; display: flex; align-items: center; gap: 10px; }
+  .page-head__sub { font-size: var(--fs-label); color: var(--text-secondary); margin-top: 4px; }
+  .tla { font-family: var(--font-mono); font-weight: var(--fw-medium); font-size: 12px; letter-spacing: 0.04em; color: var(--color-brand);
+         background: var(--color-brand-faint); border: 1px solid var(--color-brand-border); border-radius: var(--radius-sm); padding: 2px 7px; }
+  .app-status { display: inline-flex; align-items: center; gap: 5px; font-size: var(--fs-caption); color: var(--text-secondary); }
+  .app-status__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-positive); }
+  .tabs { display: flex; gap: 2px; border-bottom: 0.5px solid var(--border-default); margin: var(--space-5) 0 var(--space-2); }
+  .tab { padding: 8px 14px; font-size: var(--fs-label); font-weight: var(--fw-medium); color: var(--text-tertiary); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tab:hover { color: var(--text-primary); }
+  .tab.is-active { color: var(--color-brand); border-bottom-color: var(--color-brand); }
+  .section { margin-top: var(--space-6); }
+  .section__head { display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-3); }
+  .fsec { background: var(--surface-panel); border: 0.5px solid var(--border-default); border-radius: var(--radius-lg); padding: var(--space-5); }
+  .kv { display: grid; grid-template-columns: 128px 1fr; gap: 12px 16px; }
+  .kv__k { font-size: var(--fs-eyebrow); font-weight: var(--fw-semibold); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-tertiary); padding-top: 2px; }
+  .kv__v { font-size: var(--fs-label); color: var(--text-primary); line-height: 1.5; min-width: 0; }
+  .yn { font-weight: var(--fw-medium); } .yn--y { color: var(--color-positive); } .yn--n { color: var(--text-secondary); }
+  .ix-grid { display: grid; grid-template-columns: 1fr 120px 110px 110px 110px; gap: var(--space-4); align-items: center; padding: 11px 16px; }
+  .reg-sub { font-size: var(--fs-caption); color: var(--text-tertiary); }
+  .ix-name { font-size: var(--fs-label); font-weight: var(--fw-medium); }
+  .team-row { display: flex; align-items: center; gap: var(--space-3); padding: 9px 0; border-bottom: 0.5px solid var(--border-faint); }
+  .team-row:last-child { border-bottom: none; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="app__topbar">
+    <div class="topbar-row">
+      <a class="topbar__logo" href="sample.html" aria-label="Verity — Home">
+        <img class="wordmark wordmark--light" src="../assets/verity-wordmark-dark.png" alt="Verity" width="74" height="22">
+        <img class="wordmark wordmark--dark" src="../assets/verity-wordmark-white.png" alt="" aria-hidden="true" width="74" height="22">
+      </a>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <span class="breadcrumb__item">Intake</span><span class="breadcrumb__sep">›</span>
+        <a class="breadcrumb__item" href="applications.html" style="text-decoration:none;">Applications</a><span class="breadcrumb__sep">›</span>
+        <span class="breadcrumb__item breadcrumb__item--current">Personal Auto Underwriting</span>
+      </nav>
+      <span class="l-spacer"></span>
+      <span class="topbar__scope is-locked" role="button" aria-disabled="true" title="Locked to this application while you're inside it">
+        <svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg>
+        <span class="topbar__scope__label">PAU</span>
+      </span>
+      <div class="topbar__utils">
+        <span class="search-field" style="width:200px;"><svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg><span style="flex:1;text-align:left;color:var(--text-tertiary);font-size:var(--fs-label);">Search…</span><kbd>⌘J</kbd></span>
+        <button class="btn btn--icon btn--ghost" data-theme-toggle aria-label="Toggle theme"><svg class="icon" aria-hidden="true"><use href="#i-theme"></use></svg></button>
+        <button class="btn btn--icon btn--ghost" aria-label="Notifications"><svg class="icon" aria-hidden="true"><use href="#i-notifications"></use></svg></button>
+        <button class="btn btn--icon btn--ghost" aria-label="Help"><svg class="icon" aria-hidden="true"><use href="#i-help"></use></svg></button>
+        <span class="avatar" title="Anil Venugopal">AV</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="app__body">
+    <nav class="app__left-rail" aria-label="Apps">
+      <div class="rail-apps">
+        <div class="rail-app-icon" title="Home"><svg class="icon" aria-hidden="true"><use href="#i-app-home"></use></svg></div>
+        <div class="rail-app-icon is-active" title="Intake"><svg class="icon" aria-hidden="true"><use href="#i-app-intake"></use></svg></div>
+        <div class="rail-app-icon" title="Studio"><svg class="icon" aria-hidden="true"><use href="#i-app-studio"></use></svg></div>
+        <div class="rail-app-icon" title="Registry"><svg class="icon" aria-hidden="true"><use href="#i-app-registry"></use></svg></div>
+        <div class="rail-app-icon" title="Observability"><svg class="icon" aria-hidden="true"><use href="#i-app-observability"></use></svg></div>
+        <div class="rail-app-icon" title="Governance"><svg class="icon" aria-hidden="true"><use href="#i-app-governance"></use></svg></div>
+        <div class="rail-app-icon" title="Compliance"><svg class="icon" aria-hidden="true"><use href="#i-app-compliance"></use></svg></div>
+        <div class="rail-app-icon" title="Harness"><svg class="icon" aria-hidden="true"><use href="#i-app-harness"></use></svg></div>
+      </div>
+      <span class="l-spacer"></span>
+      <div class="rail-app-icon" title="App launcher" style="margin-bottom:var(--space-2);"><svg class="icon" aria-hidden="true"><use href="#i-app-launcher"></use></svg></div>
+      <div class="rail-app-icon" title="Settings" style="margin-bottom:var(--space-3);"><svg class="icon" aria-hidden="true"><use href="#i-app-settings"></use></svg></div>
+    </nav>
+
+    <nav class="app__sidebar" aria-label="Intake">
+      <div class="sidebar__section">
+        <div class="sidebar__section-label">Intake</div>
+        <a class="nav-item is-active" href="applications.html" style="text-decoration:none;"><svg class="icon" aria-hidden="true"><use href="#i-entity-application"></use></svg>Applications</a>
+        <div class="nav-item"><svg class="icon" aria-hidden="true"><use href="#i-entity-task"></use></svg>Use cases</div>
+        <div class="nav-item"><svg class="icon" aria-hidden="true"><use href="#i-app-compliance"></use></svg>Obligations</div>
+      </div>
+    </nav>
+
+    <main class="app__canvas">
+      <div class="canvas-pad">
+
+        <div class="page-head">
+          <div>
+            <div class="page-head__title">Personal Auto Underwriting <span class="tla">PAU</span> <span class="app-status"><span class="app-status__dot"></span>Active</span></div>
+            <div class="page-head__sub">Owner: Maria Okafor · P&amp;C · onboarded 14 Apr 2026</div>
+          </div>
+          <div class="l-cluster" style="flex-wrap:nowrap;">
+            <button class="btn btn--ghost btn--md"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-more"></use></svg></button>
+            <button class="btn btn--primary btn--md"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-add"></use></svg>New use case</button>
+          </div>
+        </div>
+
+        <div class="tabs">
+          <span class="tab is-active">Overview</span>
+          <span class="tab">Use cases</span>
+          <span class="tab">Compliance</span>
+          <span class="tab">Team</span>
+          <span class="tab">Activity</span>
+        </div>
+
+        <!-- Overview -->
+        <section class="section">
+          <div class="l-grid l-grid--4col" style="margin-bottom:var(--space-5);">
+            <div class="stat"><span class="stat__label">Use cases</span><span class="stat__value">4</span><span class="stat__delta">2 champion</span></div>
+            <div class="stat"><span class="stat__label">Live agents</span><span class="stat__value">6</span><span class="stat__delta stat__delta--up">▲ 1</span></div>
+            <div class="stat"><span class="stat__label">Pass rate</span><span class="stat__value">95.1%</span><span class="stat__delta stat__delta--up">▲ 0.6%</span></div>
+            <div class="stat"><span class="stat__label">HITL rate</span><span class="stat__value">5.2%</span><span class="stat__delta stat__delta--down">▼ 0.3%</span></div>
+          </div>
+
+          <div class="l-grid l-grid--2col" style="align-items:start;">
+            <div class="fsec">
+              <div class="section__head" style="margin-bottom:var(--space-4);"><span class="eyebrow">Identity</span></div>
+              <div class="kv">
+                <span class="kv__k">Purpose</span><span class="kv__v">Underwrites personal auto submissions: extracts risk fields, scores appetite, and routes high-materiality cases to human review.</span>
+                <span class="kv__k">Line of business</span><span class="kv__v">P&amp;C</span>
+                <span class="kv__k">Data ceiling</span><span class="kv__v">Confidential</span>
+              </div>
+            </div>
+            <div class="fsec">
+              <div class="section__head" style="margin-bottom:var(--space-4);"><span class="eyebrow">Compliance perimeter</span><span class="l-spacer"></span><button class="btn btn--ghost btn--sm">Propose change</button></div>
+              <div class="kv">
+                <span class="kv__k">Frameworks</span><span class="kv__v"><span class="chip chip--static">NAIC Model Bulletin</span><span class="chip chip--static">Colorado SB21-169</span></span>
+                <span class="kv__k">Domains</span><span class="kv__v"><span class="chip chip--static">Model risk</span><span class="chip chip--static">Fairness</span><span class="chip chip--static">Privacy</span><span class="chip chip--static">Human oversight</span></span>
+                <span class="kv__k">Consumer impact</span><span class="kv__v">Decisions affecting consumers <span class="yn yn--y">Yes</span> · PII/PHI <span class="yn yn--y">Yes</span> · Consumer-facing <span class="yn yn--n">No</span></span>
+                <span class="kv__k">Jurisdictions</span><span class="kv__v"><span class="chip chip--static">Colorado</span><span class="chip chip--static">New York</span></span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Use cases -->
+        <section class="section">
+          <div class="section__head"><span class="eyebrow">Use cases</span><span class="l-spacer"></span><a class="reg-sub" href="#" style="color:var(--color-brand);text-decoration:none;">View all 4 →</a></div>
+          <div class="log-table">
+            <div class="log-table__header ix-grid">
+              <span class="eyebrow">Use case</span><span class="eyebrow">Status</span><span class="eyebrow">AI risk tier</span><span class="eyebrow">Materiality</span><span class="eyebrow">Updated</span>
+            </div>
+            <div class="log-row ix-grid">
+              <span class="ix-name">Driver risk extraction</span><span><span class="badge badge--champion"><span class="badge__dot"></span>Champion</span></span><span class="badge badge--high"><span class="badge__dot" style="background:var(--color-negative)"></span>High</span><span class="reg-sub">Material</span><span class="reg-sub">2h ago</span>
+            </div>
+            <div class="log-row ix-grid">
+              <span class="ix-name">Appetite scoring</span><span><span class="badge badge--champion"><span class="badge__dot"></span>Champion</span></span><span class="badge badge--medium"><span class="badge__dot" style="background:var(--color-warning)"></span>Limited</span><span class="reg-sub">Material</span><span class="reg-sub">1d ago</span>
+            </div>
+            <div class="log-row ix-grid">
+              <span class="ix-name">Prior-carrier summary</span><span><span class="badge badge--challenger"><span class="badge__dot"></span>Challenger</span></span><span class="badge badge--low"><span class="badge__dot" style="background:var(--text-disabled)"></span>Minimal</span><span class="reg-sub">Non-material</span><span class="reg-sub">3d ago</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Team -->
+        <section class="section">
+          <div class="section__head"><span class="eyebrow">Team</span></div>
+          <div class="fsec">
+            <div class="team-row"><span class="avatar" style="width:26px;height:26px;font-size:10px;">MO</span><span style="flex:1;font-size:var(--fs-label);">Maria Okafor</span><span class="reg-sub">Business owner · App owner</span></div>
+            <div class="team-row"><span class="avatar" style="width:26px;height:26px;font-size:10px;">DS</span><span style="flex:1;font-size:var(--fs-label);">Devin Shah</span><span class="reg-sub">App lead</span></div>
+            <div class="team-row"><span class="avatar" style="width:26px;height:26px;font-size:10px;">PN</span><span style="flex:1;font-size:var(--fs-label);">Priya Nair</span><span class="reg-sub">App dev</span></div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="../js/app.js" data-sprite="../icons/sprite.svg"></script>
+</body>
+</html>

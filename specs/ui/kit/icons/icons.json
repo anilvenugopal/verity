@@ -1,0 +1,1196 @@
+{
+  "$schema": "./icons.schema.json",
+  "meta": {
+    "name": "Verity v2 — Icon Catalog",
+    "version": "1.0.0",
+    "iconSet": "lucide-static",
+    "iconSetVersion": "1.17.0",
+    "license": "ISC (Lucide)",
+    "note": "Source of truth for every meaning-bearing icon in Verity v2. Each entry maps a semantic id (used in code as i-<id>) to a chosen Lucide glyph, with alternatives for review. Reference the semantic id in markup, never the raw Lucide name. See design-system.md §7 (nav) and §6/§9/§10/§13 (label-bearing icons).",
+    "usage": "<svg class=\"icon\" aria-hidden=\"true\"><use href=\"#i-<id>\"></use></svg>  —  add aria-label on the parent button when the icon stands alone."
+  },
+  "categories": [
+    {
+      "id": "nav-apps",
+      "label": "Navigation — apps (left rail)",
+      "ref": "design-system.md §7",
+      "icons": [
+        {
+          "id": "app-home",
+          "lucide": "house",
+          "alt": [
+            "layout-dashboard",
+            "panel-left"
+          ],
+          "label": "Home",
+          "usage": "Left-rail home / landing app",
+          "status": "approved"
+        },
+        {
+          "id": "app-intake",
+          "lucide": "inbox",
+          "alt": [
+            "import",
+            "file-input",
+            "download"
+          ],
+          "label": "Intake",
+          "usage": "Application onboarding & submission intake",
+          "status": "approved"
+        },
+        {
+          "id": "app-studio",
+          "lucide": "pencil-ruler",
+          "alt": [
+            "drafting-compass",
+            "pen-tool",
+            "shapes"
+          ],
+          "label": "Studio",
+          "usage": "Agent/task authoring canvas",
+          "status": "approved"
+        },
+        {
+          "id": "app-registry",
+          "lucide": "library",
+          "alt": [
+            "boxes",
+            "package",
+            "layers"
+          ],
+          "label": "Registry",
+          "usage": "Entity & version registry",
+          "status": "approved"
+        },
+        {
+          "id": "app-observability",
+          "lucide": "activity",
+          "alt": [
+            "radar",
+            "chart-line",
+            "telescope",
+            "gauge"
+          ],
+          "label": "Observability",
+          "usage": "Runs, traces, live monitoring",
+          "status": "approved"
+        },
+        {
+          "id": "app-governance",
+          "lucide": "landmark",
+          "alt": [
+            "scale",
+            "gavel",
+            "book-marked"
+          ],
+          "label": "Governance",
+          "usage": "Lifecycle, approvals, decision log",
+          "status": "change"
+        },
+        {
+          "id": "app-compliance",
+          "lucide": "shield-check",
+          "alt": [
+            "badge-check",
+            "clipboard-check",
+            "file-check"
+          ],
+          "label": "Compliance",
+          "usage": "Audit, policy, regulatory evidence",
+          "status": "approved"
+        },
+        {
+          "id": "app-harness",
+          "lucide": "server-cog",
+          "alt": [
+            "server",
+            "cpu",
+            "boxes",
+            "container"
+          ],
+          "label": "Harness",
+          "usage": "Runtime execution cluster",
+          "status": "approved"
+        },
+        {
+          "id": "app-settings",
+          "lucide": "settings",
+          "alt": [
+            "settings-2",
+            "sliders-horizontal"
+          ],
+          "label": "Settings",
+          "usage": "Workspace & account settings",
+          "status": "approved"
+        }
+      ]
+    },
+    {
+      "id": "nav-utility",
+      "label": "Navigation — topbar & utility",
+      "ref": "design-system.md §7",
+      "icons": [
+        {
+          "id": "brand-mark",
+          "lucide": "shield",
+          "alt": [
+            "shield-check",
+            "hexagon",
+            "gem"
+          ],
+          "label": "Verity mark",
+          "usage": "Placeholder wordmark glyph — replace with final logo",
+          "status": "approved"
+        },
+        {
+          "id": "search",
+          "lucide": "search",
+          "alt": [],
+          "label": "Search",
+          "usage": "Search field affordance",
+          "status": "approved"
+        },
+        {
+          "id": "command",
+          "lucide": "command",
+          "alt": [
+            "terminal",
+            "square-chevron-right"
+          ],
+          "label": "Command palette",
+          "usage": "Ctrl/Cmd+J command palette",
+          "status": "approved"
+        },
+        {
+          "id": "app-launcher",
+          "lucide": "layout-dashboard",
+          "alt": [
+            "layout-grid",
+            "grid-3x3",
+            "grip"
+          ],
+          "label": "App launcher",
+          "usage": "Rail grid icon → app launcher modal",
+          "status": "change"
+        },
+        {
+          "id": "notifications",
+          "lucide": "bell",
+          "alt": [
+            "bell-dot"
+          ],
+          "label": "Notifications",
+          "usage": "Topbar notifications",
+          "status": "approved"
+        },
+        {
+          "id": "help",
+          "lucide": "circle-help",
+          "alt": [
+            "life-buoy",
+            "message-circle-question"
+          ],
+          "label": "Help",
+          "usage": "Contextual help / ? affordance (§8)",
+          "status": "approved"
+        },
+        {
+          "id": "theme",
+          "lucide": "sun-moon",
+          "alt": ["moon", "sun", "contrast"],
+          "label": "Theme toggle",
+          "usage": "Light / dark mode toggle (distinct from i-state-shadow)",
+          "status": "approved"
+        },
+        {
+          "id": "lock",
+          "lucide": "lock",
+          "alt": ["lock-keyhole"],
+          "label": "Locked",
+          "usage": "Locked / disabled state — e.g. Application Scope while onboarding or on app-scoped screens",
+          "status": "approved"
+        },
+        {
+          "id": "user",
+          "lucide": "circle-user-round",
+          "alt": [
+            "circle-user",
+            "user"
+          ],
+          "label": "Account",
+          "usage": "Avatar / account menu",
+          "status": "change"
+        },
+        {
+          "id": "panel-toggle",
+          "lucide": "panel-right",
+          "alt": [
+            "panel-right-close",
+            "columns-2"
+          ],
+          "label": "Toggle panel",
+          "usage": "Show/hide right context panel",
+          "status": "approved"
+        },
+        {
+          "id": "pin",
+          "lucide": "pin",
+          "alt": [
+            "bookmark",
+            "star"
+          ],
+          "label": "Pin",
+          "usage": "Pin an app in the rail",
+          "status": "approved"
+        },
+        {
+          "id": "recent",
+          "lucide": "history",
+          "alt": [
+            "clock",
+            "rotate-ccw"
+          ],
+          "label": "Recent",
+          "usage": "Recent apps / history",
+          "status": "approved"
+        }
+      ]
+    },
+    {
+      "id": "lifecycle",
+      "label": "Lifecycle state badges",
+      "ref": "design-system.md §6 (badges), §10 (state machine)",
+      "icons": [
+        {
+          "id": "state-draft",
+          "lucide": "file-pen",
+          "alt": [
+            "pencil",
+            "pen-line",
+            "notebook-pen"
+          ],
+          "label": "Draft",
+          "usage": "Editable, not yet promoted",
+          "status": "approved"
+        },
+        {
+          "id": "state-candidate",
+          "lucide": "flask-conical",
+          "alt": [
+            "circle-dashed",
+            "test-tube",
+            "git-commit-horizontal"
+          ],
+          "label": "Candidate",
+          "usage": "Locked composition, under test",
+          "status": "approved"
+        },
+        {
+          "id": "state-staging",
+          "lucide": "container",
+          "alt": [
+            "layers",
+            "git-branch",
+            "boxes"
+          ],
+          "label": "Staging",
+          "usage": "Test-suite gated",
+          "status": "change"
+        },
+        {
+          "id": "state-shadow",
+          "lucide": "eye",
+          "alt": [
+            "eye-off",
+            "copy",
+            "ghost",
+            "contrast"
+          ],
+          "label": "Shadow",
+          "usage": "Mirrored, non-affecting prod run",
+          "status": "approved"
+        },
+        {
+          "id": "state-challenger",
+          "lucide": "swords",
+          "alt": [
+            "git-pull-request-arrow",
+            "target",
+            "flag"
+          ],
+          "label": "Challenger",
+          "usage": "Head-to-head vs champion",
+          "status": "approved"
+        },
+        {
+          "id": "state-champion",
+          "lucide": "trophy",
+          "alt": [
+            "crown",
+            "award",
+            "badge-check"
+          ],
+          "label": "Champion",
+          "usage": "Live production version",
+          "status": "change"
+        },
+        {
+          "id": "state-deprecated",
+          "lucide": "archive-x",
+          "alt": [
+            "archive",
+            "ban",
+            "package-x",
+            "circle-slash"
+          ],
+          "label": "Deprecated",
+          "usage": "Retired; restorable via rollback",
+          "status": "change"
+        }
+      ]
+    },
+    {
+      "id": "materiality",
+      "label": "Materiality tiers",
+      "ref": "design-system.md §6",
+      "icons": [
+        {
+          "id": "tier-high",
+          "lucide": "shield-alert",
+          "alt": [
+            "octagon-alert",
+            "flame",
+            "circle-alert"
+          ],
+          "label": "High",
+          "usage": "High materiality — negative palette",
+          "status": "change"
+        },
+        {
+          "id": "tier-medium",
+          "lucide": "triangle-alert",
+          "alt": [
+            "shield-alert"
+          ],
+          "label": "Medium",
+          "usage": "Medium materiality — warning palette",
+          "status": "approved"
+        },
+        {
+          "id": "tier-low",
+          "lucide": "info",
+          "alt": [
+            "circle",
+            "shield",
+            "minus"
+          ],
+          "label": "Low",
+          "usage": "Low materiality — neutral palette",
+          "status": "approved"
+        }
+      ]
+    },
+    {
+      "id": "callouts",
+      "label": "Callout kinds",
+      "ref": "design-system.md §6",
+      "icons": [
+        {
+          "id": "callout-info",
+          "lucide": "info",
+          "alt": [
+            "lightbulb"
+          ],
+          "label": "Info",
+          "usage": "Informational callout",
+          "status": "approved"
+        },
+        {
+          "id": "callout-success",
+          "lucide": "circle-check",
+          "alt": [
+            "check",
+            "badge-check",
+            "circle-check-big"
+          ],
+          "label": "Success",
+          "usage": "Success callout",
+          "status": "approved"
+        },
+        {
+          "id": "callout-warning",
+          "lucide": "triangle-alert",
+          "alt": [],
+          "label": "Warning",
+          "usage": "Warning callout",
+          "status": "approved"
+        },
+        {
+          "id": "callout-error",
+          "lucide": "circle-alert",
+          "alt": [
+            "octagon-x",
+            "circle-x",
+            "octagon-alert"
+          ],
+          "label": "Error",
+          "usage": "Error callout / field error",
+          "status": "approved"
+        }
+      ]
+    },
+    {
+      "id": "block-types",
+      "label": "Prompt block types",
+      "ref": "design-system.md §9",
+      "icons": [
+        {
+          "id": "block-prose",
+          "lucide": "type",
+          "alt": [
+            "align-left",
+            "text",
+            "pilcrow"
+          ],
+          "label": "Prose",
+          "usage": "Plain instructional text block",
+          "status": "change"
+        },
+        {
+          "id": "block-var",
+          "lucide": "braces",
+          "alt": [
+            "variable",
+            "parentheses",
+            "dollar-sign"
+          ],
+          "label": "Variable",
+          "usage": "Runtime placeholder chip",
+          "status": "change"
+        },
+        {
+          "id": "block-list",
+          "lucide": "list-ordered",
+          "alt": [
+            "list",
+            "list-checks"
+          ],
+          "label": "List",
+          "usage": "Numbered instruction list",
+          "status": "approved"
+        },
+        {
+          "id": "block-table",
+          "lucide": "table",
+          "alt": [
+            "table-2",
+            "grid-3x3",
+            "sheet"
+          ],
+          "label": "Table",
+          "usage": "Reference table (labels supported)",
+          "status": "approved"
+        },
+        {
+          "id": "block-code",
+          "lucide": "code",
+          "alt": [
+            "code-xml",
+            "square-code",
+            "file-code"
+          ],
+          "label": "Code",
+          "usage": "Syntax-highlighted code example",
+          "status": "approved"
+        }
+      ]
+    },
+    {
+      "id": "diff",
+      "label": "Diff markers",
+      "ref": "design-system.md §11",
+      "icons": [
+        {
+          "id": "diff-added",
+          "lucide": "plus",
+          "alt": [
+            "file-plus",
+            "circle-plus"
+          ],
+          "label": "Added",
+          "usage": "Added block / line",
+          "status": "approved"
+        },
+        {
+          "id": "diff-removed",
+          "lucide": "minus",
+          "alt": [
+            "file-minus",
+            "circle-minus"
+          ],
+          "label": "Removed",
+          "usage": "Removed block / line",
+          "status": "approved"
+        },
+        {
+          "id": "diff-modified",
+          "lucide": "pencil-line",
+          "alt": [
+            "pencil",
+            "file-pen",
+            "git-compare"
+          ],
+          "label": "Modified",
+          "usage": "Modified block",
+          "status": "approved"
+        },
+        {
+          "id": "diff-unchanged",
+          "lucide": "equal",
+          "alt": [
+            "minus",
+            "dot"
+          ],
+          "label": "Unchanged",
+          "usage": "Unchanged block",
+          "status": "approved"
+        }
+      ]
+    },
+    {
+      "id": "triage",
+      "label": "Triage signals",
+      "ref": "design-system.md §13",
+      "icons": [
+        {
+          "id": "triage-test-failure",
+          "lucide": "circle-x",
+          "alt": [
+            "bug",
+            "octagon-x"
+          ],
+          "label": "Test failure",
+          "usage": "New failures vs prior version",
+          "status": "approved"
+        },
+        {
+          "id": "triage-hitl-spike",
+          "lucide": "trending-up",
+          "alt": [
+            "arrow-up-right",
+            "hand"
+          ],
+          "label": "HITL spike",
+          "usage": "Human override rate spike",
+          "status": "approved"
+        },
+        {
+          "id": "triage-confidence-drift",
+          "lucide": "trending-down",
+          "alt": [
+            "arrow-down-right",
+            "chart-line"
+          ],
+          "label": "Confidence drift",
+          "usage": "Average confidence dropped",
+          "status": "approved"
+        },
+        {
+          "id": "triage-challenger-lag",
+          "lucide": "hourglass",
+          "alt": [
+            "timer-off",
+            "clock"
+          ],
+          "label": "Challenger lagging",
+          "usage": "Running >14d without decision",
+          "status": "approved"
+        },
+        {
+          "id": "triage-quota",
+          "lucide": "gauge",
+          "alt": [
+            "battery-warning",
+            "circle-gauge",
+            "fuel"
+          ],
+          "label": "Quota approaching",
+          "usage": "Within 20% of budget",
+          "status": "approved"
+        }
+      ]
+    },
+    {
+      "id": "canvas-sections",
+      "label": "Authoring canvas sections",
+      "ref": "design-system.md §10",
+      "icons": [
+        {
+          "id": "section-input-bindings",
+          "lucide": "file-input",
+          "alt": [
+            "link",
+            "arrow-right-left",
+            "git-merge",
+            "waypoints"
+          ],
+          "label": "Input bindings",
+          "usage": "source_field → template_var (input bindings; pairs with file-output write targets)",
+          "status": "approved"
+        },
+        {
+          "id": "section-prompt",
+          "lucide": "message-square-text",
+          "alt": [
+            "text",
+            "file-text"
+          ],
+          "label": "Prompt",
+          "usage": "Wired prompt section",
+          "status": "approved"
+        },
+        {
+          "id": "section-tools",
+          "lucide": "wrench",
+          "alt": [
+            "hammer",
+            "settings-2"
+          ],
+          "label": "Tools",
+          "usage": "Authorised tools (agents)",
+          "status": "approved"
+        },
+        {
+          "id": "section-delegation",
+          "lucide": "workflow",
+          "alt": [
+            "git-fork",
+            "users",
+            "share-2",
+            "network"
+          ],
+          "label": "Delegation",
+          "usage": "Delegate agents",
+          "status": "change"
+        },
+        {
+          "id": "section-output-schema",
+          "lucide": "table-properties",
+          "alt": [
+            "braces",
+            "file-json",
+            "list-tree"
+          ],
+          "label": "Output schema",
+          "usage": "Output field table",
+          "status": "change"
+        },
+        {
+          "id": "section-write-targets",
+          "lucide": "file-output",
+          "alt": [
+            "upload",
+            "database",
+            "save",
+            "hard-drive-upload"
+          ],
+          "label": "Write targets",
+          "usage": "output.field → connector.write (output bindings; pairs with file-input input bindings)",
+          "status": "approved"
+        },
+        {
+          "id": "section-hooks",
+          "lucide": "webhook",
+          "alt": [
+            "anchor",
+            "zap",
+            "git-pull-request"
+          ],
+          "label": "Hooks",
+          "usage": "post_extract / pre_write / on_low_confidence",
+          "status": "approved"
+        }
+      ]
+    },
+    {
+      "id": "library",
+      "label": "Library / connector kinds",
+      "ref": "design-system.md §10",
+      "icons": [
+        {
+          "id": "lib-prompts",
+          "lucide": "message-square-text",
+          "alt": [
+            "file-text",
+            "files",
+            "scroll-text"
+          ],
+          "label": "Prompts",
+          "usage": "Available prompts",
+          "status": "approved"
+        },
+        {
+          "id": "lib-tools",
+          "lucide": "wrench",
+          "alt": [
+            "hammer",
+            "settings-2"
+          ],
+          "label": "Tools",
+          "usage": "Available tools",
+          "status": "approved"
+        },
+        {
+          "id": "lib-inference",
+          "lucide": "sliders-horizontal",
+          "alt": [
+            "sliders-vertical",
+            "settings-2",
+            "gauge"
+          ],
+          "label": "Inference config",
+          "usage": "Model / temperature configs",
+          "status": "approved"
+        },
+        {
+          "id": "lib-connectors",
+          "lucide": "cable",
+          "alt": [
+            "plug",
+            "plug-zap",
+            "unplug"
+          ],
+          "label": "Data connectors",
+          "usage": "Source bindings",
+          "status": "approved"
+        },
+        {
+          "id": "lib-delegates",
+          "lucide": "workflow",
+          "alt": [
+            "bot",
+            "bot-message-square",
+            "users"
+          ],
+          "label": "Delegate agents",
+          "usage": "Agent → agent delegation",
+          "status": "change"
+        }
+      ]
+    },
+    {
+      "id": "entities",
+      "label": "Entity types",
+      "ref": "design-system.md §10",
+      "icons": [
+        {
+          "id": "entity-agent",
+          "lucide": "bot",
+          "alt": [
+            "bot-message-square",
+            "brain",
+            "cpu"
+          ],
+          "label": "Agent",
+          "usage": "Agent entity",
+          "status": "approved"
+        },
+        {
+          "id": "entity-task",
+          "lucide": "list-checks",
+          "alt": [
+            "square-check",
+            "clipboard-list"
+          ],
+          "label": "Task",
+          "usage": "Task entity",
+          "status": "approved"
+        },
+        {
+          "id": "entity-prompt",
+          "lucide": "message-square-text",
+          "alt": [
+            "file-text",
+            "scroll-text"
+          ],
+          "label": "Prompt",
+          "usage": "Prompt template",
+          "status": "approved"
+        },
+        {
+          "id": "entity-application",
+          "lucide": "app-window",
+          "alt": [
+            "layout-grid",
+            "panel-top",
+            "app-window-mac"
+          ],
+          "label": "Application",
+          "usage": "Onboarded application",
+          "status": "approved"
+        },
+        {
+          "id": "entity-run",
+          "lucide": "play",
+          "alt": [
+            "play-circle",
+            "circle-play",
+            "zap"
+          ],
+          "label": "Run",
+          "usage": "Execution run",
+          "status": "change"
+        },
+        {
+          "id": "entity-user",
+          "lucide": "circle-user",
+          "alt": [
+            "user",
+            "circle-user-round"
+          ],
+          "label": "User",
+          "usage": "User / author",
+          "status": "approved"
+        }
+      ]
+    },
+    {
+      "id": "test-perf",
+      "label": "Test & performance",
+      "ref": "design-system.md §12",
+      "icons": [
+        {
+          "id": "run",
+          "lucide": "play",
+          "alt": [
+            "circle-play",
+            "play-circle"
+          ],
+          "label": "Run",
+          "usage": "Run entity in test panel",
+          "status": "approved"
+        },
+        {
+          "id": "metric-score",
+          "lucide": "target",
+          "alt": [
+            "crosshair",
+            "gauge",
+            "percent"
+          ],
+          "label": "F1 / accuracy",
+          "usage": "Score stat tile",
+          "status": "approved"
+        },
+        {
+          "id": "metric-pass",
+          "lucide": "circle-check",
+          "alt": [
+            "check",
+            "badge-check"
+          ],
+          "label": "Pass rate",
+          "usage": "Pass-rate stat tile",
+          "status": "approved"
+        },
+        {
+          "id": "metric-latency",
+          "lucide": "timer",
+          "alt": [
+            "clock",
+            "gauge"
+          ],
+          "label": "Latency",
+          "usage": "Avg/P95 latency tile",
+          "status": "approved"
+        },
+        {
+          "id": "metric-cost",
+          "lucide": "coins",
+          "alt": [
+            "dollar-sign",
+            "banknote",
+            "circle-dollar-sign",
+            "receipt"
+          ],
+          "label": "Cost",
+          "usage": "Avg cost tile",
+          "status": "approved"
+        },
+        {
+          "id": "save-suite",
+          "lucide": "bookmark-plus",
+          "alt": [
+            "save",
+            "list-plus"
+          ],
+          "label": "Save to suite",
+          "usage": "Capture run as test case",
+          "status": "change"
+        },
+        {
+          "id": "decision-log",
+          "lucide": "receipt-text",
+          "alt": [
+            "scroll-text",
+            "file-clock",
+            "history"
+          ],
+          "label": "Decision log",
+          "usage": "Link to decision log",
+          "status": "change"
+        },
+        {
+          "id": "hitl",
+          "lucide": "pointer",
+          "alt": [
+            "hand",
+            "user-check"
+          ],
+          "label": "HITL override",
+          "usage": "Human-in-the-loop override",
+          "status": "change"
+        }
+      ]
+    },
+    {
+      "id": "actions",
+      "label": "Common actions",
+      "ref": "design-system.md §6 (buttons), general",
+      "icons": [
+        {
+          "id": "add",
+          "lucide": "plus",
+          "alt": [
+            "circle-plus"
+          ],
+          "label": "Add",
+          "usage": "Add / create",
+          "status": "approved"
+        },
+        {
+          "id": "edit",
+          "lucide": "pencil",
+          "alt": [
+            "pen-line",
+            "square-pen"
+          ],
+          "label": "Edit",
+          "usage": "Edit in place",
+          "status": "approved"
+        },
+        {
+          "id": "clone",
+          "lucide": "copy-plus",
+          "alt": [
+            "copy",
+            "files"
+          ],
+          "label": "Clone",
+          "usage": "Clone to new version",
+          "status": "change"
+        },
+        {
+          "id": "delete",
+          "lucide": "trash-2",
+          "alt": [
+            "trash",
+            "x"
+          ],
+          "label": "Delete",
+          "usage": "Delete / remove",
+          "status": "approved"
+        },
+        {
+          "id": "save",
+          "lucide": "save",
+          "alt": [
+            "hard-drive",
+            "check"
+          ],
+          "label": "Save",
+          "usage": "Save / commit",
+          "status": "approved"
+        },
+        {
+          "id": "open-editor",
+          "lucide": "square-arrow-out-up-right",
+          "alt": [
+            "external-link",
+            "arrow-up-right",
+            "maximize-2"
+          ],
+          "label": "Open editor",
+          "usage": "Open in full editor",
+          "status": "approved"
+        },
+        {
+          "id": "clear",
+          "lucide": "x",
+          "alt": [
+            "circle-x"
+          ],
+          "label": "Clear",
+          "usage": "Clear field / close",
+          "status": "approved"
+        },
+        {
+          "id": "expand",
+          "lucide": "chevron-down",
+          "alt": [
+            "chevrons-up-down",
+            "plus"
+          ],
+          "label": "Expand",
+          "usage": "Expand / open",
+          "status": "approved"
+        },
+        {
+          "id": "collapse",
+          "lucide": "chevron-up",
+          "alt": [
+            "chevrons-down-up",
+            "minus"
+          ],
+          "label": "Collapse",
+          "usage": "Collapse / close",
+          "status": "approved"
+        },
+        {
+          "id": "next",
+          "lucide": "chevron-right",
+          "alt": [
+            "arrow-right"
+          ],
+          "label": "Next",
+          "usage": "Forward / disclosure",
+          "status": "approved"
+        },
+        {
+          "id": "prev",
+          "lucide": "chevron-left",
+          "alt": [
+            "arrow-left"
+          ],
+          "label": "Previous",
+          "usage": "Back",
+          "status": "approved"
+        },
+        {
+          "id": "more",
+          "lucide": "ellipsis",
+          "alt": [
+            "ellipsis-vertical",
+            "menu"
+          ],
+          "label": "More",
+          "usage": "Overflow / kebab menu",
+          "status": "change"
+        },
+        {
+          "id": "filter",
+          "lucide": "list-filter",
+          "alt": [
+            "filter"
+          ],
+          "label": "Filter",
+          "usage": "Filter a list",
+          "status": "approved"
+        },
+        {
+          "id": "upload",
+          "lucide": "upload",
+          "alt": [
+            "cloud-upload",
+            "file-up"
+          ],
+          "label": "Upload",
+          "usage": "Upload file",
+          "status": "approved"
+        },
+        {
+          "id": "download",
+          "lucide": "download",
+          "alt": [
+            "cloud-download",
+            "file-down"
+          ],
+          "label": "Download",
+          "usage": "Download / export",
+          "status": "approved"
+        },
+        {
+          "id": "drag",
+          "lucide": "grip-vertical",
+          "alt": [
+            "grip",
+            "grip-horizontal"
+          ],
+          "label": "Drag",
+          "usage": "Drag handle (blocks, bindings)",
+          "status": "approved"
+        },
+        {
+          "id": "promote",
+          "lucide": "chevrons-up",
+          "alt": [
+            "circle-arrow-up",
+            "arrow-up",
+            "trending-up"
+          ],
+          "label": "Promote",
+          "usage": "Promote to next lifecycle state",
+          "status": "change"
+        },
+        {
+          "id": "approve",
+          "lucide": "thumbs-up",
+          "alt": [
+            "check",
+            "circle-check",
+            "badge-check"
+          ],
+          "label": "Approve",
+          "usage": "Approval gate accept",
+          "status": "change"
+        },
+        {
+          "id": "rollback",
+          "lucide": "undo-2",
+          "alt": [
+            "rotate-ccw",
+            "history",
+            "corner-up-left"
+          ],
+          "label": "Rollback",
+          "usage": "Restore prior champion",
+          "status": "change"
+        },
+        {
+          "id": "attach",
+          "lucide": "paperclip",
+          "alt": [
+            "file",
+            "link"
+          ],
+          "label": "Attach",
+          "usage": "Attach document",
+          "status": "approved"
+        },
+        {
+          "id": "vision",
+          "lucide": "image",
+          "alt": [
+            "eye",
+            "scan-eye",
+            "file-image",
+            "camera"
+          ],
+          "label": "Vision input",
+          "usage": "PDF/vision content block",
+          "status": "approved"
+        }
+      ]
+    }
+  ]
+}

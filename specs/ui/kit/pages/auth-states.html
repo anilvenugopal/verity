@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verity — Auth states</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles/tokens.css">
+<link rel="stylesheet" href="../styles/base.css">
+<link rel="stylesheet" href="../styles/components.css">
+<link rel="stylesheet" href="../styles/utilities.css">
+<style>
+  body { background: var(--surface-recessed); }
+  .wrap { max-width: 920px; margin: 0 auto; padding: var(--space-7) var(--space-6) 80px; }
+  .head { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-2); }
+  /* logo uses the .wordmark component (size + theme-swap) */
+  .title { font-size: var(--fs-title); font-weight: var(--fw-semibold); }
+  .lede { color: var(--text-secondary); font-size: var(--fs-label); margin-bottom: var(--space-6); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-4); }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  .state { background: var(--surface-panel); border: 0.5px solid var(--border-default); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: var(--space-6) var(--space-5); }
+  .state__icon { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: var(--radius-md); margin-bottom: var(--space-3); }
+  .state__icon .icon { width: 22px; height: 22px; }
+  .state__icon--warn { background: var(--color-warning-bg); color: var(--color-warning); }
+  .state__icon--err  { background: var(--color-negative-bg); color: var(--color-negative); }
+  .state__icon--neutral { background: var(--surface-recessed); color: var(--text-tertiary); }
+  .state__code { font-family: var(--font-mono); font-size: var(--fs-eyebrow); color: var(--text-tertiary); letter-spacing: 0.06em; }
+  .state__title { font-size: var(--fs-h3); font-weight: var(--fw-semibold); margin: 4px 0 6px; }
+  .state__body { font-size: var(--fs-label); color: var(--text-secondary); line-height: 1.55; }
+  .state__body code { font-family: var(--font-mono); font-size: 11px; background: var(--surface-recessed); border: 1px solid var(--border-default); border-radius: 3px; padding: 0 4px; }
+  .state__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-5); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="head"><img class="wordmark wordmark--light" src="../assets/verity-wordmark-dark.png" alt="Verity"><img class="wordmark wordmark--dark" src="../assets/verity-wordmark-white.png" alt="" aria-hidden="true"><span class="title">Auth states</span></div>
+    <p class="lede">Fail-closed states — Verity denies by default and explains what's needed. All three are full-screen takeovers in the product; shown here side by side.</p>
+
+    <div class="grid">
+      <!-- Session expired -->
+      <div class="state">
+        <div class="state__icon state__icon--warn"><svg class="icon" aria-hidden="true"><use href="#i-recent"></use></svg></div>
+        <div class="state__code">session</div>
+        <div class="state__title">Your session has expired</div>
+        <p class="state__body">For your security you've been signed out. Sign in again to continue — your work is saved.</p>
+        <div class="state__actions">
+          <a class="btn btn--primary btn--md" href="signin.html"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-open-editor"></use></svg>Sign in with Microsoft</a>
+        </div>
+      </div>
+
+      <!-- Access denied (403) -->
+      <div class="state">
+        <div class="state__icon state__icon--err"><svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg></div>
+        <div class="state__code">403 · forbidden</div>
+        <div class="state__title">You don't have permission</div>
+        <p class="state__body">This action requires the <code>ai_governance</code> role. Ask a workspace admin to grant it — role changes take effect within seconds.</p>
+        <div class="state__actions">
+          <button class="btn btn--secondary btn--md">Back</button>
+          <button class="btn btn--ghost btn--md">Request access</button>
+        </div>
+      </div>
+
+      <!-- Account disabled -->
+      <div class="state">
+        <div class="state__icon state__icon--neutral"><svg class="icon" aria-hidden="true"><use href="#i-state-deprecated"></use></svg></div>
+        <div class="state__code">account</div>
+        <div class="state__title">Your account is disabled</div>
+        <p class="state__body">An administrator has disabled your access to Verity. Contact them to restore it. <span style="color:var(--text-tertiary);">(FR-021 — fail closed)</span></p>
+        <div class="state__actions">
+          <button class="btn btn--ghost btn--md">Contact administrator</button>
+        </div>
+      </div>
+    </div>
+  </div>
+<script src="../js/app.js" data-sprite="../icons/sprite.svg"></script>
+</body>
+</html>

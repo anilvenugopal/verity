@@ -1,0 +1,36 @@
+/* ============================================================================
+   utilities.css — Layer 5 of the five-layer ITCSS architecture (design-system §2)
+   ----------------------------------------------------------------------------
+   Single-purpose escape hatches. Every rule carries !important (this is the ONLY
+   layer allowed to). Use sparingly — if you reach for the same combination 3+
+   times, it should become a component.
+   ============================================================================ */
+
+.u-hidden       { display: none !important; }
+.u-block        { display: block !important; }
+.u-flex         { display: flex !important; }
+.u-flex-1       { flex: 1 1 0% !important; }
+.u-items-center { align-items: center !important; }
+.u-ml-auto      { margin-left: auto !important; }
+.u-mt-auto      { margin-top: auto !important; }
+
+.u-text-center  { text-align: center !important; }
+.u-text-left    { text-align: left !important; }
+.u-text-right   { text-align: right !important; }
+.u-truncate     { overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
+
+.u-fw-medium    { font-weight: var(--fw-medium) !important; }
+.u-fw-semibold  { font-weight: var(--fw-semibold) !important; }
+.u-mono         { font-family: var(--font-mono) !important; }
+
+.u-text-secondary { color: var(--text-secondary) !important; }
+.u-text-tertiary  { color: var(--text-tertiary) !important; }
+
+/* Screen-reader-only — visually hidden, available to assistive tech (§16) */
+.u-sr-only {
+  position: absolute !important;
+  width: 1px !important; height: 1px !important;
+  padding: 0 !important; margin: -1px !important;
+  overflow: hidden !important; clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important; border: 0 !important;
+}

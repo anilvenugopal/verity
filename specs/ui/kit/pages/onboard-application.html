@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verity — Onboard application</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles/tokens.css">
+<link rel="stylesheet" href="../styles/base.css">
+<link rel="stylesheet" href="../styles/layout.css">
+<link rel="stylesheet" href="../styles/components.css">
+<link rel="stylesheet" href="../styles/utilities.css">
+<style>
+  /* ── page-local composition ───────────────────────────────────────────── */
+  .rail-apps { display: flex; flex-direction: column; align-items: center; gap: 2px; padding-top: var(--space-3); }
+  .topbar-row { display: flex; align-items: center; gap: var(--space-3); width: 100%; }
+  .canvas-pad { padding: var(--space-6) var(--space-7) 24px; max-width: 880px; }
+  .page-head { margin-bottom: var(--space-4); }
+  .page-head__title { font-size: var(--fs-hero); font-weight: var(--fw-semibold); letter-spacing: -0.02em; }
+  .page-head__sub { font-size: var(--fs-label); color: var(--text-secondary); margin-top: 4px; max-width: 70ch; line-height: 1.5; }
+
+  /* form scaffold (page-local) */
+  .fsec { background: var(--surface-panel); border: 0.5px solid var(--border-default); border-radius: var(--radius-lg); padding: var(--space-5); margin-top: var(--space-4); }
+  .fsec__head { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-4); padding-bottom: var(--space-3); border-bottom: 0.5px solid var(--border-faint); }
+  .fsec__num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: var(--radius-sm);
+               background: var(--color-brand-faint); color: var(--color-brand); font-size: 11px; font-weight: var(--fw-semibold); flex-shrink: 0; }
+  .fsec__title { font-size: var(--fs-h3); font-weight: var(--fw-semibold); }
+  .fsec__note { font-size: var(--fs-caption); color: var(--text-tertiary); margin-left: auto; }
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+  .field-full { grid-column: 1 / -1; }
+  .field + .field { margin-top: var(--space-4); }
+  .req { color: var(--color-negative); font-weight: var(--fw-semibold); }
+  textarea.input { min-height: 76px; line-height: 1.5; }
+  select.input { appearance: auto; }
+  .sublabel { font-size: var(--fs-caption); font-weight: var(--fw-semibold); color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+
+  .proposer { display: flex; align-items: center; gap: var(--space-2); padding: 8px 10px; background: var(--surface-recessed);
+              border: 1px solid var(--border-default); border-radius: var(--radius-md); font-size: var(--fs-label); color: var(--text-secondary); }
+  .proposer .avatar { width: 22px; height: 22px; font-size: 9px; }
+  .proposer__tag { margin-left: auto; font-size: var(--fs-caption); color: var(--text-tertiary); }
+
+  .team-row { display: grid; grid-template-columns: 1fr 170px 32px; gap: var(--space-2); align-items: center; }
+  .team-row + .team-row { margin-top: var(--space-2); }
+
+  .flag-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: 11px 0; border-bottom: 0.5px solid var(--border-faint); }
+  .flag-row:first-of-type { padding-top: 0; }
+  .flag-row:last-of-type { border-bottom: none; }
+  .flag-row__text { font-size: var(--fs-label); }
+  .flag-row__hint { font-size: var(--fs-caption); color: var(--text-tertiary); margin-top: 1px; }
+
+  /* sticky action bar */
+  .form-actions { position: sticky; bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-3);
+                  margin-top: var(--space-6); padding: var(--space-3) var(--space-4);
+                  background: var(--surface-panel); border: 0.5px solid var(--border-strong); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); }
+  .form-actions__summary { font-size: var(--fs-caption); color: var(--text-tertiary); }
+  .form-actions__summary b { color: var(--text-secondary); font-weight: var(--fw-medium); }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ── Top bar ── -->
+  <header class="app__topbar">
+    <div class="topbar-row">
+      <a class="topbar__logo" href="sample.html" aria-label="Verity — Home">
+        <img class="wordmark wordmark--light" src="../assets/verity-wordmark-dark.png" alt="Verity" width="74" height="22">
+        <img class="wordmark wordmark--dark" src="../assets/verity-wordmark-white.png" alt="" aria-hidden="true" width="74" height="22">
+      </a>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <span class="breadcrumb__item">Intake</span>
+        <span class="breadcrumb__sep">›</span>
+        <span class="breadcrumb__item">Applications</span>
+        <span class="breadcrumb__sep">›</span>
+        <span class="breadcrumb__item breadcrumb__item--current">Onboard</span>
+      </nav>
+      <span class="l-spacer"></span>
+      <span class="topbar__scope is-locked" role="button" aria-disabled="true" title="Locked to the application you're onboarding — scope can't change here">
+        <svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg>
+        <span class="topbar__scope__label">New application</span>
+      </span>
+      <div class="topbar__utils">
+        <span class="search-field" style="width:200px;">
+          <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
+          <span style="flex:1;text-align:left;color:var(--text-tertiary);font-size:var(--fs-label);">Search…</span>
+          <kbd>⌘J</kbd>
+        </span>
+        <button class="btn btn--icon btn--ghost" data-theme-toggle aria-label="Toggle light/dark theme"><svg class="icon" aria-hidden="true"><use href="#i-theme"></use></svg></button>
+        <button class="btn btn--icon btn--ghost" aria-label="Notifications"><svg class="icon" aria-hidden="true"><use href="#i-notifications"></use></svg></button>
+        <button class="btn btn--icon btn--ghost" aria-label="Help"><svg class="icon" aria-hidden="true"><use href="#i-help"></use></svg></button>
+        <span class="avatar" title="Anil Venugopal">AV</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="app__body">
+
+    <!-- ── Left rail ── -->
+    <nav class="app__left-rail" aria-label="Apps">
+      <div class="rail-apps">
+        <div class="rail-app-icon" title="Home"><svg class="icon" aria-hidden="true"><use href="#i-app-home"></use></svg></div>
+        <div class="rail-app-icon is-active" title="Intake"><svg class="icon" aria-hidden="true"><use href="#i-app-intake"></use></svg></div>
+        <div class="rail-app-icon" title="Studio"><svg class="icon" aria-hidden="true"><use href="#i-app-studio"></use></svg></div>
+        <div class="rail-app-icon" title="Registry"><svg class="icon" aria-hidden="true"><use href="#i-app-registry"></use></svg></div>
+        <div class="rail-app-icon" title="Observability"><svg class="icon" aria-hidden="true"><use href="#i-app-observability"></use></svg></div>
+        <div class="rail-app-icon" title="Governance"><svg class="icon" aria-hidden="true"><use href="#i-app-governance"></use></svg></div>
+        <div class="rail-app-icon" title="Compliance"><svg class="icon" aria-hidden="true"><use href="#i-app-compliance"></use></svg></div>
+        <div class="rail-app-icon" title="Harness"><svg class="icon" aria-hidden="true"><use href="#i-app-harness"></use></svg></div>
+      </div>
+      <span class="l-spacer"></span>
+      <div class="rail-app-icon" title="App launcher" style="margin-bottom:var(--space-2);"><svg class="icon" aria-hidden="true"><use href="#i-app-launcher"></use></svg></div>
+      <div class="rail-app-icon" title="Settings" style="margin-bottom:var(--space-3);"><svg class="icon" aria-hidden="true"><use href="#i-app-settings"></use></svg></div>
+    </nav>
+
+    <!-- ── Sidebar — Intake sections ── -->
+    <nav class="app__sidebar" aria-label="Intake">
+      <div class="sidebar__section">
+        <div class="sidebar__section-label">Intake</div>
+        <div class="nav-item is-active"><svg class="icon" aria-hidden="true"><use href="#i-entity-application"></use></svg>Applications</div>
+        <div class="nav-item"><svg class="icon" aria-hidden="true"><use href="#i-entity-task"></use></svg>Use cases</div>
+        <div class="nav-item"><svg class="icon" aria-hidden="true"><use href="#i-app-compliance"></use></svg>Obligations</div>
+      </div>
+    </nav>
+
+    <!-- ── Canvas — onboarding form ── -->
+    <main class="app__canvas">
+      <div class="canvas-pad">
+
+        <div class="page-head">
+          <div class="page-head__title">Onboard application</div>
+          <div class="page-head__sub">Register a business application under governance. This opens an approval — the application stays <strong>pending</strong> and cannot own promotable use cases or assets until <strong>AI Governance</strong> and the <strong>business owner</strong> sign off.</div>
+        </div>
+
+        <div class="callout callout--info">
+          <svg class="icon callout__icon" aria-hidden="true"><use href="#i-callout-info"></use></svg>
+          <div class="callout__body"><span class="callout__title">Governed action.</span>Identity is permanent once approved; the compliance perimeter can change later via a governed change proposal.</div>
+        </div>
+
+        <!-- A · Identity -->
+        <section class="fsec">
+          <div class="fsec__head"><span class="fsec__num">A</span><span class="fsec__title">Identity</span></div>
+          <div class="field-grid">
+            <div class="field">
+              <div class="form-field">
+                <label class="form-label" for="name">Name <span class="req">*</span></label>
+                <input class="input" id="name" placeholder="Personal Auto Underwriting" value="Personal Auto Underwriting">
+                <span class="input-hint">Unique across the platform.</span>
+              </div>
+            </div>
+            <div class="field">
+              <div class="form-field">
+                <label class="form-label" for="tla">Acronym (TLA) <span class="req">*</span></label>
+                <input class="input input--mono" id="tla" maxlength="3" placeholder="PAU" value="PAU" data-tla>
+                <span class="input-hint">3 letters, uppercase, unique. <strong>Permanent once approved</strong> — it's the audit-correlation key.</span>
+              </div>
+            </div>
+            <div class="field field-full">
+              <div class="form-field">
+                <label class="form-label" for="purpose">Purpose <span class="req">*</span></label>
+                <textarea class="input" id="purpose" placeholder="What this application does and its intended use.">Underwrites personal auto submissions: extracts risk fields, scores appetite, and routes high-materiality cases to human review.</textarea>
+                <span class="input-hint">Intended purpose — the baseline against which proportionate controls are judged.</span>
+              </div>
+            </div>
+            <div class="field">
+              <div class="form-field">
+                <label class="form-label" for="lob">Line of business</label>
+                <select class="input" id="lob">
+                  <option>P&amp;C</option><option>Life</option><option>Health</option><option>Annuities</option>
+                  <option>Commercial</option><option>Reinsurance</option><option>Specialty</option><option>Workers' Comp</option>
+                  <option>Other…</option>
+                </select>
+                <span class="input-hint">For reporting &amp; routing. Optional.</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- B · Ownership & accountability -->
+        <section class="fsec">
+          <div class="fsec__head"><span class="fsec__num">B</span><span class="fsec__title">Ownership &amp; accountability</span></div>
+          <div class="field">
+            <div class="form-field">
+              <label class="form-label" for="owner">Business owner <span class="req">*</span></label>
+              <input class="input" id="owner" placeholder="Search people…" value="Maria Okafor">
+              <span class="input-hint">Accountable owner. A required approver of this onboarding.</span>
+            </div>
+          </div>
+          <div class="field">
+            <label class="form-label">Proposed by</label>
+            <div class="proposer">
+              <span class="avatar">AV</span> Anil Venugopal · AI Governance
+              <span class="proposer__tag">set automatically</span>
+            </div>
+          </div>
+          <div class="field">
+            <label class="form-label">Initial app-team <span style="color:var(--text-tertiary);font-weight:400;">(optional)</span></label>
+            <div style="margin-top:6px;">
+              <div class="team-row">
+                <input class="input" placeholder="Search people…" value="Devin Shah">
+                <select class="input"><option>App owner</option><option selected>App lead</option><option>App dev</option><option>App SRE</option><option>App ops</option></select>
+                <button class="btn btn--icon btn--ghost" aria-label="Remove"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-clear"></use></svg></button>
+              </div>
+              <div class="team-row">
+                <input class="input" placeholder="Search people…" value="Priya Nair">
+                <select class="input"><option>App owner</option><option>App lead</option><option selected>App dev</option><option>App SRE</option><option>App ops</option></select>
+                <button class="btn btn--icon btn--ghost" aria-label="Remove"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-clear"></use></svg></button>
+              </div>
+            </div>
+            <button class="btn btn--ghost btn--sm" style="margin-top:var(--space-2);"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-add"></use></svg>Add member</button>
+          </div>
+        </section>
+
+        <!-- C · Compliance context -->
+        <section class="fsec">
+          <div class="fsec__head"><span class="fsec__num">C</span><span class="fsec__title">Compliance context</span><span class="fsec__note">application-wide perimeter</span></div>
+
+          <div class="field">
+            <div class="sublabel">Data classification <span class="req">*</span></div>
+            <div class="chip-group" role="radiogroup" aria-label="Data classification" data-chip-mode="single">
+              <button class="chip" type="button" role="radio" aria-checked="false">Public</button>
+              <button class="chip" type="button" role="radio" aria-checked="false">Internal</button>
+              <button class="chip is-selected" type="button" role="radio" aria-checked="true">Confidential</button>
+              <button class="chip" type="button" role="radio" aria-checked="false">PII-restricted</button>
+            </div>
+            <span class="input-hint" style="display:block;margin-top:6px;">App-wide <strong>ceiling</strong>. A use case's actual classification may not exceed it. PII/PHI = Yes ⇒ at least Confidential.</span>
+          </div>
+
+          <div class="field">
+            <div class="sublabel">Regulatory frameworks in scope <span class="req">*</span></div>
+            <div class="chip-group" role="group" aria-label="Regulatory frameworks" data-chip-mode="multi">
+              <button class="chip is-selected" type="button" role="checkbox" aria-checked="true">NAIC Model Bulletin</button>
+              <button class="chip is-selected" type="button" role="checkbox" aria-checked="true">Colorado SB21-169</button>
+              <button class="chip" type="button" role="checkbox" aria-checked="false">EU AI Act</button>
+              <button class="chip" type="button" role="checkbox" aria-checked="false">NYDFS</button>
+              <button class="chip" type="button" role="checkbox" aria-checked="false">NIST AI RMF</button>
+              <button class="chip" type="button" role="checkbox" aria-checked="false">ISO/IEC 42001</button>
+            </div>
+            <span class="input-hint" style="display:block;margin-top:6px;">At least one. If none external applies, select <strong>NIST AI RMF</strong> or an internal-only framework — never blank.</span>
+          </div>
+
+          <div class="field">
+            <div class="sublabel">Governance domains in scope <span class="req">*</span></div>
+            <div class="chip-group" role="group" aria-label="Governance domains" data-chip-mode="multi">
+              <button class="chip is-selected" type="button" role="checkbox" aria-checked="true">Model risk</button>
+              <button class="chip is-selected" type="button" role="checkbox" aria-checked="true">Fairness</button>
+              <button class="chip is-selected" type="button" role="checkbox" aria-checked="true">Privacy</button>
+              <button class="chip" type="button" role="checkbox" aria-checked="false">Security</button>
+              <button class="chip" type="button" role="checkbox" aria-checked="false">Transparency</button>
+              <button class="chip" type="button" role="checkbox" aria-checked="false">Robustness</button>
+              <button class="chip" type="button" role="checkbox" aria-checked="false">Data governance</button>
+              <button class="chip is-selected" type="button" role="checkbox" aria-checked="true">Human oversight</button>
+              <button class="chip" type="button" role="checkbox" aria-checked="false">Accountability</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="sublabel">Consumer impact</div>
+            <div class="flag-row">
+              <div><div class="flag-row__text">Makes or informs automated decisions affecting consumers? <span class="req">*</span></div><div class="flag-row__hint">Triggers EU AI Act / Colorado SB21-169 / NAIC unfair-discrimination scrutiny.</div></div>
+              <div class="chip-group" role="radiogroup" aria-label="Affects consumers" data-chip-mode="single">
+                <button class="chip is-selected" type="button" role="radio" aria-checked="true">Yes</button>
+                <button class="chip" type="button" role="radio" aria-checked="false">No</button>
+              </div>
+            </div>
+            <div class="flag-row">
+              <div><div class="flag-row__text">Processes PII / PHI? <span class="req">*</span></div><div class="flag-row__hint">Privacy obligations. Yes ⇒ data-classification ceiling ≥ Confidential.</div></div>
+              <div class="chip-group" role="radiogroup" aria-label="Processes PII or PHI" data-chip-mode="single">
+                <button class="chip is-selected" type="button" role="radio" aria-checked="true">Yes</button>
+                <button class="chip" type="button" role="radio" aria-checked="false">No</button>
+              </div>
+            </div>
+            <div class="flag-row">
+              <div><div class="flag-row__text">Consumer-facing? <span class="req">*</span></div><div class="flag-row__hint">Disclosure / transparency obligations.</div></div>
+              <div class="chip-group" role="radiogroup" aria-label="Consumer facing" data-chip-mode="single">
+                <button class="chip" type="button" role="radio" aria-checked="false">Yes</button>
+                <button class="chip is-selected" type="button" role="radio" aria-checked="true">No</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="sublabel">Jurisdictions of operation <span class="req">*</span></div>
+            <div class="chip-group" role="group" aria-label="Jurisdictions" data-chip-mode="multi">
+              <button class="chip is-selected" type="button" role="checkbox" aria-checked="true">Colorado</button>
+              <button class="chip is-selected" type="button" role="checkbox" aria-checked="true">New York</button>
+              <button class="chip" type="button" role="checkbox" aria-checked="false">California</button>
+              <button class="chip" type="button" role="checkbox" aria-checked="false">Illinois</button>
+              <button class="chip" type="button" role="checkbox" aria-checked="false">Texas</button>
+              <button class="chip" type="button" role="checkbox" aria-checked="false">EU</button>
+              <button class="chip" type="button" role="checkbox" aria-checked="false">UK</button>
+              <button class="chip" type="button" role="checkbox" aria-checked="false">Other…</button>
+            </div>
+            <span class="input-hint" style="display:block;margin-top:6px;">Controlled list — drives the jurisdiction → regime mapping (CO → SB21-169, NY → NYDFS). "Other" is an annotation only.</span>
+          </div>
+        </section>
+
+        <!-- D · Governance & approval -->
+        <section class="fsec">
+          <div class="fsec__head"><span class="fsec__num">D</span><span class="fsec__title">Governance &amp; approval</span></div>
+          <div class="field">
+            <div class="form-field">
+              <label class="form-label" for="just">Justification <span class="req">*</span></label>
+              <textarea class="input" id="just" placeholder="Why this application should be onboarded."></textarea>
+              <span class="input-hint">Recorded as the approval justification.</span>
+            </div>
+          </div>
+          <div class="field">
+            <label class="form-label">Approval gate</label>
+            <div class="l-cluster" style="margin-top:6px;gap:8px;">
+              <span class="badge badge--candidate"><span class="badge__dot"></span>AI Governance</span>
+              <span class="badge badge--candidate"><span class="badge__dot"></span>Business Owner</span>
+              <span style="font-size:var(--fs-caption);color:var(--text-tertiary);">both required · status will be <strong>Pending</strong></span>
+            </div>
+          </div>
+        </section>
+
+        <!-- sticky actions -->
+        <div class="form-actions">
+          <div class="form-actions__summary">Opens an approval · approvers: <b>AI Governance</b> + <b>Business Owner</b></div>
+          <span class="l-spacer"></span>
+          <button class="btn btn--ghost btn--md">Cancel</button>
+          <button class="btn btn--secondary btn--md">Save draft</button>
+          <button class="btn btn--primary btn--md"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-promote"></use></svg>Submit for approval</button>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+</div>
+
+<script src="../js/app.js" data-sprite="../icons/sprite.svg"></script>
+<script>
+// page-local: TLA uppercase + chip behaviour (multi / single / toggle)
+document.querySelectorAll('[data-tla]').forEach(i => i.addEventListener('input', () => { i.value = i.value.replace(/[^a-z]/gi,'').toUpperCase().slice(0,3); }));
+document.querySelectorAll('[data-chip-mode]').forEach(el => {
+  if (el.dataset.chipMode === 'toggle') {
+    el.addEventListener('click', () => { const on = el.classList.toggle('is-selected'); el.setAttribute('aria-pressed', on); });
+    return;
+  }
+  el.querySelectorAll('.chip').forEach(chip => chip.addEventListener('click', () => {
+    if (el.dataset.chipMode === 'single') {
+      el.querySelectorAll('.chip').forEach(c => { c.classList.remove('is-selected'); c.setAttribute('aria-checked','false'); });
+      chip.classList.add('is-selected'); chip.setAttribute('aria-checked','true');
+    } else {
+      const on = chip.classList.toggle('is-selected'); chip.setAttribute('aria-checked', on);
+    }
+  }));
+});
+</script>
+</body>
+</html>
