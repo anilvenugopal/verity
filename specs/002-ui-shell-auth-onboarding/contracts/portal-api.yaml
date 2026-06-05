@@ -250,6 +250,209 @@ paths:
         "409": { $ref: "#/components/responses/Conflict" }
 
 # ─────────────────────────────────────────────
+# INTAKE LIFECYCLE (M4) — all routes already exist in the hub
+# ─────────────────────────────────────────────
+
+  /applications/{application_id}/intakes:
+    get:
+      summary: List an application's intakes (requires view) — Use Cases tab
+      tags: [intakes]
+      parameters:
+        - name: application_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Array of intakes
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Intake" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      summary: Create an intake under an application (requires create_intake)
+      tags: [intakes]
+      parameters:
+        - name: application_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/IntakeCreate" }
+      responses:
+        "201":
+          description: Intake created (status proposed)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Intake" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /intakes/{intake_id}:
+    get:
+      summary: Get an intake (requires view)
+      tags: [intakes]
+      parameters:
+        - name: intake_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Intake" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /intakes/{intake_id}/requirements:
+    get:
+      summary: List an intake's requirements (requires view)
+      tags: [intakes]
+      parameters:
+        - name: intake_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Requirement" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      summary: Add a requirement to an intake (intake author)
+      tags: [intakes]
+      parameters:
+        - name: intake_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RequirementCreate" }
+      responses:
+        "201":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Requirement" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /intakes/{intake_id}/assessment:
+    get:
+      summary: Get the captured assessment + computed tier (requires view)
+      tags: [intakes]
+      parameters:
+        - name: intake_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AssessmentView" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      summary: >
+        Capture the assessment (requires edit_impact_assessment). Per-tab save sends the FULL
+        snapshot (both shipped tabs required) → one SCD-2 revision; recomputes tier.
+      tags: [intakes]
+      parameters:
+        - name: intake_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AssessmentInput" }
+      responses:
+        "200":
+          description: Updated assessment view with computed tier
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AssessmentView" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }   # terminal intake — cannot re-assess
+
+  /intakes/{intake_id}/assessment/revisions:
+    get:
+      summary: List assessment revisions (requires view)
+      tags: [intakes]
+      parameters:
+        - name: intake_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/RevisionMeta" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /intakes/{intake_id}/submit:
+    post:
+      summary: >
+        Submit an assessed intake for approval (requires edit_intake). Requires a computed tier
+        (else 400); advances proposed→in_review; opens a kind=intake approval with the tier quorum.
+      tags: [intakes]
+      parameters:
+        - name: intake_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SubmitForApproval" }
+      responses:
+        "201":
+          description: Intake approval request created (kind=intake)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/IntakeApprovalRequest" }
+        "400": { $ref: "#/components/responses/BadRequest" }   # not yet classified (no tier)
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }     # terminal intake / duplicate open approval / empty quorum
+
+# NOTE (contract reconciliation): GET /approvals/{id} and POST …/signoff are SHARED with M3 and
+# return the kind-agnostic backend shape `IntakeApprovalRequest` (request_kind_code, required_roles[],
+# signoffs[]) for BOTH kinds — NOT the application-centric `ApprovalRequest` schema above. The M3
+# `ApprovalRequest`/`Signoff` schemas diverge from the real backend model
+# (hub/src/verity/hub/approval/models.py) and the real decision vocabulary
+# (approved|rejected|requested_changes|abstained, NOT returned_for_revision). Flagged for /speckit.analyze
+# to reconcile M3's contract; left intact here to honour "keep M1–M3 intact". For kind=intake the UI
+# offers approve/reject only.
+
+# ─────────────────────────────────────────────
 # COMPONENTS
 # ─────────────────────────────────────────────
 
@@ -401,6 +604,161 @@ components:
         comment:
           type: string
           nullable: true
+
+    # ── Intake lifecycle (M4) ──────────────────
+
+    Intake:
+      type: object
+      required: [intake_id, application_id, title, intake_status_code, created_at]
+      properties:
+        intake_id:             { type: string, format: uuid }
+        application_id:        { type: string, format: uuid }
+        title:                 { type: string }
+        description:           { type: string, nullable: true }
+        intake_status_code:
+          type: string
+          enum: [proposed, in_review, approved, rejected, retired]
+        ai_risk_tier_code:     { type: string, nullable: true }
+        naic_materiality_code: { type: string, nullable: true }
+        materiality_tier_code: { type: string, nullable: true }
+        created_at:            { type: string, format: date-time }
+
+    IntakeCreate:
+      type: object
+      required: [title]
+      properties:
+        title:       { type: string, minLength: 1 }
+        description: { type: string, nullable: true }
+
+    Requirement:
+      type: object
+      required: [intake_requirement_id, intake_id, requirement_kind_code, requirement_status_code, title, body, created_at]
+      properties:
+        intake_requirement_id:   { type: string, format: uuid }
+        intake_id:               { type: string, format: uuid }
+        requirement_kind_code:   { type: string }
+        requirement_status_code: { type: string }
+        title:                   { type: string }
+        body:                    { type: string }
+        created_at:              { type: string, format: date-time }
+
+    RequirementCreate:
+      type: object
+      required: [requirement_kind_code, title, body]
+      properties:
+        requirement_kind_code: { type: string, minLength: 1 }
+        title:                 { type: string, minLength: 1 }
+        body:                  { type: string, minLength: 1 }
+
+    AssessmentInput:
+      type: object
+      description: Both shipped tabs required in one payload — no partial PUT. security_access stays null in M4.
+      required: [ai_decision_impact, data]
+      properties:
+        ai_decision_impact: { $ref: "#/components/schemas/AIDecisionImpact" }
+        data:               { $ref: "#/components/schemas/DataTab" }
+        security_access:    { type: object, nullable: true }   # M4: always null (tab unbuilt → feature 003)
+        rationale:          { type: string, nullable: true }
+
+    AIDecisionImpact:
+      type: object
+      required: [decision_role, decision_domain, affected_population, adverse_impact, human_oversight, reversibility, gdpr_art22, deployment_scale]
+      properties:
+        decision_role:      { type: string, enum: [assists, recommends_with_signoff, autonomous] }
+        decision_domain:    { type: string, enum: [underwriting, pricing, claims, fraud, marketing, servicing, internal_ops] }
+        affected_population: { type: string, enum: [internal_only, brokers_agents, policyholders_consumers, vulnerable] }
+        adverse_impact:     { type: string, enum: [negligible, financial, coverage_or_claim_denial, unfair_discriminatory, safety] }
+        human_oversight:
+          type: object
+          required: [strategy]
+          properties:
+            strategy:  { type: string, enum: [none, on_the_loop, in_the_loop] }
+            threshold: { type: string, nullable: true }
+        reversibility:      { type: string, enum: [easily_reversible, reversible_with_effort, irreversible] }
+        gdpr_art22:         { type: boolean }
+        deployment_scale:   { type: string, enum: [pilot, limited, production_wide] }
+
+    DataTab:
+      type: object
+      required: [description, data_classification_code, pii_presence]
+      properties:
+        description:              { type: string, minLength: 1 }
+        sources:                  { type: array, items: { type: string } }
+        data_classification_code: { type: string }
+        pii_presence:             { type: string, enum: [none, direct, indirect, special_category] }
+        sensitive_categories:     { type: array, items: { type: string } }
+        lawful_basis:             { type: string, nullable: true }
+        residency:                { type: string, nullable: true }
+        retention:                { type: string, nullable: true }
+        use:                      { type: string, nullable: true }
+
+    AssessmentView:
+      type: object
+      required: [intake_id, revision, assessment, created_at]
+      properties:
+        intake_id:  { type: string, format: uuid }
+        revision:   { type: integer }
+        assessment: { type: object, description: the stored AssessmentInput }
+        computed:   { $ref: "#/components/schemas/Computed" }
+        created_at: { type: string, format: date-time }
+
+    Computed:
+      type: object
+      nullable: true
+      required: [auto_rejected]
+      properties:
+        ai_risk_tier_code:        { type: string, nullable: true }
+        naic_materiality_code:    { type: string, nullable: true }
+        data_classification_code: { type: string, nullable: true }
+        intake_status_code:       { type: string, nullable: true }
+        auto_rejected:            { type: boolean }
+
+    RevisionMeta:
+      type: object
+      required: [revision, valid_from, valid_to, created_by_actor_id]
+      properties:
+        revision:            { type: integer }
+        valid_from:          { type: string, format: date-time }
+        valid_to:            { type: string, format: date-time }
+        created_by_actor_id: { type: string, format: uuid }
+
+    SubmitForApproval:
+      type: object
+      properties:
+        note: { type: string, nullable: true }
+
+    IntakeApprovalRequest:
+      type: object
+      description: >
+        The real kind-agnostic approval shape (hub/src/verity/hub/approval/models.py::ApprovalRequest).
+        Returned by POST /intakes/{id}/submit and the shared GET /approvals/{id} for kind=intake.
+      required: [approval_request_id, request_kind_code, status_code, required_roles, signoffs, created_at]
+      properties:
+        approval_request_id:   { type: string, format: uuid }
+        request_kind_code:     { type: string, enum: [intake, application_onboarding] }
+        status_code:           { type: string, enum: [pending, approved, rejected] }
+        target_intake_id:      { type: string, format: uuid, nullable: true }
+        target_application_id: { type: string, format: uuid, nullable: true }
+        required_roles:        { type: array, items: { type: string }, description: the FR-IN-005 tier quorum }
+        signoffs:
+          type: array
+          items:
+            type: object
+            required: [approver_actor_id, signed_as_role_code, decision_code]
+            properties:
+              approver_actor_id: { type: string, format: uuid }
+              signed_as_role_code: { type: string }
+              decision_code:     { type: string, enum: [approved, rejected, requested_changes, abstained] }
+              comment:           { type: string, nullable: true }
+        created_at:            { type: string, format: date-time }
+
+    IntakeSignoff:
+      type: object
+      description: Sign-off body for kind=intake — approve/reject only (no returned_for_revision).
+      required: [decision_code]
+      properties:
+        decision_code: { type: string, enum: [approved, rejected] }
+        comment:       { type: string, nullable: true }
 
     ApiError:
       type: object

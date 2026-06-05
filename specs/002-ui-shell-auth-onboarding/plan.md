@@ -1,10 +1,10 @@
-# Implementation Plan: UI Shell, Auth & Application Onboarding
+# Implementation Plan: UI Shell, Auth, Application Onboarding & Intake Lifecycle
 
-**Branch**: `001-verity-governance-service` (spec tracked here) | **Date**: 2026-06-05 | **Spec**: [spec.md](spec.md)
+**Branch**: `002-ui-shell-auth-onboarding` | **Date**: 2026-06-05 | **Spec**: [spec.md](spec.md)
 
 ## Summary
 
-Build the first usable React + TypeScript product surface for Verity v2 — sign-in (Entra OIDC + local-dev mock), the persistent app shell, a landing page, and the application-onboarding workflow — wired to the existing governance API. The CSS/icon kit in `specs/ui/kit/` is the approved visual source; the five-layer CSS files are copied verbatim into the React project. The backend auth session endpoints (`/auth/login`, `/auth/callback`, `/auth/mock`, `/auth/logout`) are missing from the current hub implementation and must be added alongside the frontend work.
+Build the first usable React + TypeScript product surface for Verity v2 — a portal over **everything the governance backend already supports**: sign-in (local-dev mock first; Entra OIDC scaffolded), the persistent app shell, a landing page, the application-onboarding workflow (M3), and the **intake lifecycle** (M4: create → assess → submit → tier-quorum sign-off). The CSS/icon kit in `specs/ui/kit/` is the approved visual source; the five-layer CSS files are copied verbatim into the React project. The backend auth session endpoints (`/auth/login`, `/auth/callback`, `/auth/mock`, `/auth/logout`) are added alongside M1 frontend work. **M4 adds no new backend** — it is pure frontend over the already-shipped intake/assessment/approval routes, with the same `GET /me`-style read wiring as M1–M3.
 
 ---
 
@@ -31,7 +31,7 @@ Build the first usable React + TypeScript product surface for Verity v2 — sign
 - No frontend-side authorization logic — all permission decisions come from the API; the portal only hides/shows affordances based on what the API returns.
 - Mock-auth section must have zero DOM presence when `VITE_VERITY_ENV` ≠ `local`.
 
-**Scale/Scope**: ~12 screens (M1: 4, M2: 3, M3: 5), single SPA, single tenant.
+**Scale/Scope**: ~15 screens (M1: 4, M2: 3, M3: 5, M4: 3 — intake create/detail/review), single SPA, single tenant. M4 reuses the M3 approval view (scroll-gate) for `kind=intake` and the shipped assessment tabs.
 
 ---
 
@@ -53,6 +53,8 @@ Build the first usable React + TypeScript product surface for Verity v2 — sign
 | **Boundary gate** | ✅ PASS | Auth session endpoints to be added to the hub backend follow the same fail-closed, action-gated FastAPI pattern as existing routes. |
 
 **No violations. Cleared for Phase 0.**
+
+**M4 post-design re-check (2026-06-05)**: still clean. M4 introduces **no new DB schema** (reads/writes the already-shipped intake/assessment/approval tables via existing routes — Principle II holds), **no backend additions** (API-only boundary IV holds — the portal calls existing HTTP routes), and all TypeScript types mirror backend snake_case field names verbatim (naming gate holds; see data-model.md §8–13). No legacy import (III). No agent/binding/deployment surface (V/VII N/A).
 
 ---
 
@@ -112,16 +114,22 @@ hub/
 │           ├── AuthCallback.tsx    (auth.callback — no UI, only session mint)
 │           ├── AuthStatePage.tsx   (auth.states — session-expired/forbidden/disabled)
 │           ├── Landing.tsx         (home.landing wireframe)
-│           └── applications/
-│               ├── ApplicationsList.tsx    (intake.applications)
-│               ├── OnboardForm.tsx         (intake.onboard — multi-step)
-│               ├── ApprovalView.tsx        (intake.onboard-approval)
-│               └── ApplicationDetail.tsx   (intake.app-detail + tabs)
+│           ├── applications/
+│           │   ├── ApplicationsList.tsx    (intake.applications)
+│           │   ├── OnboardForm.tsx         (intake.onboard — multi-step)
+│           │   ├── ApprovalView.tsx        (intake.onboard-approval — REUSED by M4 for kind=intake)
+│           │   └── ApplicationDetail.tsx   (intake.app-detail + tabs; Use Cases tab lists intakes — M4)
+│           └── intakes/                     ← M4
+│               ├── IntakeCreate.tsx        (intake.usecase-create — form under an application)
+│               ├── IntakeDetail.tsx        (intake.usecase-detail — status, requirements, assessment progress)
+│               └── AssessmentTabs.tsx      (the two shipped tabs: AI Decision Impact + Data; per-tab save)
+│                   # the intake sign-off view reuses ApprovalView.tsx with kind=intake (approve/reject only)
 │
 └── src/verity/hub/
     └── auth/
-        └── session.py             ← NEW: /auth/login, /auth/callback, /auth/mock, /auth/logout
+        └── session.py             ← NEW (M1 only): /auth/login, /auth/callback, /auth/mock, /auth/logout
                                       (session middleware + OIDC client wiring per user-authentication.md)
+                                      # M4 adds NO backend files — intake/assessment/approval routes already exist
 ```
 
 **Structure Decision**: Web application — React SPA in `hub/portal/`, backend extensions in `hub/src/verity/hub/auth/session.py`. The portal is a separate Vite project within the hub workspace; in production it is built to `hub/portal/dist/` and served by FastAPI as a static mount. No new top-level service is introduced.
@@ -158,3 +166,29 @@ The spec's auth endpoints are not yet in the running hub. These must be added be
 - The `tasks.md` must sequence this correctly.
 
 **Dashboard stats**: `GET /dashboard/stats` does not yet exist. The landing page falls back to zero-value tiles if the endpoint is absent (HTTP 404 → show zeros, no error takeover). The endpoint can be added in a follow-on task.
+
+---
+
+## API Gap Analysis — Milestone 4 (Intake lifecycle)
+
+**No backend additions.** Every endpoint M4 consumes already exists in the hub (verified against the routers). M4 is frontend-only.
+
+| Endpoint | Status | Action gate | Notes |
+|---|---|---|---|
+| `POST /applications/{application_id}/intakes` | **EXISTS** | `create_intake` | Create an intake under an application → returns `Intake` (status `proposed`) |
+| `GET /applications/{application_id}/intakes` | **EXISTS** | `view` | List an application's intakes (Use Cases tab) |
+| `GET /intakes/{intake_id}` | **EXISTS** | `view` | Intake detail |
+| `POST /intakes/{intake_id}/requirements` | **EXISTS** | (intake author) | Add a requirement |
+| `GET /intakes/{intake_id}/requirements` | **EXISTS** | `view` | List requirements |
+| `PUT /intakes/{intake_id}/assessment` | **EXISTS** | `edit_impact_assessment` | Capture the whole assessment (one SCD-2 revision); per-tab save sends the full snapshot |
+| `GET /intakes/{intake_id}/assessment` | **EXISTS** | `view` | Reload captured answers + computed tier/materiality |
+| `GET /intakes/{intake_id}/assessment/revisions` | **EXISTS** | `view` | Revision history |
+| `POST /intakes/{intake_id}/submit` | **EXISTS** | `edit_intake` | Submit for approval (requires computed tier); advances `proposed→in_review`; returns `ApprovalRequest` (`kind=intake`) with `required_roles` |
+| `GET /approvals/{approval_request_id}` | **EXISTS** | `view` | Read the intake approval (kind-dispatched) — REUSED from M3 |
+| `POST /approvals/{approval_request_id}/signoff` | **EXISTS** | `signoff` | Sign off; separation of duty enforced backend-side (submitter→403); REUSED from M3 |
+
+**Clarification-driven behaviors (Session 2026-06-05):**
+- **Reject-only**: the reused `ApprovalView` omits the "Return for revision" button when `kind=intake` (no withdraw route exists for intake). `decision_code` ∈ {`approved`, `rejected`}.
+- **Per-tab save**: each assessment tab save issues `PUT …/assessment` with the **full** assessment snapshot → one revision per save; the response's computed tier re-renders.
+- **Allow-but-warn**: edits stay enabled in `in_review` (backend blocks only terminal status); the detail/assessment surfaces show a banner that re-saving may change the tier/quorum.
+- **New-intake CTA**: gated on `create_intake` (matches the backend route gate).

@@ -202,3 +202,167 @@ Status badge colour mapping (design system tokens):
 - `pending` / `pending_approval` → `--color-warning` pill
 - `active` → `--color-positive` pill
 - `suspended` / `retired` → `--text-tertiary` pill (neutral)
+
+---
+
+# Milestone 4 — Intake lifecycle types
+
+Field names mirror the backend models in `hub/src/verity/hub/intake/models.py` and
+`hub/src/verity/hub/assessment/models.py` verbatim (naming gate).
+
+## 8. Intake
+
+```typescript
+// GET /intakes/{intake_id}  &  rows in GET /applications/{application_id}/intakes
+interface Intake {
+  intake_id: string;                    // UUID
+  application_id: string;               // UUID
+  title: string;
+  description: string | null;
+  intake_status_code: string;           // "proposed" | "in_review" | "approved" | "rejected" | "retired"
+  ai_risk_tier_code: string | null;     // computed by the assessment; null until assessed
+  naic_materiality_code: string | null;
+  materiality_tier_code: string | null; // intake-level materiality (distinct from agent-level)
+  created_at: string;                   // ISO 8601
+}
+
+// POST /applications/{application_id}/intakes body — mirrors IntakeCreate
+interface IntakeCreate {
+  title: string;                        // min length 1
+  description?: string | null;
+}
+```
+
+## 9. Requirement
+
+```typescript
+interface Requirement {
+  intake_requirement_id: string;        // UUID
+  intake_id: string;                    // UUID
+  requirement_kind_code: string;
+  requirement_status_code: string;
+  title: string;
+  body: string;
+  created_at: string;
+}
+
+// POST /intakes/{intake_id}/requirements body — mirrors RequirementCreate
+interface RequirementCreate {
+  requirement_kind_code: string;
+  title: string;
+  body: string;
+}
+```
+
+## 10. Assessment (the two shipped tabs only)
+
+```typescript
+// PUT /intakes/{intake_id}/assessment body — mirrors AssessmentInput.
+// NOTE: both shipped tabs are REQUIRED in one payload — there is no partial PUT.
+// security_access stays null in M4 (that tab's backend is unbuilt → feature 003).
+interface AssessmentInput {
+  ai_decision_impact: AIDecisionImpact;   // tab 1 (required)
+  data: DataTab;                          // tab 2 (required)
+  security_access?: null;                 // M4: always null
+  rationale?: string | null;
+}
+
+interface AIDecisionImpact {
+  decision_role: "assists" | "recommends_with_signoff" | "autonomous";
+  decision_domain: "underwriting" | "pricing" | "claims" | "fraud" | "marketing" | "servicing" | "internal_ops";
+  affected_population: "internal_only" | "brokers_agents" | "policyholders_consumers" | "vulnerable";
+  adverse_impact: "negligible" | "financial" | "coverage_or_claim_denial" | "unfair_discriminatory" | "safety";
+  human_oversight: { strategy: "none" | "on_the_loop" | "in_the_loop"; threshold?: string | null };
+  reversibility: "easily_reversible" | "reversible_with_effort" | "irreversible";
+  gdpr_art22: boolean;
+  deployment_scale: "pilot" | "limited" | "production_wide";
+}
+
+interface DataTab {
+  description: string;                    // min length 1
+  sources: string[];
+  data_classification_code: string;       // tier1_public | tier2_internal | tier3_confidential | tier4_pii_restricted
+  pii_presence: "none" | "direct" | "indirect" | "special_category";
+  sensitive_categories: string[];
+  lawful_basis?: string | null;
+  residency?: string | null;
+  retention?: string | null;
+  use?: string | null;
+}
+
+// GET /intakes/{intake_id}/assessment — mirrors AssessmentView
+interface AssessmentView {
+  intake_id: string;
+  revision: number;
+  assessment: Record<string, unknown>;   // the captured AssessmentInput as stored
+  computed: Computed | null;
+  created_at: string;
+}
+
+interface Computed {
+  ai_risk_tier_code: string | null;
+  naic_materiality_code: string | null;
+  data_classification_code: string | null;
+  intake_status_code: string | null;
+  auto_rejected: boolean;                 // true when the tier computed to unacceptable → intake auto-rejected
+}
+
+// GET /intakes/{intake_id}/assessment/revisions — mirrors RevisionMeta
+interface RevisionMeta {
+  revision: number;
+  valid_from: string;
+  valid_to: string;
+  created_by_actor_id: string;
+}
+```
+
+## 11. Intake approval request (kind=intake)
+
+The intake approval reuses the shared approval entity. Shape per `hub/src/verity/hub/approval/models.py::ApprovalRequest` with `request_kind_code = "intake"` and `target_intake_id` set. `required_roles` is the FR-IN-005 tier quorum, computed from the intake's `ai_risk_tier_code` (not stored).
+
+```typescript
+// POST /intakes/{intake_id}/submit → ApprovalRequest (kind=intake)
+// GET /approvals/{approval_request_id} → ApprovalRequest
+// Reuses the M3 ApprovalRequest type; for kind=intake the sign-off decision is approve/reject ONLY.
+interface Signoff_Intake {
+  decision_code: "approved" | "rejected";   // NO "returned_for_revision" for intake
+  comment: string | null;
+}
+```
+
+## 12. UI-only state — intake (not persisted, not sent to API)
+
+```typescript
+// Assessment editor: both tabs held client-side; a per-tab Save PUTs the FULL snapshot.
+// A save only succeeds once BOTH tabs' required fields are valid (backend requires both).
+interface AssessmentEditorState {
+  intake_id: string;
+  ai_decision_impact: Partial<AIDecisionImpact>;
+  data: Partial<DataTab>;
+  active_tab: "ai_decision_impact" | "data";
+  dirty: boolean;
+  computed: Computed | null;              // last server-computed result
+  approval_open: boolean;                 // true when intake is in_review → show the "re-save may change tier" banner
+}
+```
+
+## 13. State transitions — Intake status
+
+```
+[proposed]
+    │ PUT …/assessment  (tier computed)        │ assessment → unacceptable
+    │ POST /intakes/{id}/submit                 ▼
+    ▼                                       [rejected] (auto, terminal)
+[in_review]
+    │ POST /approvals/{id}/signoff  decision=approved  (full tier quorum)
+    ▼
+[approved]
+
+[in_review]
+    │ POST /approvals/{id}/signoff  decision=rejected  (any signer)
+    ▼
+[rejected] (terminal)
+```
+
+Intake status badge colours: `proposed` → `--color-warning`; `in_review` → `--color-info`/`--color-warning`; `approved` → `--color-positive`; `rejected` / `retired` → `--text-tertiary`.
+Risk-tier badge: `high`/`unacceptable` → `--color-negative`; `limited` → `--color-warning`; `minimal` → `--color-positive`.

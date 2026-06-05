@@ -145,3 +145,31 @@ FastAPI serves the built dist at `/` via `StaticFiles` mount in `app.py` (added 
 4. Create a page component in `src/pages/`.
 5. Use BEM class names from `components.css`; use tokens from `tokens.css` via CSS custom properties.
 6. Never add a `--color-*` or `--space-*` variable directly in a component file — add it to `tokens.css` first (and update `specs/ui/kit/styles/tokens.css` as the source).
+
+---
+
+## 10. M4 — Intake lifecycle demo flow (mock auth, end-to-end)
+
+Demonstrates the full lifecycle the 001 backend already supports, with **separation of duty** via two mock roles (the author may not sign off on their own intake). No backend additions — every route already exists. Reference wireframe: `specs/ui/verity-intake-wireframe.html`.
+
+**Pre-req**: an `active` application exists (onboard one via M3, or seed one).
+
+1. **Author creates + assesses** — run the hub as an authoring role:
+   ```bash
+   VERITY_AUTH_MODE=mock VERITY_ENV=local \
+     VERITY_MOCK_MICROSOFT_OID=aaaa1111-2222-3333-4444-555566667777 \
+     VERITY_MOCK_PLATFORM_ROLES=engineer \
+     uvicorn verity.hub.app:app --reload
+   ```
+   In the portal: open the `active` application → **Use Cases** tab → **New intake** → land on `/intakes/{id}` (status `proposed`). Open the assessment → fill **AI Decision Impact** and **Data** → **Save** (a `high`-leaning set of answers gives a `high` tier). The computed tier + materiality render in the summary panel.
+
+2. **Author submits** — click **Submit for approval**. The intake advances to `in_review`; the returned `required_roles` are the tier quorum (e.g. `high` → 5 roles). The author cannot sign off (separation of duty).
+
+3. **Approver signs off** — restart the hub as a *distinct* quorum role (repeat for each required role, or use one principal holding several):
+   ```bash
+   VERITY_MOCK_MICROSOFT_OID=dddd1111-2222-3333-4444-555566667777 \
+     VERITY_MOCK_PLATFORM_ROLES=business_owner,compliance,legal,model_risk,ai_governance
+   ```
+   Open the intake's approval view (`/approvals/{approval_request_id}`) → scroll to the end (scroll-gate) → **Approve** (approve/reject only — no "Return for revision"). Once every required role has approved, the intake flips to **`approved`**.
+
+**Edge demos**: an `unacceptable`-tier assessment auto-rejects the intake (no submit path); editing the assessment while `in_review` is allowed but shows a "re-saving may change the tier/quorum" banner; a submitter opening their own approval sees the sign-off action disabled.
