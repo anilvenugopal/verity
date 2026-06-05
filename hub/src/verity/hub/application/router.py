@@ -13,7 +13,7 @@ from psycopg import AsyncConnection
 from psycopg.errors import ForeignKeyViolation, UniqueViolation
 
 from verity.hub.application import service
-from verity.hub.application.models import Application, ApplicationPropose
+from verity.hub.application.models import Application, ApplicationPropose, LifecycleChange
 from verity.hub.approval.models import ApprovalRequest, SubmitForApproval
 from verity.hub.auth.dependencies import require_action
 from verity.hub.auth.models import AuthContext
@@ -90,3 +90,21 @@ async def submit_for_approval(
     if request is None:
         raise HTTPException(404, "application not found")
     return request
+
+
+@router.post("/applications/{application_id}/lifecycle", response_model=Application)
+async def change_lifecycle(
+    application_id: UUID,
+    body: LifecycleChange,
+    conn: AsyncConnection = Depends(get_conn),
+    ctx: AuthContext = Depends(require_action("onboard_application")),
+) -> Application:
+    try:
+        application = await service.change_status(conn, application_id, body.to_status_code, ctx)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except service.OnboardingConflict as exc:
+        raise HTTPException(409, str(exc)) from exc
+    if application is None:
+        raise HTTPException(404, "application not found")
+    return application

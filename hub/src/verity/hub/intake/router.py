@@ -16,6 +16,7 @@ from psycopg.errors import ForeignKeyViolation
 
 from verity.hub.auth.dependencies import require_action
 from verity.hub.auth.models import AuthContext
+from verity.hub.db import queries
 from verity.hub.intake import service
 from verity.hub.intake.models import (
     Intake,
@@ -57,8 +58,11 @@ async def create_intake(
     conn: AsyncConnection = Depends(get_conn),
     ctx: AuthContext = Depends(require_action("create_intake")),
 ) -> Intake:
-    if await service.get_application(conn, application_id) is None:
+    gate = await queries.get_application_gate(conn, application_id=application_id)
+    if gate is None:
         raise HTTPException(404, "application not found")
+    if gate["application_status_code"] != "active":  # FR-IN-015: only an active app owns intakes
+        raise HTTPException(409, "application is not active (onboarding not approved)")
     return await service.create_intake(conn, application_id, body, ctx)
 
 

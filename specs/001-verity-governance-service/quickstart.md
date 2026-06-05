@@ -23,14 +23,18 @@ VERITY_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/verity \
 ## 3. Exercise the flow — propose → submit → approve → active
 
 ```bash
+# the business owner here = the proposer (resolve their actor_id from /me)
+owner=$(curl -s localhost:8000/me | jq -r .actor_id)
+
 # propose an application (created pending, with its compliance perimeter)
+# data_classification_code is a reference.data_classification code: tier1_public..tier4_pii_restricted
 app=$(curl -s -XPOST localhost:8000/applications -H 'content-type: application/json' -d '{
   "name":"Underwriting Copilot","code":"UWC","description":"Assists underwriters with submission triage.",
-  "data_classification_code":"confidential",
+  "data_classification_code":"tier3_confidential",
   "regulatory_framework_codes":["naic_model_bulletin_ai"],
   "governance_domain_codes":["model_risk","fairness","human_oversight"],
   "jurisdiction_codes":["co","ny"],
-  "business_owner_actor_id":"<actor-uuid>",
+  "business_owner_actor_id":"'"$owner"'",
   "affects_consumers":true,"processes_pii":true,"consumer_facing":false,
   "justification":"Underwriting decisions affecting consumers — governed from intake."
 }' | jq -r .application_id)
@@ -38,9 +42,10 @@ app=$(curl -s -XPOST localhost:8000/applications -H 'content-type: application/j
 # submit for approval (opens the application_onboarding approval)
 req=$(curl -s -XPOST localhost:8000/applications/$app/submit -H 'content-type: application/json' -d '{}' | jq -r .approval_request_id)
 
-# AI Governance signs off → (business owner too, if they were not the proposer) → app goes active
+# AI Governance signs off → (business owner too, if they were not the proposer) → app goes active.
+# decision_code is a reference.approval_decision code: approved | rejected | requested_changes | abstained
 curl -s -XPOST localhost:8000/approvals/$req/signoff -H 'content-type: application/json' \
-  -d '{"decision_code":"approve","comment":"meets governance bar"}' | jq '.status_code'
+  -d '{"decision_code":"approved","comment":"meets governance bar"}' | jq '.status_code'
 
 curl -s localhost:8000/applications/$app | jq '.application_status_code'   # -> "active"
 ```

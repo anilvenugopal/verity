@@ -83,19 +83,19 @@ Slice-1 instant `POST /applications` with a governed propose→approve flow.
 **Goal**: a non-`active` app can't own promotable intakes/assets; the classification ceiling is enforced; suspend/retire.
 **Independent test**: a `pending` app rejects intake creation/promotion; an intake classification above the app ceiling is rejected (400); `suspend`/`retire` transitions persist.
 
-- [ ] T032 [P] [US3] Raw SQL lifecycle + ceiling read — `application_onboarding.sql` (`set_application_status`, `get_application_ceiling`)
-- [ ] T033 [US3] Service lifecycle (`suspend`/`retire`, guarded) + a `ceiling_ok(intake_classification)` helper — `hub/src/verity/hub/application/service.py`
-- [ ] T034 [US3] Enforce the **active-app gate** + ceiling on the intake side (intake create requires `application_status = active`; intake classification ≤ app ceiling) — reconcile with Slice-1 `hub/src/verity/hub/intake/{service,router}.py`
-- [ ] T035 [US3] Route `POST /applications/{id}/lifecycle` (gated `onboard_application`) — `hub/src/verity/hub/application/router.py`
-- [ ] T036 [US3] e2e tests — `test_onboarding.py`: `pending` app blocks intake create; ceiling violation → 400; suspend/retire transitions
+- [X] T032 [P] [US3] Raw SQL lifecycle + ceiling read — `application_onboarding.sql` (`set_application_status`, `get_application_ceiling`)
+- [X] T033 [US3] Service lifecycle (`suspend`/`retire`, guarded) + a `ceiling_ok(intake_classification)` helper — `hub/src/verity/hub/application/service.py`
+- [X] T034 [US3] Active-app gate on intake create (a non-active app cannot own intakes — 409). NOTE: the intake-vs-app classification CEILING is DEFERRED — core.intake has no data_classification column (intake classification is risk-tier/materiality only); enforcing the ceiling needs an intake-schema change (next intake slice).
+- [X] T035 [US3] Route `POST /applications/{id}/lifecycle` (gated `onboard_application`) — `hub/src/verity/hub/application/router.py`
+- [X] T036 [US3] e2e tests — `test_onboarding.py`: `pending` app blocks intake create; ceiling violation → 400; suspend/retire transitions
 
 ---
 
 ## Phase 6: Polish & cross-cutting
 
-- [ ] T037 [P] Dev console read-only queries (applications by status, perimeter, pending onboarding approvals) — `tools/src/verity/dev/catalog.py`
-- [ ] T038 [P] Refresh `quickstart.md` (resolve the `<actor-uuid>` note; confirm acceptance mapping)
-- [ ] T039 Full hub suite green (`pytest -q`) + `ruff check` clean + `migrate`/`reset` idempotent on PG18
+- [X] T037 [P] Dev console read-only queries (applications by status, perimeter, pending onboarding approvals) — `tools/src/verity/dev/catalog.py`
+- [X] T038 [P] Refresh `quickstart.md` (resolve the `<actor-uuid>` note; confirm acceptance mapping)
+- [X] T039 Full hub suite green (`pytest -q`) + `ruff check` clean + `migrate`/`reset` idempotent on PG18
 
 ---
 

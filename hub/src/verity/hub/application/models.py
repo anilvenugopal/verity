@@ -35,6 +35,11 @@ class ApplicationPropose(BaseModel):
     justification: str = Field(min_length=1)
 
 
+class LifecycleChange(BaseModel):
+    to_status_code: str  # suspended | retired | active (reactivate)
+    reason: str | None = None
+
+
 class Application(BaseModel):
     application_id: UUID
     code: str

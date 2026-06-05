@@ -17,8 +17,23 @@ QUERIES: dict[str, tuple[str, str]] = {
     ),
     "actors": ("actors by type", "SELECT actor_type_code, count(*) FROM core.actor GROUP BY 1"),
     "applications": (
-        "onboarded applications",
-        "SELECT application_id, name, created_at FROM core.application ORDER BY created_at DESC LIMIT 20",
+        "applications: code, status, owner, classification ceiling",
+        "SELECT code, name, application_status_code, data_classification_code, business_owner_actor_id "
+        "FROM core.application ORDER BY created_at DESC LIMIT 20",
+    ),
+    "app_perimeter": (
+        "application compliance perimeter (frameworks/domains/jurisdictions)",
+        "SELECT a.code, "
+        "  (SELECT array_agg(framework_code) FROM core.application_regulatory_framework f WHERE f.application_id=a.application_id) AS frameworks, "
+        "  (SELECT array_agg(governance_domain_code) FROM core.application_governance_domain d WHERE d.application_id=a.application_id) AS domains, "
+        "  (SELECT array_agg(jurisdiction_code) FROM core.application_jurisdiction j WHERE j.application_id=a.application_id) AS jurisdictions "
+        "FROM core.application a ORDER BY a.created_at DESC LIMIT 20",
+    ),
+    "onboarding_approvals": (
+        "application onboarding approvals + status",
+        "SELECT r.approval_request_id, app.code, r.status_code, r.created_at "
+        "FROM core.approval_request r JOIN core.application app ON app.application_id = r.target_application_id "
+        "WHERE r.request_kind_code = 'application_onboarding' ORDER BY r.created_at DESC LIMIT 20",
     ),
     "intakes": (
         "intakes with classification + status",

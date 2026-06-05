@@ -32,6 +32,12 @@ SELECT application_status_code, business_owner_actor_id, created_by_actor_id
 FROM core.application
 WHERE application_id = %(application_id)s;
 
+-- name: set_application_status!
+-- Governed lifecycle transition (US3): active<->suspended, active/suspended->retired. The legal
+-- set is enforced in the service; pending->active happens only via onboarding approval (US2).
+UPDATE core.application SET application_status_code = %(status_code)s, updated_at = now()
+WHERE application_id = %(application_id)s;
+
 -- name: list_applications
 SELECT application_id, code, name, description, application_status_code, line_of_business_code,
        data_classification_code, business_owner_actor_id,

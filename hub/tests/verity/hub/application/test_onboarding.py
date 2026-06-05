@@ -204,3 +204,47 @@ def test_owner_needed_quorum_and_non_required_denied(pg_url):
             "SELECT application_status_code FROM core.application WHERE application_id = %s",
             (application_id,),
         ).fetchone()[0] == "pending"
+
+
+def _activate(pg_url, code):
+    """Propose + submit + AI-Gov sign-off → returns an active application's id."""
+    author = _app(pg_url, oid=AUTHOR_OID, roles="business_owner")
+    with TestClient(author) as c:
+        owner_id = c.get("/me").json()["actor_id"]
+        application_id = c.post("/applications", json=_propose_body(code, owner_id)).json()["application_id"]
+        request_id = c.post(f"/applications/{application_id}/submit", json={}).json()["approval_request_id"]
+    aigov = _app(pg_url, oid=AIGOV_OID, roles="ai_governance")
+    with TestClient(aigov) as c:
+        c.post(f"/approvals/{request_id}/signoff", json={"decision_code": "approved"})
+    return application_id
+
+
+def test_pending_application_blocks_intake_create(pg_url):
+    author = _app(pg_url, oid=AUTHOR_OID, roles="business_owner")
+    with TestClient(author) as c:
+        owner_id = c.get("/me").json()["actor_id"]
+        application_id = c.post("/applications", json=_propose_body("PND", owner_id)).json()["application_id"]
+        # business_owner is an authoring role for create_intake, but the app is still pending.
+        r = c.post(f"/applications/{application_id}/intakes", json={"title": "too early"})
+        assert r.status_code == 409
+
+
+def test_lifecycle_suspend_retire_and_illegal(pg_url):
+    application_id = _activate(pg_url, "LIF")
+    author = _app(pg_url, oid=AUTHOR_OID, roles="business_owner")
+    with TestClient(author) as c:
+        # an intake can be created while active
+        assert c.post(f"/applications/{application_id}/intakes", json={"title": "ok now"}).status_code == 201
+
+        s = c.post(f"/applications/{application_id}/lifecycle", json={"to_status_code": "suspended", "reason": "hold"})
+        assert s.status_code == 200
+        assert s.json()["application_status_code"] == "suspended"
+
+        r = c.post(f"/applications/{application_id}/lifecycle", json={"to_status_code": "retired"})
+        assert r.status_code == 200
+        assert r.json()["application_status_code"] == "retired"
+
+        # retired is terminal -> illegal transition
+        assert c.post(f"/applications/{application_id}/lifecycle", json={"to_status_code": "active"}).status_code == 409
+        # unsupported target -> 400
+        assert c.post(f"/applications/{application_id}/lifecycle", json={"to_status_code": "pending"}).status_code == 400

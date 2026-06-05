@@ -19,9 +19,17 @@ from verity.hub.db import queries
 
 _ONBOARDING_KIND = "application_onboarding"
 
+# Governed lifecycle transitions (US3). pending->active is via onboarding approval (US2), not here.
+_LEGAL_TRANSITIONS = frozenset({
+    ("active", "suspended"), ("suspended", "active"),
+    ("active", "retired"), ("suspended", "retired"),
+})
+_LIFECYCLE_TARGETS = frozenset({"active", "suspended", "retired"})
+
 
 class OnboardingConflict(Exception):
-    """A 409 — e.g. submitting a non-pending application, or signing a resolved request."""
+    """A 409 — e.g. submitting a non-pending application, signing a resolved request, or an
+    illegal lifecycle transition."""
 
 # reference.data_classification is ordered by tier (tier1_public < … < tier4_pii_restricted).
 _CLASSIFICATION_RANK = {
@@ -131,6 +139,22 @@ async def submit_for_approval(conn: AsyncConnection, application_id: UUID, ctx: 
             opened_by_actor_id=ctx.principal.actor_id, opened_role_code=ctx.acting_role,
         )
     return approval_service.build_view(row, [], _required_roles(owner_needed))
+
+
+async def change_status(conn: AsyncConnection, application_id: UUID, to_status_code: str, ctx: AuthContext) -> Application | None:
+    """Governed lifecycle transition (US3): suspend / retire / reactivate. None => 404; a target
+    outside the lifecycle set => ValueError (400); an illegal transition => OnboardingConflict (409)."""
+    gate = await queries.get_application_gate(conn, application_id=application_id)
+    if gate is None:
+        return None
+    if to_status_code not in _LIFECYCLE_TARGETS:
+        raise ValueError(f"unsupported lifecycle target '{to_status_code}'")
+    from_status = gate["application_status_code"]
+    if (from_status, to_status_code) not in _LEGAL_TRANSITIONS:
+        raise OnboardingConflict(f"illegal transition '{from_status}' -> '{to_status_code}'")
+    async with conn.transaction():
+        await queries.set_application_status(conn, application_id=application_id, status_code=to_status_code)
+    return await get_application(conn, application_id)
 
 
 async def get_request_view(conn: AsyncConnection, approval_request_id: UUID) -> ApprovalRequest | None:
