@@ -1,129 +1,121 @@
 ---
-description: "Task list — Intake slice (001-verity-governance-service)"
+description: "Task list — Application Onboarding slice (001-verity-governance-service)"
 ---
 
-# Tasks: Intake slice — verity-governance-service
+# Tasks: Application Onboarding slice — verity-governance-service
 
-**Input**: Design documents in `specs/001-verity-governance-service/` (plan.md, research.md,
-data-model.md, contracts/intake-openapi.yaml, quickstart.md).
+**Input**: [plan.md](plan.md), [research.md](research.md) (D-ONB-1…7), [data-model.md](data-model.md),
+[contracts/onboarding-openapi.yaml](contracts/onboarding-openapi.yaml), [quickstart.md](quickstart.md).
 
-**Tests**: INCLUDED — the product owner requested PG18 end-to-end tests per story.
+**Tests**: INCLUDED — the plan requires PG18 end-to-end tests per story.
 
-**Organization**: by user story for independent implementation/testing. The committed,
-PG18-tested foundation is recorded as **done [X]** (Complexity Tracking in plan.md); it is not
-re-derived.
+**Slice note**: Slice 2 of this feature. The **Intake CRUD slice (US1–US4)** shipped (commits
+`8780d24`, `fc2dd8d`; its task list is in git at `32d542d`). This slice **supersedes** the thin
+Slice-1 instant `POST /applications` with a governed propose→approve flow.
 
 ## Format: `[ID] [P?] [Story] Description`
 - **[P]**: parallelizable (different files, no incomplete-task dependency)
-- **[Story]**: US1–US4 (user-story phases only)
-- Paths are repo-relative; the hub component is `hub/` (package `verity.hub`).
+- Paths are repo-relative; hub component is `hub/` (package `verity.hub`).
 
 ---
 
-## Phase 1: Setup — DONE (committed; recorded for traceability, not re-done)
+## Phase 1: Setup
 
-- [X] T001 Hub component scaffold: `verity.hub` package — FastAPI app, config, psycopg v3 async pool, aiosql raw-SQL loader, thin repo — `hub/src/verity/hub/{app,config,db,repo}.py` (commits 6a1d168, 0a3772d)
-- [X] T002 Migration/reset runner from the canonical DDL + seeds (ADR-0012) — `hub/src/verity/hub/migrate.py`
-- [X] T003 PG18 testcontainer harness; tests mirror the package — `hub/tests/verity/hub/`
-- [X] T004 Auth wiring: mock authenticator (e2e), Entra stub, fail-closed action matrix, `audit.auth_event` — `hub/src/verity/hub/auth/`
+- [X] T001 Hub component + migrate/reset + PG18 testcontainer + auth foundation (done, Slice 1)
+- [ ] T002 [P] Create package skeletons `hub/src/verity/hub/application/__init__.py` and `hub/src/verity/hub/approval/__init__.py`
+- [ ] T003 [P] Create test dirs `hub/tests/verity/hub/application/` and `hub/tests/verity/hub/approval/`
 
-## Phase 2: Foundational — finalize the uncommitted foundation-prep (BLOCKS all stories)
+## Phase 2: Foundational — schema growth (BLOCKS all stories; review DDL first — Principle II)
 
-- [X] T005 Finalize `dict_row` on the pool and the two scalar auth queries (→ select-one named) — `hub/src/verity/hub/db.py`, `hub/db/queries/health.sql` (`count_roles`), `hub/db/queries/auth.sql` (`has_role_grant`), and call sites `hub/src/verity/hub/auth/authenticator.py`, `hub/src/verity/hub/app.py` (`readyz`)
-- [X] T006 [P] Add `AuthContext(principal, action, acting_role)` — `hub/src/verity/hub/auth/models.py`
-- [X] T007 [P] Add `acting_role_for()` + the `onboard_application` matrix cell — `hub/src/verity/hub/auth/matrix.py`
-- [X] T008 `require_action` returns `AuthContext`; update the `/admin/roles` handler — `hub/src/verity/hub/auth/dependencies.py`, `hub/src/verity/hub/app.py`
-- [X] T009 [P] Absolute `verity.*` imports across `hub/` + `tools/`; ruff `ban-relative-imports` rule — `hub/pyproject.toml`, `tools/pyproject.toml`
-- [X] T010 Create the intake package init so `app.py`'s `intake_router` import resolves — `hub/src/verity/hub/intake/__init__.py`; then run `pytest -q` to confirm the existing suite is green
+- [ ] T004 [P] ALTER `core.application`: add `code` (TLA — `UNIQUE`, `CHECK (code ~ '^[A-Z]{3}$')`), `application_status_code` (FK `reference.application_status`, default `'pending'`), `data_classification_code` (FK `reference.data_classification`), `line_of_business_code` (FK `reference.line_of_business`, NULL), `business_owner_actor_id` (FK `core.actor`, NOT NULL), `affects_consumers`/`processes_pii`/`consumer_facing` (boolean NOT NULL) — `specs/schema/core/application.sql`
+- [ ] T005 [P] ALTER `core.approval_request`: add `target_application_id` (uuid NULL, FK `core.application`) — `specs/schema/core/approval_request.sql`
+- [ ] T006 [P] NEW `reference.application_status` (`pending`/`active`/`suspended`/`retired`) + seed — `specs/schema/reference/application_status.sql`, `specs/schema/seed/reference_seed.sql`
+- [ ] T007 [P] NEW `reference.jurisdiction` (US states + `eu`/`uk`/…) + seed — `specs/schema/reference/jurisdiction.sql`, seed
+- [ ] T008 [P] NEW `reference.line_of_business` (`pc`/`life`/`health`/`annuities`/`commercial`/`reinsurance`/`other`) + seed — `specs/schema/reference/line_of_business.sql`, seed
+- [ ] T009 [P] NEW `core.application_regulatory_framework` join (`application_id`, `framework_code`) — `specs/schema/core/application_regulatory_framework.sql`
+- [ ] T010 [P] NEW `core.application_governance_domain` join (`application_id`, `governance_domain_code`) — `specs/schema/core/application_governance_domain.sql`
+- [ ] T011 [P] NEW `core.application_jurisdiction` join (`application_id`, `jurisdiction_code`) — `specs/schema/core/application_jurisdiction.sql`
+- [ ] T012 Verify/repair `reference.data_classification` seed to `{public, internal, confidential, pii_restricted}` (D-ONB-3) — `specs/schema/seed/reference_seed.sql`
+- [ ] T013 Rename `app_team_role` seed `app_demo_*` → `app_{owner,lead,dev,sre,ops}` + fix references; record the v1→v2 disposition (D-ONB-6) — `specs/schema/reference/app_team_role.sql`, seed, `specs/schema/DATA-MODEL.md`
+- [ ] T014 Seed/validate the `application_onboarding` approval-request kind (D-ONB-7)
+- [ ] T015 Update `data-model.md` (add `business_owner_actor_id`) + `specs/schema/DATA-MODEL.md` / `TABLE-INDEX.md` for the new objects
+- [ ] T016 Hand-written numbered migration applying T004–T014 — `hub/migrations/000X_application_onboarding.sql`
+- [ ] T017 **Review checkpoint** (Principle II): run `migrate` + `reset` on PG18; the existing 13-test suite stays green; new schema loads + seeds idempotent
 
-**Checkpoint**: hub imports cleanly; all existing tests pass before any story work.
+**Checkpoint**: schema grown + reviewed; all existing tests pass before any story work.
 
 ---
 
-## Phase 3: User Story 1 (P1) — Onboard application & create intake  🎯 MVP
+## Phase 3: User Story 1 (P1) — Propose an application  🎯 MVP
 
-**Goal**: a governance user registers an application and opens an intake under it; reads work; every route is action-gated.
-**Independent test**: an `onboard_application`-authorized principal creates an application and an intake and reads both; a `viewer`-only principal is denied (403) on create and allowed (200) on GET; writes record `created_by_actor_id + acting_role`.
+**Goal**: propose creates a `pending` application capturing identity + ownership + compliance perimeter; reads work; action-gated.
+**Independent test**: an `onboard_application`-authorized author proposes an app → it persists `pending` with a unique well-formed TLA, the perimeter rows (≥1 framework/domain/jurisdiction), the three attestations, the business owner; a viewer is denied (403) on propose, allowed on GET; a bad perimeter cardinality / missing attestation → 400; a duplicate TLA → 409.
 
-- [X] T011 [P] [US1] Raw SQL for applications (`create_application`, `list_applications`, `get_application`) — `hub/db/queries/application.sql`
-- [X] T012 [P] [US1] Raw SQL for intake create/read (`create_intake`, `get_intake`, `list_intakes_by_application`) — `hub/db/queries/intake.sql`
-- [X] T013 [P] [US1] Pydantic boundary models `ApplicationCreate/Application`, `IntakeCreate/Intake` — fields mirror schema columns (naming gate) — `hub/src/verity/hub/intake/models.py`
-- [X] T014 [US1] Intake service: create/get/list (insert via the repo helper; attribution `actor_id + acting_role` server-resolved, D6) — `hub/src/verity/hub/intake/service.py`
-- [X] T015 [US1] Router: `POST/GET /applications`, `POST/GET /applications/{id}/intakes`, `GET /intakes/{id}` — gated `onboard_application` / `create_intake` / `view`; 404 on missing id — `hub/src/verity/hub/intake/router.py`
-- [X] T016 [US1] Wire `app.include_router(intake_router)` — `hub/src/verity/hub/app.py`
-- [X] T017 [US1] e2e test (PG18): onboard→create→read; viewer 403 on create / 200 on GET; attribution recorded — `hub/tests/verity/hub/intake/test_intake.py`
+- [ ] T018 [P] [US1] Raw SQL propose/read — `hub/db/queries/application_onboarding.sql` (`propose_application`, `get_application`, `list_applications`)
+- [ ] T019 [P] [US1] Raw SQL perimeter — `hub/db/queries/application_perimeter.sql` (insert + list frameworks / domains / jurisdictions)
+- [ ] T020 [P] [US1] Pydantic models `ApplicationPropose` / `Application` (fields mirror schema; perimeter as code arrays) — `hub/src/verity/hub/application/models.py`
+- [ ] T021 [US1] Service `propose` — insert `pending` app + `business_owner_actor_id` + perimeter rows + initial app-team grants (non-owner) into `core.actor_app_role_grant`; validate ≥1 framework/domain/jurisdiction + all three attestations + TLA shape; attribution server-set (D6) — `hub/src/verity/hub/application/service.py`
+- [ ] T022 [US1] Router `POST/GET /applications`, `GET /applications/{id}` (gated `onboard_application` / `view`; FK→400, cardinality/attestation→400, duplicate TLA→409) — `hub/src/verity/hub/application/router.py`
+- [ ] T023 [US1] Wire `app.include_router(application_router)`; **supersede** the Slice-1 intake `POST /applications` (remove/redirect the instant create) — `hub/src/verity/hub/app.py`, `hub/src/verity/hub/intake/router.py`
+- [ ] T024 [US1] e2e test (PG18) — `hub/tests/verity/hub/application/test_onboarding.py`: propose → `pending` + perimeter + owner; viewer 403 / GET 200; bad cardinality + missing attestation → 400; duplicate TLA → 409
 
 **Checkpoint**: US1 independently runnable + tested (the MVP).
 
 ---
 
-## Phase 4: User Story 2 (P2) — Classify intake (risk + materiality)
+## Phase 4: User Story 2 (P2) — Governed approval (the minimal primitive)
 
-**Goal**: set EU-AI-Act risk tier + NAIC/internal materiality on an intake.
-**Independent test**: a `reclassify_risk`-authorized principal sets the codes and they persist; an invalid code returns 400 (not 500).
+**Goal**: submit opens the onboarding approval; the required sign-offs resolve it and activate the app.
+**Independent test**: submit opens an `application_onboarding` request with **computed** required roles (AI Governance + business-owner-if-not-proposer); the required `approve` sign-offs flip the app to `active` and write the `app_owner` grant; an incomplete set leaves it `pending`; a non-required approver is 403.
 
-- [X] T018 [P] [US2] Raw SQL `classify_intake` (UPDATE the three `*_code` columns, RETURNING) — `hub/db/queries/intake.sql`
-- [X] T019 [P] [US2] `IntakeClassify` model — `hub/src/verity/hub/intake/models.py`
-- [X] T020 [US2] Service `classify` + route `POST /intakes/{id}/classification` (gate `reclassify_risk`); map FK violation → 400 with the bad field (D-INT-7) — `hub/src/verity/hub/intake/{service,router}.py`
-- [X] T021 [US2] e2e test: classify sets codes; `ai_risk_tier_code:"bogus"` → 400 — `hub/tests/verity/hub/intake/test_intake.py`
-
----
-
-## Phase 5: User Story 3 (P3) — Governed status transitions (audited)
-
-**Goal**: change an intake's status; one transaction updates the row **and** appends to `audit.status_transition`.
-**Independent test**: a status change updates `intake_status_code` and writes exactly one `audit.status_transition` row with `from_code`/`to_code`/`actor_id`/`acting_role_code`; an invalid status code returns 400.
-
-- [X] T022 [P] [US3] Raw SQL `get_intake_status`, `update_intake_status` (`hub/db/queries/intake.sql`) + `insert_status_transition` (`hub/db/queries/status_transition.sql`)
-- [X] T023 [P] [US3] `IntakeStatusChange` model — `hub/src/verity/hub/intake/models.py`
-- [X] T024 [US3] Service `change_status` — **single transaction** (read from_code → update → insert audit, D-INT-1); route `POST /intakes/{id}/status` (gate `triage_intake`) — `hub/src/verity/hub/intake/{service,router}.py`
-- [X] T025 [US3] e2e test: status change updates the row + exactly one audit row (from/to/actor/acting_role); invalid code → 400 — `hub/tests/verity/hub/intake/test_intake.py`
+- [ ] T025 [P] [US2] Raw SQL approval primitive — `hub/db/queries/approval.sql` (`open_request`, `get_request`, `list_signoffs`, `insert_signoff`, `set_request_status`, `set_application_active`, `insert_app_owner_grant`)
+- [ ] T026 [P] [US2] Models `ApprovalRequest` / `Signoff` / `SubmitForApproval` — `hub/src/verity/hub/approval/models.py`
+- [ ] T027 [US2] Approval service — `open_request(kind, target, required_roles)`, `record_signoff`, resolve-when-satisfied (D-ONB-1) — `hub/src/verity/hub/approval/service.py`
+- [ ] T028 [US2] Onboarding submit/resolve in `application/service.py` — compute required = `ai_governance` + business-owner-if-not-proposer; on resolve → status `active` + write the `app_owner` grant (FR-IN-015)
+- [ ] T029 [US2] Routes `POST /applications/{id}/submit` + `GET /approvals/{id}` + `POST /approvals/{id}/signoff` (gated `onboard_application` / `view` / `signoff`) — `hub/src/verity/hub/approval/router.py`, `application/router.py`
+- [ ] T030 [US2] Wire `approval_router`; 403 (non-required approver) / 409 (already resolved) handling — `hub/src/verity/hub/app.py`
+- [ ] T031 [US2] e2e tests — `test_onboarding.py` (submit→signoff→`active` + `app_owner` grant; incomplete set → still `pending`; non-required approver 403) + `hub/tests/verity/hub/approval/test_approval.py` (primitive in isolation: open → signoff → resolve)
 
 ---
 
-## Phase 6: User Story 4 (P3) — Requirements capture
+## Phase 5: User Story 3 (P3) — Enforcement & lifecycle
 
-**Goal**: add and list typed requirements on an intake (`embedding` null — deferred D-INT-6).
-**Independent test**: an `edit_requirement`-authorized principal adds a requirement (embedding null) and lists it back.
+**Goal**: a non-`active` app can't own promotable intakes/assets; the classification ceiling is enforced; suspend/retire.
+**Independent test**: a `pending` app rejects intake creation/promotion; an intake classification above the app ceiling is rejected (400); `suspend`/`retire` transitions persist.
 
-- [X] T026 [P] [US4] Raw SQL `add_requirement`, `list_requirements` — `hub/db/queries/intake_requirement.sql`
-- [X] T027 [P] [US4] `RequirementCreate/Requirement` models — `hub/src/verity/hub/intake/models.py`
-- [X] T028 [US4] Service + routes `POST/GET /intakes/{id}/requirements` (gates `edit_requirement` / `view`) — `hub/src/verity/hub/intake/{service,router}.py`
-- [X] T029 [US4] e2e test: add requirement (embedding null) + list — `hub/tests/verity/hub/intake/test_intake.py`
+- [ ] T032 [P] [US3] Raw SQL lifecycle + ceiling read — `application_onboarding.sql` (`set_application_status`, `get_application_ceiling`)
+- [ ] T033 [US3] Service lifecycle (`suspend`/`retire`, guarded) + a `ceiling_ok(intake_classification)` helper — `hub/src/verity/hub/application/service.py`
+- [ ] T034 [US3] Enforce the **active-app gate** + ceiling on the intake side (intake create requires `application_status = active`; intake classification ≤ app ceiling) — reconcile with Slice-1 `hub/src/verity/hub/intake/{service,router}.py`
+- [ ] T035 [US3] Route `POST /applications/{id}/lifecycle` (gated `onboard_application`) — `hub/src/verity/hub/application/router.py`
+- [ ] T036 [US3] e2e tests — `test_onboarding.py`: `pending` app blocks intake create; ceiling violation → 400; suspend/retire transitions
 
 ---
 
-## Phase 7: Polish & cross-cutting
+## Phase 6: Polish & cross-cutting
 
-- [X] T030 [P] Read-only intake queries in the dev console catalog (`intakes`, `status_history`, `requirements`) — `tools/src/verity/dev/catalog.py`
-- [X] T031 [P] One-line `infra/README.md` note: hub-only features run on the `pg` substrate (dev stack `pg`; prod CloudNativePG)
-- [X] T032 Full hub suite green (`pytest -q`) + quickstart smoke + `ruff check` clean
+- [ ] T037 [P] Dev console read-only queries (applications by status, perimeter, pending onboarding approvals) — `tools/src/verity/dev/catalog.py`
+- [ ] T038 [P] Refresh `quickstart.md` (resolve the `<actor-uuid>` note; confirm acceptance mapping)
+- [ ] T039 Full hub suite green (`pytest -q`) + `ruff check` clean + `migrate`/`reset` idempotent on PG18
 
 ---
 
 ## Dependencies & order
 
-- **Phase 2 blocks Phase 3+** (foundation must be finalized first).
-- **US1 (P1) is the MVP and a prerequisite** for US2/US3/US4 (each acts on an intake created in US1).
-- **US2, US3, US4 are independent of one another** (different endpoints), but they share
-  `intake/service.py`, `intake/router.py`, and `intake.sql` — coordinate edits or do them in
-  sequence to avoid churn.
+- **Phase 2 blocks Phase 3+** (the schema must be grown + reviewed first).
+- **US1 → US2 → US3**: US2 approves an app US1 proposes; US3 enforces gates over `active` apps. US1 is the MVP.
+- **Cross-slice**: T023 supersedes the Slice-1 instant create; T034 adds the active-app gate to the shipped intake create — both touch Slice-1 code (update its tests).
 
 ## Parallel opportunities
 
-- Within a story, the `[P]` tasks (SQL files, models) run in parallel; service → router → test
-  are sequential (same files / build on each other).
-- Example (US1): T011, T012, T013 in parallel → then T014 → T015 → T016 → T017.
+- **Phase 2** is highly parallel: T004–T011 are independent files (the ALTERs + new tables/vocabs); T012–T014 (seeds) follow; T016 (migration) consolidates; T017 reviews.
+- Within a story, `[P]` SQL/model tasks run together; service → router → test are sequential.
+- Example (US1): T018, T019, T020 in parallel → T021 → T022 → T023 → T024.
 
 ## Implementation strategy
 
-- **MVP = US1** (onboard application + create/read intake): the smallest end-to-end, auth-gated,
-  tested increment. Ship/verify it before US2–US4.
-- Then layer US2 (classify) → US3 (audited status) → US4 (requirements), each independently
-  testable, finishing with the polish phase.
+- **MVP = US1** (propose a `pending` application + perimeter): the smallest governed, tested increment.
+- Then US2 (approval → `active`) and US3 (enforcement). Review the **Phase-2 migration before wiring services** (Principle II).
 
-## Deferred (NOT in this slice — recorded, not dropped)
+## Deferred (NOT in this slice — recorded)
 
-Intake status **state-machine** (legal transitions); requirement **embeddings + semantic dedup**;
-**obligation-resolution → compliance** metamodel; **plan/estimate/ROI/cost**. Each is a later
-intake slice (capability gate; plan.md).
+The onboarding **UI build** (screen is a contract only); **environments / harness** management (FR-IN-016 tabs); FR-AP-* approval features beyond the onboarding need; **obligation resolution** (the perimeter is captured here; elicitation is the assessment slice).
