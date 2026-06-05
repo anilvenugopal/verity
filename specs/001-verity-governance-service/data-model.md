@@ -66,7 +66,7 @@ actor ──proposes──> application (pending)
 - `code`: `^[A-Z]{3}$`, unique; immutable once `active`.
 - Perimeter: ≥1 regulatory framework, ≥1 governance domain, ≥1 jurisdiction (else 400).
 - Attestations: all three booleans required (no default; missing → 400/422).
-- `data_classification_code` is the **ceiling**: an intake's actual classification MUST NOT exceed it; `processes_pii = true` ⇒ ceiling ≥ `confidential`.
+- `data_classification_code` is the **ceiling**: an intake's actual classification MUST NOT exceed it; `processes_pii = true` ⇒ ceiling ≥ `confidential`. **[deferred — T034]**: `core.intake` has no `data_classification` column yet (intake classification = risk-tier/materiality only); ceiling enforcement requires an intake-schema addition in the next intake slice.
 - Approval resolves only when every computed required role (AI Governance + business-owner-if-not-proposer) has an `approval` sign-off; any rejection blocks.
 - A non-`active` application MUST NOT own promotable intakes/assets (FR-IN-015).
 - All writes record `created_by/role` server-side (D6 / FR-018).

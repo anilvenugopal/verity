@@ -119,3 +119,8 @@ Slice-1 instant `POST /applications` with a governed propose→approve flow.
 ## Deferred (NOT in this slice — recorded)
 
 The onboarding **UI build** (screen is a contract only); **environments / harness** management (FR-IN-016 tabs); FR-AP-* approval features beyond the onboarding need; **obligation resolution** (the perimeter is captured here; elicitation is the assessment slice).
+
+Named deferrals (from /speckit.analyze — G2/G3; not silent):
+- **G2 — `cost_center` / quota on application**: FR-IN-015 / clarification lists cost center as captured at onboarding; neither the schema nor the code includes it yet. Land alongside the quota infrastructure (FR-QT) in a dedicated slice.
+- **G3 — FR-AUTHZ-003 app-team-gated operations**: `app_team_role` grants are *written* at onboarding but the grant-*check* path for app-scoped operations (e.g. app-team members editing their app's intakes) isn't specced or tasked. This is a prerequisite for the first slice that adds app-scoped routes beyond onboarding itself.
+- **U1 hardening (already partially applied)**: the schema has `uq_approval_signoff_request_role` UNIQUE (approval_request_id, signed_as_role_code); the service duplicate-check (409 before INSERT) was added in the analyze remediation pass. No further work needed for this slice.

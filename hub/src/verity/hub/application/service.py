@@ -195,7 +195,18 @@ async def sign_off(conn: AsyncConnection, approval_request_id: UUID, ctx: AuthCo
     is_owner = str(ctx.principal.actor_id) == str(owner)
     if not (is_ai_gov or is_owner):
         raise AuthError(403, "not_required_approver", "not a required approver for this onboarding")
+    # Self-approval guard (G1): the proposer may not fill the AI-Governance sign-off slot on their
+    # own request — they must be a different person from the AI-Gov approver (separation of duty).
+    is_proposer = str(ctx.principal.actor_id) == str(request["opened_by_actor_id"])
+    if is_ai_gov and is_proposer and not is_owner:
+        raise AuthError(403, "self_approval", "the proposer may not sign as AI Governance on their own request")
     signed_as = "ai_governance" if is_ai_gov else "business_owner"
+
+    # U1: prevent duplicate sign-offs for the same role slot (schema UNIQUE enforces at DB level;
+    # this check surfaces a clean 409 before the INSERT rather than relying on a UniqueViolation).
+    existing = await approval_service.list_signoffs(conn, approval_request_id)
+    if any(s["signed_as_role_code"] == signed_as for s in existing):
+        raise OnboardingConflict(f"a sign-off for role '{signed_as}' has already been recorded")
 
     async with conn.transaction():
         await approval_service.insert_signoff(

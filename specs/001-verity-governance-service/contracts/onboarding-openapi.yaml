@@ -170,5 +170,5 @@ components:
       type: object
       required: [decision_code]
       properties:
-        decision_code: { type: string, description: a reference.approval_decision code (approve / reject / request_changes) }
+        decision_code: { type: string, description: a reference.approval_decision code (approved | rejected | requested_changes | abstained) }
         comment: { type: string }
