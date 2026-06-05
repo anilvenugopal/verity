@@ -1,129 +1,89 @@
-# Implementation Plan: Intake vertical slice (verity-governance-service)
+# Implementation Plan — Application Onboarding slice
 
-**Branch**: `001-verity-governance-service` | **Date**: 2026-06-04 | **Spec**: [spec.md](./spec.md)
+**Branch**: `001-verity-governance-service` · **Spec**: [spec.md](spec.md) (FR-IN-015…018, FR-AUTHZ-001, FR-AP-*)
+**Slice**: Application onboarding — the governed proposal that creates the tenant-of-record and its compliance perimeter.
 
-**Input**: Feature specification from `specs/001-verity-governance-service/spec.md`
-
-**Scope note**: This plan covers the **first vertical slice — Intake** — of the governance
-service, per the constitution's PCR §6 sequencing (intake → registry → … ). Later slices
-(registry/compose, harness/packaging/deploy, decision logging, lifecycle, compliance,
-reporting) get their own plans.
+> **Slice history (one feature, sequential slices):**
+> - **Slice 1 — Intake CRUD (shipped):** application/intake/classify/status/requirements US1–US4 (commits `8780d24`, `fc2dd8d`). Its plan artifacts are preserved in git history (`88f73f5`).
+> - **Slice 2 — Application Onboarding (this plan):** supersedes the thin instant `POST /applications` from Slice 1 with a governed propose→approve flow.
 
 ## Summary
 
-The intake slice is the front door of governance: **application onboarding → intake
-(classified by EU-AI-Act risk tier + NAIC/internal materiality) → typed requirements**,
-exposed through the **action-gated, fail-closed** governance API. Every status change is
-written to the append-only `audit.status_transition` log, and every write is attributed to
-`actor_id + acting_role` (D6). It is **hub-only** (no harness, NATS, or MinIO) and builds on
-the committed, PG18-tested foundation (the `verity.hub` service: FastAPI · psycopg v3 async ·
-raw SQL via aiosql · Pydantic v2 · the auth wiring). Data is the existing canonical schema —
-no DDL changes.
+Application onboarding turns the thin Slice-1 `application` record into a **governed tenant-of-record**: a proposal (not an instant create) that captures **identity** (name, immutable 3-char TLA, purpose), **ownership** (business owner + initial app-team), and the **compliance perimeter** (data-classification ceiling, ≥1 regulatory framework / governance domain / jurisdiction, three explicit attestations), then requires an **AI-Governance + business-owner** approval before the application goes `active`. It also lands the **minimal, reusable approval primitive** (`approval_request` + `approval_signoff` over existing tables) that intake/change-proposals/exceptions will reuse.
 
 ## Technical Context
 
-**Language/Version**: Python 3.12
-
-**Primary Dependencies**: FastAPI; psycopg v3 (async) + psycopg_pool (dict_row); aiosql (raw
-SQL, no ORM — ADR-0012); Pydantic v2. Test: pytest + testcontainers.
-
-**Storage**: PostgreSQL 18 (pgvector). Canonical schema `specs/schema/verity_schema.sql` +
-`seed/` — **no schema changes in this slice**. Tables used: `core.application`, `core.intake`,
-`core.intake_requirement`, `audit.status_transition`; reference vocabs `reference.{intake_status,
-ai_risk_tier, naic_materiality, materiality_tier, requirement_kind, requirement_status}`.
-
-**Testing**: pytest against an ephemeral `pgvector/pgvector:pg18` testcontainer; tests mirror
-the package (`tests/verity/hub/intake/`). The container is the safety net for raw SQL (ADR-0012).
-
-**Target Platform**: Linux server (the `hub` component, package `verity.hub`). Local dev via
-the `dev` console's `pg` container; prod is K8s/Helm + CloudNativePG.
-
-**Project Type**: web service (the governance API) within the modular monorepo (ADR-0011).
-
-**Performance Goals**: a cache-hit authorization decision adds no DB round-trip (NFR-005);
-intake is low-volume Tier-1 CRUD — no special performance work.
-
-**Constraints**: raw SQL / no ORM (constitution Technical Standards; ADR-0012); every status
-change append-only-audited (D4); attribution `actor_id + acting_role` on every write (D6);
-naming gate — API/model field names mirror schema columns exactly (NFR-007).
-
-**Scale/Scope**: ~11 endpoints, 3 core tables + 1 audit table, 6 reference vocabularies.
+- **Stack:** Python 3.12 · FastAPI · psycopg v3 async · raw SQL via aiosql + thin repo (ADR-0012) · Pydantic v2 · PostgreSQL 18. (Unchanged from Slice 1.)
+- **Package:** `verity.hub`; new module `verity.hub.application` (onboarding) + `verity.hub.approval` (the primitive). Tests mirror the package.
+- **Data layer:** the canonical schema, **grown** for onboarding (DDL changes are spec-covered: FR-IN-015…018). Migrations are hand-written, numbered SQL (ADR-0012).
+- **Existing infrastructure reused (no new tables for these):** `core.approval_request`, `core.approval_signoff`, `reference.approval_decision`, `reference.approval_request_status`, `core.actor_app_role_grant` (+ `current_actor_app_role` view), `reference.governance_domain` (the 9), `reference.data_classification` (sensitivity), `core.regulatory_framework`, the compliance metamodel (`canonical_requirement`/`control`/`evidence_specification`/`domain_maturity`).
+- **NEEDS CLARIFICATION:** none blocking — resolved in research.md (D-ONB-1…7).
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0. Re-checked after Phase 1 (below).*
+| Principle | Gate | Status |
+|---|---|---|
+| I — Spec precedes implementation | Onboarding is fully specced (FR-IN-015…018) before code | ✅ PASS |
+| II — Schema is the hardened foundation | DDL growth is spec-covered + reviewed before service work; new objects follow naming-conventions.md | ✅ PASS (review the migration first) |
+| III — Legacy is reference, never source | Re-author; `app_demo_*`→`app_*` rename recorded as an intentional v2 delta (not silent) | ✅ PASS |
+| IV — API-only governance boundary | All writes via the governance API; attribution server-resolved (D6); no direct DB from callers | ✅ PASS |
+| V — Uniform bindings, agent-only tools | N/A (no binding/tool surface in this slice) | ✅ N/A |
+| VI — Slice-first, parity committed | Onboarding scoped; deferrals recorded (UI build, harness provisioning) — never silent | ✅ PASS |
+| VIII — Continuous control-and-evidence compliance | Perimeter feeds obligation elicitation (FR-IN-014/018) — captured here, resolved downstream | ✅ PASS |
 
-| Principle / Gate | Assessment |
-|---|---|
-| **I. Spec precedes implementation** | This plan + the 001 spec drive code; `/speckit.tasks` → `/speckit.implement` follow. **Deviation (recorded):** the foundation + auth were written ahead of this plan — see Complexity Tracking; kept as completed setup per product-owner decision, not re-derived. |
-| **II. Schema is the hardened foundation** | Schema is reviewed, PG18 load-tested, and documented; intake depends only on existing tables — no DDL. **PASS.** |
-| **III. Legacy is reference** | No imports from `verity_legacy`. (uw_demo is re-authored *demo data in app-alpha*, not this slice.) **PASS.** |
-| **IV. API-only governance boundary** | Constrains the *harness*, not the hub. Intake is hub-internal; the hub *is* the governance API and owns its DB writes. **PASS (n/a to intake).** |
-| **V. Uniform bindings, agent-only tools** | Intake introduces no bindings/tools/agents/MCP. **N/A.** |
-| **VI. Slice-first, parity committed** | Intake is the first vertical per PCR §6. Deferred intake capabilities are recorded as **deferred-not-dropped** (below). **PASS.** |
-| **VII. Governed deployment** | No packages/deploy in intake. **N/A.** |
-| **VIII. Continuous compliance** | Intake is the *start* of the compliance lifecycle; this slice stops **before** obligation-resolution → the compliance metamodel (deferred). No compliance gate is bypassed. **PASS.** |
-| **Naming gate** | Pydantic/API fields mirror schema column names exactly. **PASS.** |
-| **Capability gate** | Deferrals recorded (research.md + below). **PASS.** |
+No violations. **Process note:** this slice grows the hardened schema — the migration DDL MUST be reviewed (Principle II) before the service layer is wired.
 
-**Deferred-not-dropped (capability gate):** intake status *state-machine* (this slice accepts
-any valid `reference.intake_status`); requirement **embeddings + semantic dedup** (`vector(384)`);
-**obligation-resolution → compliance** metamodel; **plan/estimate/ROI/cost**. Each is a later
-intake slice, tracked here so parity stays honest.
+## Scope
 
-## Project Structure
+**In scope**
+- Schema growth (data-model.md): `core.application` columns (`code` TLA, `application_status_code`, `data_classification_code`, `line_of_business_code`, `affects_consumers`, `processes_pii`, `consumer_facing`); `core.approval_request.target_application_id`; new joins `application_regulatory_framework` / `_governance_domain` / `_jurisdiction`; new vocabs `reference.application_status` / `jurisdiction` / `line_of_business`; `app_team_role` rename `app_demo_*`→`app_*`; the `application_onboarding` approval kind.
+- Reference seeds: `application_status`, `jurisdiction` (US states + EU/UK + …), `line_of_business`, a starter `regulatory_framework` set; verify/repair `data_classification` to the 4 sensitivity codes.
+- The **minimal approval primitive** (`verity.hub.approval`): open request (kind, target, computed required-roles), record sign-off, resolve when satisfied.
+- Onboarding API (contracts/onboarding-openapi.yaml): propose (`pending`), submit-for-approval, sign-off → `active` + owner grant, reads; **rework** the Slice-1 instant `POST /applications`.
+- Enforcement: non-`active` application can't own promotable intakes/assets; classification-ceiling rule available to intakes.
 
-### Documentation (this feature)
+**Out of scope (deferred — recorded):** the onboarding UI build (screen is a contract only); harness provisioning + environments (FR-IN-016 management tabs); FR-AP-* approval features beyond the onboarding need; obligation *resolution* (perimeter is captured here; elicitation is the assessment slice).
 
-```text
-specs/001-verity-governance-service/
-├── plan.md          # this file
-├── research.md      # Phase 0 (decisions)
-├── data-model.md    # Phase 1 (entities used + transitions)
-├── quickstart.md    # Phase 1 (how to run/verify the slice)
-├── contracts/
-│   └── intake-openapi.yaml   # Phase 1 (the intake API contract)
-└── tasks.md         # Phase 2 (/speckit.tasks — NOT created here)
+## User-story decomposition (drives /speckit.tasks)
+
+- **Foundational** — schema migration (DDL growth + seeds + `app_*` rename), reviewed first; reconcile the Slice-1 `application` model.
+- **US1 (P1) — Propose an application (MVP):** create a `pending` application capturing identity + ownership + compliance perimeter; reads. *Independent test:* an authorized author proposes an app; it persists `pending` with TLA unique/immutable + perimeter rows + owner recorded; a viewer is denied.
+- **US2 (P2) — Governed approval:** submit-for-approval (open `application_onboarding` request; required roles = AI Governance + business-owner-if-not-proposer), sign-off, resolve → `active` + write the `app_owner` grant. *Independent test:* the required sign-offs flip the app to `active` and grant the owner; an incomplete set leaves it `pending`.
+- **US3 (P3) — Enforcement & lifecycle:** non-`active` app can't own promotable intakes/assets; classification-ceiling check; `suspend`/`retire`. *Independent test:* a `pending` app rejects intake/asset promotion; a ceiling violation is rejected.
+
+## Project structure (additions)
+
 ```
-
-### Source Code (repository root)
-
-```text
-hub/                                  # the governance hub component (ADR-0011)
-└── src/verity/hub/
-    ├── app.py                        # + app.include_router(intake_router)
-    ├── auth/                         # existing (matrix, AuthContext, require_action)
-    └── intake/                       # NEW (this slice)
-        ├── __init__.py
-        ├── models.py                 # Pydantic boundary models (mirror schema columns)
-        ├── service.py                # multi-statement ops (create, status-transition+audit)
-        └── router.py                 # APIRouter, action-gated routes
-hub/db/queries/                       # NEW raw SQL (aiosql)
-    ├── application.sql
-    ├── intake.sql
-    ├── intake_requirement.sql
-    └── status_transition.sql
-hub/tests/verity/hub/intake/          # NEW tests (mirror the package)
-    └── test_intake.py
-tools/src/verity/dev/catalog.py       # + read-only intake queries (dev console)
-infra/README.md                       # + one line: hub-only features run on the pg substrate
+hub/
+  db/queries/
+    application_onboarding.sql      # propose/read/lifecycle
+    application_perimeter.sql       # perimeter joins (frameworks/domains/jurisdictions)
+    approval.sql                    # open request, signoff, resolve (the primitive)
+  src/verity/hub/
+    application/{models,service,router}.py   # onboarding (supersedes intake.Application bits)
+    approval/{models,service}.py             # minimal approval primitive
+  tests/verity/hub/
+    application/test_onboarding.py           # PG18 e2e: propose→submit→signoff→active
+    approval/test_approval.py                # the primitive in isolation
+  migrations/000X_application_onboarding.sql # hand-written, numbered (ADR-0012)
+specs/schema/                                # DDL growth (structure) + seeds — reviewed first
+  core/{application,approval_request}.sql               # ALTER (new columns)
+  core/{application_regulatory_framework,application_governance_domain,application_jurisdiction}.sql  # NEW
+  reference/{application_status,jurisdiction,line_of_business}.sql                                    # NEW
+  seed/...                                              # vocab seeds + app_team_role rename
 ```
-
-**Structure Decision**: extends the existing `verity.hub` package with an `intake/` subpackage
-(router/service/models), backed by per-aggregate `.sql` files; no new top-level structure.
-Demo data is **not** here — it lives in `app-alpha/`, orchestrated by the `dev` console
-(product-owner direction).
 
 ## Complexity Tracking
 
-| Violation | Why it happened | Resolution (simpler alternative) |
-|---|---|---|
-| Foundation + auth implemented **before** this plan (Principle I) | Phase-2 scaffolding was built directly against the umbrella spec instead of through `/speckit.plan → tasks → implement`. | Per product-owner decision: **keep** the committed, PG18-tested foundation and back-fill it into `tasks.md` as completed setup, rather than re-deriving working code. From this slice on, all code flows through Spec Kit. |
-| Raw SQL + thin repo (not an ORM) | Intentional (ADR-0012; constitution mandates raw SQL). | Not a violation — recorded for clarity; the testcontainer is the column-drift safety net. |
+| Item | Note |
+|---|---|
+| Schema growth on hardened tables | Spec-covered (FR-IN-015…018); migration reviewed before service (Principle II). |
+| `app_demo_*`→`app_*` vocab rename | Touches SC-004 (verbatim-from-v1); recorded as an intentional v2 product rename (research D-ONB-6). |
+| Minimal approval primitive | Built general (reused by intake/change-proposals/exceptions) but feature-scoped to the onboarding need. |
+| Supersedes Slice-1 instant create | The thin `POST /applications` is reworked into propose→approve; Slice-1 tests update accordingly. |
 
-## Constitution Re-check (post-Phase 1)
+## Phases
 
-After the Phase 1 design (data-model.md, contracts/, quickstart.md): no new violations. The
-slice touches only existing reviewed tables, introduces no harness/DB-boundary change, no
-bindings, and records every deferral. Gates I (with the recorded deviation), II, VI, naming,
-and capability all hold. **Cleared to `/speckit.tasks`.**
+- **Phase 0 — research.md:** D-ONB-1…7.
+- **Phase 1 — data-model.md + contracts/onboarding-openapi.yaml + quickstart.md:** the schema growth, the onboarding/approval API, and the propose→approve→active happy path.
+- **Phase 2 — /speckit.tasks:** task breakdown by the user stories above.

@@ -1,0 +1,174 @@
+openapi: 3.1.0
+info:
+  title: Verity Governance API — Application Onboarding slice
+  version: 0.1.0
+  description: >
+    Governed application onboarding: propose (pending) → submit-for-approval → sign-off (AI
+    Governance + business-owner-if-not-proposer) → active. Every route is action-gated and
+    fail-closed (user-authentication.md); the `x-action` extension names the required action.
+    Field names mirror the canonical schema columns (naming gate). Supersedes the Slice-1 instant
+    POST /applications. The minimal approval primitive (open/sign-off/resolve) is reused by later
+    slices.
+servers:
+  - url: http://localhost:8000
+
+paths:
+  /applications:
+    post:
+      summary: Propose an application (creates it pending with its compliance perimeter)
+      x-action: onboard_application
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ApplicationPropose' } } } }
+      responses:
+        "201": { description: created pending, content: { application/json: { schema: { $ref: '#/components/schemas/Application' } } } }
+        "400": { $ref: '#/components/responses/BadInput' }
+        "403": { $ref: '#/components/responses/Denied' }
+        "409": { $ref: '#/components/responses/Conflict' }
+    get:
+      summary: List applications
+      x-action: view
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Application' } } } } }
+
+  /applications/{application_id}:
+    get:
+      summary: Get an application (with its perimeter)
+      x-action: view
+      parameters: [ { $ref: '#/components/parameters/ApplicationId' } ]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/Application' } } } }
+        "404": { $ref: '#/components/responses/NotFound' }
+
+  /applications/{application_id}/submit:
+    post:
+      summary: Submit a pending application for approval (opens the onboarding approval)
+      x-action: onboard_application
+      parameters: [ { $ref: '#/components/parameters/ApplicationId' } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/SubmitForApproval' } } } }
+      responses:
+        "201": { description: approval opened, content: { application/json: { schema: { $ref: '#/components/schemas/ApprovalRequest' } } } }
+        "403": { $ref: '#/components/responses/Denied' }
+        "404": { $ref: '#/components/responses/NotFound' }
+        "409": { description: not pending, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+  /applications/{application_id}/lifecycle:
+    post:
+      summary: Suspend or retire an application (governed)
+      x-action: onboard_application
+      parameters: [ { $ref: '#/components/parameters/ApplicationId' } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/LifecycleChange' } } } }
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/Application' } } } }
+        "400": { $ref: '#/components/responses/BadInput' }
+        "403": { $ref: '#/components/responses/Denied' }
+
+  /approvals/{approval_request_id}:
+    get:
+      summary: Get an approval request and its sign-offs
+      x-action: view
+      parameters: [ { $ref: '#/components/parameters/ApprovalId' } ]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/ApprovalRequest' } } } }
+        "404": { $ref: '#/components/responses/NotFound' }
+
+  /approvals/{approval_request_id}/signoff:
+    post:
+      summary: Record a sign-off; resolves the request (and activates the app) when satisfied
+      x-action: signoff
+      parameters: [ { $ref: '#/components/parameters/ApprovalId' } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Signoff' } } } }
+      responses:
+        "200": { description: recorded, content: { application/json: { schema: { $ref: '#/components/schemas/ApprovalRequest' } } } }
+        "400": { $ref: '#/components/responses/BadInput' }
+        "403": { description: not a required approver / role not held, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        "404": { $ref: '#/components/responses/NotFound' }
+        "409": { description: already resolved, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+components:
+  parameters:
+    ApplicationId: { name: application_id, in: path, required: true, schema: { type: string, format: uuid } }
+    ApprovalId: { name: approval_request_id, in: path, required: true, schema: { type: string, format: uuid } }
+  responses:
+    Denied: { description: action not permitted, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    NotFound: { description: not found, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    BadInput: { description: invalid code / perimeter cardinality / missing attestation, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    Conflict: { description: duplicate TLA / immutable code, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  schemas:
+    Error: { type: object, properties: { code: { type: string }, detail: { type: string }, request_id: { type: string } } }
+
+    ApplicationPropose:
+      type: object
+      required: [name, code, description, data_classification_code, regulatory_framework_codes,
+                 governance_domain_codes, jurisdiction_codes, business_owner_actor_id,
+                 affects_consumers, processes_pii, consumer_facing, justification]
+      properties:
+        name: { type: string, minLength: 1 }
+        code: { type: string, pattern: '^[A-Z]{3}$', description: the TLA (unique, immutable once active) }
+        description: { type: string, minLength: 20 }
+        line_of_business_code: { type: string, nullable: true }
+        data_classification_code: { type: string, description: sensitivity ceiling }
+        regulatory_framework_codes: { type: array, items: { type: string }, minItems: 1 }
+        governance_domain_codes: { type: array, items: { type: string }, minItems: 1 }
+        jurisdiction_codes: { type: array, items: { type: string }, minItems: 1 }
+        business_owner_actor_id: { type: string, format: uuid }
+        initial_app_team:
+          type: array
+          items: { type: object, properties: { actor_id: { type: string, format: uuid }, app_team_role_code: { type: string } } }
+        affects_consumers: { type: boolean }
+        processes_pii: { type: boolean }
+        consumer_facing: { type: boolean }
+        justification: { type: string, minLength: 1 }
+
+    Application:
+      type: object
+      properties:
+        application_id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        description: { type: string }
+        application_status_code: { type: string, description: pending | active | suspended | retired }
+        line_of_business_code: { type: string, nullable: true }
+        data_classification_code: { type: string }
+        regulatory_framework_codes: { type: array, items: { type: string } }
+        governance_domain_codes: { type: array, items: { type: string } }
+        jurisdiction_codes: { type: array, items: { type: string } }
+        business_owner_actor_id: { type: string, format: uuid }
+        affects_consumers: { type: boolean }
+        processes_pii: { type: boolean }
+        consumer_facing: { type: boolean }
+        created_at: { type: string, format: date-time }
+
+    SubmitForApproval:
+      type: object
+      properties: { note: { type: string } }
+
+    LifecycleChange:
+      type: object
+      required: [to_status_code]
+      properties:
+        to_status_code: { type: string, description: suspended | retired (reactivate via active) }
+        reason: { type: string }
+
+    ApprovalRequest:
+      type: object
+      properties:
+        approval_request_id: { type: string, format: uuid }
+        request_kind_code: { type: string, description: application_onboarding }
+        status_code: { type: string, description: pending | approved | rejected }
+        target_application_id: { type: string, format: uuid }
+        required_roles: { type: array, items: { type: string }, description: computed (AI Governance + business-owner-if-not-proposer) }
+        signoffs:
+          type: array
+          items:
+            type: object
+            properties:
+              approver_actor_id: { type: string, format: uuid }
+              signed_as_role_code: { type: string }
+              decision_code: { type: string }
+              comment: { type: string, nullable: true }
+
+    Signoff:
+      type: object
+      required: [decision_code]
+      properties:
+        decision_code: { type: string, description: a reference.approval_decision code (approve / reject / request_changes) }
+        comment: { type: string }

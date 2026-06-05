@@ -1,64 +1,76 @@
-# Phase 1 — Data Model: Intake slice
+# Phase 1 — Data Model: Application Onboarding slice
 
-This slice **adds no tables** — it uses existing canonical-schema entities (reviewed,
-PG18-loaded). Field names below are the schema column names verbatim (naming gate). Full
-column docs live in the catalog comments / `specs/schema/DATA-MODEL.md`.
+Field names are schema column names verbatim (naming gate). This slice **grows** the canonical
+schema (spec-covered: FR-IN-015…018) and **reuses** existing approval/compliance/app-team tables.
+DDL changes are reviewed before service work (Principle II).
 
-## Entities used (Tier-1, `core`)
+## Grown: `core.application` (new columns)
 
-### application  (`core.application`)
-The tenant-of-record that owns intakes. Fields written by this slice: `name` (unique, non-blank),
-`description?`, `created_by_actor_id`, `created_role_code`. Server-set: `application_id` (uuidv7),
-`created_at`, `updated_at`.
+| Column | Type | Notes |
+|---|---|---|
+| `code` | text | TLA; `UNIQUE`, `CHECK (code ~ '^[A-Z]{3}$')`; immutable after `active` (service-enforced) |
+| `application_status_code` | text | FK → `reference.application_status`; default `'pending'` |
+| `data_classification_code` | text | FK → `reference.data_classification` (sensitivity ceiling) |
+| `line_of_business_code` | text NULL | FK → `reference.line_of_business` (optional) |
+| `affects_consumers` | boolean | NOT NULL, no default (explicit attestation) |
+| `processes_pii` | boolean | NOT NULL, no default |
+| `consumer_facing` | boolean | NOT NULL, no default |
 
-### intake  (`core.intake`)
-A governed use-case under an application.
-- FKs: `application_id → application`.
-- Classification (nullable, set via /classification): `ai_risk_tier_code → reference.ai_risk_tier`,
-  `naic_materiality_code → reference.naic_materiality`, `materiality_tier_code → reference.materiality_tier`.
-- `intake_status_code → reference.intake_status` (default `proposed`) — **mutable; every change
-  appended to `audit.status_transition`** (D4).
-- `title`, `description?`; attribution `created_by_actor_id`, `created_role_code`.
+Existing: `application_id`, `name` (unique, non-blank), `description`, `created_at`, `updated_at`,
+`created_by_actor_id`, `created_role_code`.
 
-### intake_requirement  (`core.intake_requirement`)
-A typed requirement on an intake.
-- FK: `intake_id → intake` (cascade).
-- `requirement_kind_code → reference.requirement_kind`,
-  `requirement_status_code → reference.requirement_status` (default `draft`).
-- `title`, `body`; `embedding vector(384)` — **left null this slice** (D-INT-6).
-- attribution `created_by_actor_id`, `created_role_code`.
+## New join tables (the compliance perimeter, FR-IN-017)
 
-## Audit (Tier-2, `audit`)
+- **`core.application_regulatory_framework`** — `(application_id → core.application, framework_code → core.regulatory_framework)`, PK both; ≥1 enforced in the service.
+- **`core.application_governance_domain`** — `(application_id, governance_domain_code → reference.governance_domain)`, PK both; ≥1.
+- **`core.application_jurisdiction`** — `(application_id, jurisdiction_code → reference.jurisdiction)`, PK both; ≥1.
 
-### status_transition  (`audit.status_transition`)
-The single shared append-only log of every mutable `*_status_code` change (D4). This slice writes
-one row per intake status change: `entity_type='intake'`, `entity_id = intake_id`,
-`status_field='intake_status_code'`, `from_code`, `to_code`, `actor_id`, `acting_role_code`, `reason?`.
+## New reference vocabularies
 
-## Reference vocabularies (read-only, seeded)
+- **`reference.application_status`** — `pending` · `active` · `suspended` · `retired`.
+- **`reference.jurisdiction`** — controlled (US states + `eu` · `uk` · …).
+- **`reference.line_of_business`** — `pc` · `life` · `health` · `annuities` · `commercial` · `reinsurance` · `other`.
 
-`reference.intake_status`, `reference.ai_risk_tier`, `reference.naic_materiality`,
-`reference.materiality_tier`, `reference.requirement_kind`, `reference.requirement_status`. The
-API validates `*_code` inputs via these FKs (D-INT-7).
+## Grown: `core.approval_request` (one column)
+
+| Column | Type | Notes |
+|---|---|---|
+| `target_application_id` | uuid NULL | FK → `core.application`; scopes onboarding approvals (joins existing `target_intake_id` / `target_executable_version_id`) |
+
+`request_kind_code` gains the `application_onboarding` value (seed/validate per D-ONB-7).
+
+## Reused as-is (no change)
+
+- **`core.approval_request`** — `approval_request_id`, `request_kind_code`, `status_code` (default `pending`), `opened_by_actor_id`, `opened_role_code`.
+- **`core.approval_signoff`** — `approval_request_id`, `approver_actor_id`, `signed_as_role_code`, `decision_code → reference.approval_decision`, `comment`.
+- **`core.actor_app_role_grant`** (+ `current_actor_app_role` view) — business owner + initial app-team grants; the `app_owner` grant written on approval.
+- **`reference.governance_domain`** (the 9), **`reference.data_classification`** (4 sensitivity codes — verify seed, D-ONB-3), **`core.regulatory_framework`**, **`reference.approval_decision`**, **`reference.approval_request_status`**, **`reference.app_team_role`** (renamed `app_*`, D-ONB-6).
 
 ## Relationships
 
 ```
-application 1───* intake 1───* intake_requirement
-                   │
-                   └── status change ──> audit.status_transition (entity_type='intake')
+actor ──proposes──> application (pending)
+   │                     │ 1───* application_regulatory_framework ─> regulatory_framework
+   │                     │ 1───* application_governance_domain ────> governance_domain
+   │                     │ 1───* application_jurisdiction ─────────> jurisdiction
+   │                     │ data_classification_code (ceiling) ─────> data_classification
+   └──signs off──> approval_request (kind=application_onboarding, target_application_id)
+                        │ 1───* approval_signoff (signed_as_role, decision)
+                        └── resolved (approved) ──> application.status = active
+                                                    + actor_app_role_grant (app_owner)
 ```
 
-## Validation rules (from the spec + schema)
+## Validation rules (from FR-IN-015…018)
 
-- `application.name` non-blank, unique (DB CHECK + UNIQUE).
-- `intake.*_code` and `requirement_*_code` must exist in their reference table (DB FK → 400).
-- Status change target must be a valid `reference.intake_status` code; **legal-transition gating
-  is deferred** (D-INT-2).
-- Every create/update records `actor_id + acting_role` server-side (D6; never client-supplied — FR-018).
+- `code`: `^[A-Z]{3}$`, unique; immutable once `active`.
+- Perimeter: ≥1 regulatory framework, ≥1 governance domain, ≥1 jurisdiction (else 400).
+- Attestations: all three booleans required (no default; missing → 400/422).
+- `data_classification_code` is the **ceiling**: an intake's actual classification MUST NOT exceed it; `processes_pii = true` ⇒ ceiling ≥ `confidential`.
+- Approval resolves only when every computed required role (AI Governance + business-owner-if-not-proposer) has an `approval` sign-off; any rejection blocks.
+- A non-`active` application MUST NOT own promotable intakes/assets (FR-IN-015).
+- All writes record `created_by/role` server-side (D6 / FR-018).
 
-## State (intake_status)
+## State
 
-Current state is the row's `intake_status_code`; the **history** is the ordered
-`audit.status_transition` rows for that intake. This slice does not constrain which transitions
-are legal (D-INT-2) — that state-machine is a later slice.
+`application_status`: `pending` --(approval)--> `active` --(governed)--> `suspended` / `retired`.
+The compliance perimeter is editable only via re-approval (a change proposal — FR-IN-013); `code` is immutable once `active` (FR-IN-018).
