@@ -1,4 +1,4 @@
-# Feature Specification: UI Shell, Auth & Application Onboarding
+# Feature Specification: UI Shell, Auth, Application Onboarding & Intake Lifecycle
 
 **Feature Branch**: `002-ui-shell-auth-onboarding`
 
@@ -16,15 +16,18 @@
 
 ## Context
 
-This spec covers the React + TypeScript implementation of three sequential screen areas that together constitute the first usable product surface for Verity v2. The wireframe kit (`specs/ui/kit/`) is the approved visual source of truth for every screen in scope. The five-layer CSS architecture and token vocabulary in `specs/ui/design-system.md` are normative. The backend auth contract is fully specified in `specs/features/user-authentication.md` and is not re-specified here. The governance service (application-onboarding slice) is already built and its API is the integration target for Milestone 3.
+This spec covers the React + TypeScript implementation of four sequential screen areas that together constitute the first usable product surface for Verity v2 — a portal over **everything the governance backend already supports**. The wireframe kit (`specs/ui/kit/`) is the approved visual source of truth for every screen in scope. The five-layer CSS architecture and token vocabulary in `specs/ui/design-system.md` are normative. The backend auth contract is fully specified in `specs/features/user-authentication.md` and is not re-specified here. The governance service is already built — its application-onboarding slice is the integration target for Milestone 3, and its **shipped intake slices (CRUD, assessment capture, approval)** are the integration target for Milestone 4.
 
-Deliverables are sequenced as three milestones, each independently releasable:
+Deliverables are sequenced as four milestones, each independently releasable:
 
 | Milestone | Screens | Dependency |
 |---|---|---|
 | M1 — Auth shell | Sign-in, auth-state takeovers, account menu, callback handler | Blocks all subsequent milestones |
 | M2 — App shell + landing | App chrome (rail/sidebar/topbar/canvas), app launcher, landing page | Requires M1; blocks M3 navigation |
 | M3 — Application onboarding | Applications registry, onboard form, approval view, app detail, flow indicators | Requires M2 |
+| M4 — Intake lifecycle | Intake create, intake detail, assessment (shipped tabs), submit + tier-quorum sign-off | Requires M2 (shell) + M3 (approval view + an `active` application to attach intakes to) |
+
+**M4 scope guardrail**: M4 surfaces *only* intake backend that has already shipped in `001` — intake CRUD (slice 1), the two shipped assessment tabs (AI Decision Impact + Data) with the computed tier/materiality readout (slice 3), and submit → tier-quorum approval (slice 4). It explicitly does **not** include the Security & Access tab, mitigations, the Risk & Obligations summary tab (FR-AS-004–010), obligation-resolution display (FR-IN-014), or change-proposal flows (FR-IN-013) — that backend is not built; those screens land in feature `003` alongside their backend. M4 reuses the M3 approval/sign-off view (scroll-gate) with `kind=intake`.
 
 ---
 
@@ -95,6 +98,62 @@ A governance user navigates to the Applications section, sees a searchable regis
 
 ---
 
+### User Story 4 — Create an intake under an application (Priority: P4)
+
+A governance user opens an `active` application, starts a new intake (a proposed AI use case), gives it a title and initial requirements, and lands on the intake detail page where its status, requirements, and assessment progress are visible. This is the entry point of the intake lifecycle and the first M4 screen.
+
+**Why this priority**: Nothing downstream in M4 (assessment, approval) is reachable without an intake to operate on; it depends on M3 because an intake must attach to an `active` application.
+
+**Independent Test**: Mock-auth with an authoring role (`VERITY_MOCK_PLATFORM_ROLES=engineer`). Navigate to an `active` application → click "New intake" → enter a title → submit → assert `POST /applications/{application_id}/intakes` fires and the intake detail page (`intake.usecase-detail`) renders with status `proposed`. Add a requirement → assert `POST /intakes/{intake_id}/requirements` fires and the requirement appears in the list.
+
+**Acceptance Scenarios**:
+
+1. **Given** an `active` application detail page, **when** a user with an authoring role views it, **then** a "New intake" CTA is visible (absent for `viewer`-only users), and the Use Cases tab lists existing intakes from `GET /applications/{application_id}/intakes` with title + status badge, or an empty-state CTA when none exist.
+2. **Given** the "New intake" form (`intake.usecase-create`), **when** the user submits a valid title, **then** `POST /applications/{application_id}/intakes` is called; on success the form closes and the user lands on `/intakes/{intake_id}` showing status `proposed`.
+3. **Given** the intake detail page (`intake.usecase-detail`), **when** it loads, **then** it sources from `GET /intakes/{intake_id}` and renders title, status badge, the requirements list (`GET /intakes/{intake_id}/requirements`), and an assessment-progress indicator.
+4. **Given** the requirements list on intake detail, **when** the user adds a requirement, **then** `POST /intakes/{intake_id}/requirements` is called and the new requirement appears without a full page reload.
+5. **Given** an intake in a terminal status (`rejected`/`retired`), **when** the detail page loads, **then** edit affordances (add requirement, edit assessment, submit) are disabled.
+
+---
+
+### User Story 5 — Capture the shipped assessment tabs and see the computed tier (Priority: P5)
+
+From an intake's detail page the user opens the assessment and fills the two shipped tabs — **AI Decision Impact** and **Data** — then sees the system-computed risk tier and NAIC materiality with the rationale, plus the recorded inherent tier. This is the classification step that gates approval.
+
+**Why this priority**: A computed tier is the precondition for submission (US6); it requires an intake (US4) to exist.
+
+**Independent Test**: Mock-auth with an authoring role. Open an intake → open the assessment → complete the AI Decision Impact and Data tabs → save → assert `PUT /intakes/{intake_id}/assessment` fires and the computed tier + materiality readout renders from `GET /intakes/{intake_id}/assessment`. Re-open the assessment → assert prior answers are reloaded (revision history available via `GET /intakes/{intake_id}/assessment/revisions`).
+
+**Acceptance Scenarios**:
+
+1. **Given** the intake detail page, **when** the user opens the assessment, **then** exactly two tabs are shown — "AI Decision Impact" and "Data" — and no unbuilt tabs (Security & Access, Mitigations, Risk & Obligations) are present.
+2. **Given** the assessment tabs, **when** the user completes required fields and saves, **then** `PUT /intakes/{intake_id}/assessment` is called and the response's computed `ai_risk_tier` + materiality + rationale render in a read-only summary panel.
+3. **Given** a saved assessment, **when** the assessment is re-opened, **then** `GET /intakes/{intake_id}/assessment` reloads the captured answers and the latest computed tier; prior revisions are listed from `GET /intakes/{intake_id}/assessment/revisions`.
+4. **Given** an assessment whose answers compute an `unacceptable` tier, **when** it is saved, **then** the UI surfaces that the intake is auto-rejected and offers no submit affordance.
+5. **Given** an assessment with incomplete required fields, **when** the user attempts to save, **then** inline validation is shown and no request is sent until the tab is valid.
+
+---
+
+### User Story 6 — Submit an assessed intake and sign off the tier quorum (Priority: P6)
+
+An author submits an assessed intake for approval, which opens a `kind=intake` approval requiring the tier-based quorum (FR-IN-005). Approvers — who must be different people than the submitter (separation of duty) — open the approval view, read the composed intake, and sign off; once the full quorum approves, the intake moves to `approved`. This reuses the M3 approval/sign-off view with `kind=intake`.
+
+**Why this priority**: This is the terminal step of the lifecycle and depends on a computed tier from US5; it is the lowest-priority M4 story because it builds on everything before it.
+
+**Independent Test**: Mock-auth as the author (`engineer`) → open an assessed intake → click "Submit for approval" → assert `POST /intakes/{intake_id}/submit` fires and returns an `approval_request_id` with `required_roles` for the tier. Switch to a quorum role that differs from the submitter (e.g. `VERITY_MOCK_PLATFORM_ROLES=business_owner`) → open the approval view → scroll to the end → sign off → assert `POST /approvals/{approval_request_id}/signoff` fires; once all required roles approve, the intake shows `approved`.
+
+**Acceptance Scenarios**:
+
+1. **Given** an intake with a computed tier and no open approval, **when** the author clicks "Submit for approval", **then** `POST /intakes/{intake_id}/submit` is called; on success the intake advances to `in_review` and the returned `required_roles` (the tier quorum) are shown.
+2. **Given** an intake with no computed tier, **when** the user views it, **then** the "Submit for approval" affordance is disabled with copy explaining the assessment must be completed first.
+3. **Given** an open `kind=intake` approval, **when** an approver opens the approval view, **then** it reuses the M3 scroll-gated view (`intake.usecase-review`) sourced from `GET /approvals/{approval_request_id}`, showing the composed intake and the quorum progress (which roles have signed).
+4. **Given** the approval view, **when** the signed-in approver is the same actor who submitted, **then** the sign-off action is disabled/forbidden (separation of duty — the backend returns 403 and the UI reflects it as a disabled affordance, not a takeover).
+5. **Given** the approval view with the scroll-gate satisfied, **when** an approver holding a required role signs "approve", **then** `POST /approvals/{approval_request_id}/signoff` is called with `decision_code: "approved"`; the quorum progress updates.
+6. **Given** the final required sign-off, **when** it is recorded, **then** the intake transitions to `approved` and the approver is returned to the intake detail page showing the `approved` status.
+7. **Given** any approver signs "rejected", **when** the sign-off is recorded, **then** the approval request resolves as rejected and the intake reflects the rejected outcome.
+
+---
+
 ### Edge Cases
 
 - What happens when `GET /applications` returns an empty list? → Registry shows the empty-state pattern (every screen must ship one per design system §8).
@@ -105,6 +164,11 @@ A governance user navigates to the Applications section, sees a searchable regis
 - What happens when the app-launcher has no pinned apps? → The pinned section shows an "Add to favourites" empty state.
 - What happens when `GET /dashboard/stats` fails or times out? → Landing page shows placeholder zero values; no error takeover.
 - What happens when an onboard form has invalid fields and the user tries to submit? → All invalid fields across all steps are surfaced before any request is sent.
+- What happens when a user opens an intake whose assessment is not yet started? → The assessment-progress indicator shows "not started" and the "Submit for approval" affordance is disabled.
+- What happens when a user tries to submit an intake that already has an open approval? → The backend returns 409; the UI shows the existing approval rather than opening a second one.
+- What happens when the submitter opens the approval view for their own intake? → The sign-off action is disabled (separation of duty); no full-screen takeover.
+- What happens when an assessment computes an `unacceptable` tier? → The intake is auto-rejected; the UI shows the rejected outcome and offers no submit path.
+- What happens when an intake list for an application is empty? → The Use Cases tab shows the empty-state CTA ("Create the first intake").
 
 ---
 
@@ -143,11 +207,26 @@ A governance user navigates to the Applications section, sees a searchable regis
 - **FR-021**: Every screen in scope MUST have a defined empty state; no screen may be blank or show only an error when data is absent.
 - **FR-022**: All API calls MUST go through a single typed API client; it MUST intercept 401 to trigger the session-expired takeover and route-level 403 to trigger the forbidden takeover.
 
+**Milestone 4 — Intake lifecycle**
+
+- **FR-023**: The application detail Use Cases tab MUST list the application's intakes from `GET /applications/{application_id}/intakes` (title + status badge) with an empty-state CTA, and show a "New intake" CTA only to users with an intake-authoring permission.
+- **FR-024**: The intake create form (`intake.usecase-create`) MUST submit via `POST /applications/{application_id}/intakes`; on success it MUST route to `/intakes/{intake_id}` (the detail page).
+- **FR-025**: The intake detail page (`intake.usecase-detail`) MUST source from `GET /intakes/{intake_id}` and render title, status badge, the requirements list (`GET /intakes/{intake_id}/requirements`), and an assessment-progress indicator; adding a requirement MUST call `POST /intakes/{intake_id}/requirements` and update the list in place.
+- **FR-026**: The assessment surface MUST render exactly the two shipped tabs — "AI Decision Impact" and "Data" — and MUST NOT render the Security & Access, Mitigations, or Risk & Obligations tabs (their backend is not built; they belong to feature `003`).
+- **FR-027**: Saving the assessment MUST call `PUT /intakes/{intake_id}/assessment`; the response's computed risk tier, NAIC materiality, and rationale MUST render in a read-only summary panel. Re-opening MUST reload captured answers via `GET /intakes/{intake_id}/assessment`, with prior revisions available from `GET /intakes/{intake_id}/assessment/revisions`.
+- **FR-028**: The "Submit for approval" affordance MUST be disabled until a risk tier has been computed; it MUST call `POST /intakes/{intake_id}/submit` and surface the returned tier-quorum `required_roles`. An `unacceptable` tier MUST show the auto-rejected outcome and offer no submit path.
+- **FR-029**: The intake approval/sign-off view (`intake.usecase-review`) MUST reuse the Milestone 3 scroll-gated approval view with `kind=intake`, sourced from `GET /approvals/{approval_request_id}`, showing the composed intake and quorum progress; sign-off MUST call `POST /approvals/{approval_request_id}/signoff`.
+- **FR-030**: When the signed-in approver is the actor who submitted the intake, the sign-off action MUST be presented as a disabled affordance (separation of duty); the backend 403 MUST NOT trigger the route-level forbidden takeover.
+- **FR-031**: Every M4 screen MUST have a defined empty state and MUST disable all write affordances for an intake in a terminal status (`rejected`/`retired`).
+
 ### Key Entities *(include if feature involves data)*
 
 - **Session**: authenticated principal context — `display_name`, `email`, platform roles, app-team roles, `is_mock`; held in React context, never persisted to local/session storage.
 - **Application**: governed tenant — `application_id`, `application_name`, `status` (`draft` | `pending_approval` | `active` | `rejected`), `owner_user_id`, `compliance_perimeter`, `submitted_at`.
 - **Auth state**: one of `unauthenticated` | `authenticated` | `session_expired` | `forbidden` | `disabled`; drives which full-screen surface renders.
+- **Intake**: a proposed AI use case under an application — `intake_id`, `application_id`, `title`, `intake_status` (`proposed` | `in_review` | `approved` | `rejected` | `retired`), `ai_risk_tier` (computed, nullable until assessed), requirements list.
+- **Assessment**: the captured classification input for an intake — the two shipped tabs (AI Decision Impact, Data) plus the computed read-back (`ai_risk_tier`, materiality, rationale, inherent tier); revisioned (SCD-2 on the backend).
+- **Intake approval**: a `kind=intake` instance of the shared approval entity — `approval_request_id`, `required_roles` (the tier quorum), per-role sign-off progress, resolved status; same primitive as application onboarding.
 
 ---
 
@@ -163,6 +242,10 @@ A governance user navigates to the Applications section, sees a searchable regis
 - **SC-006**: Theme switching (Gray ↔ Slate ↔ Warm, light ↔ dark) takes effect without a page reload and without component-level style overrides.
 - **SC-007**: WCAG AA contrast passes for all screens across all three themes in both light and dark modes.
 - **SC-008**: Sign-in and auth-state screens render correctly at 375 px viewport width; the app shell sidebar collapses at the breakpoint defined in the design system.
+- **SC-009**: A user with an authoring role can create an intake under an `active` application and reach its detail page in under 2 minutes using mock auth.
+- **SC-010**: A user can complete the two shipped assessment tabs and see a computed risk tier + materiality without a page reload, sourced from real backend computation (no mocked tier).
+- **SC-011**: A full intake lifecycle — create → assess → submit → tier-quorum sign-off → `approved` — is demonstrable end-to-end in local dev using only mock-auth role switches (an authoring role to submit, a distinct quorum role to sign off), with no manual DB edits.
+- **SC-012**: The assessment surface shows only the two shipped tabs; the unbuilt tabs (Security & Access, Mitigations, Risk & Obligations) have no DOM presence.
 
 ---
 
@@ -177,4 +260,7 @@ A governance user navigates to the Applications section, sees a searchable regis
 - Theme selection is a developer/design-time concern for this feature; a user-facing theme picker is out of scope and tracked separately.
 - App-team roles in the account menu are scoped to the applications the user is a stakeholder of; the API returns them in the session payload.
 - Notification delivery (e.g., notifying a submitter on application return) is out of scope; `shell.toast` is a separate feature.
-- Screens in scope: `auth.signin`, `auth.states`, `auth.account-menu`, `auth.callback`, `shell.app`, `shell.launcher`, `home.landing`, `intake.applications`, `intake.onboard`, `intake.onboard-approval`, `intake.app-detail`, `intake.flows`. Studio, Registry, Observability, Governance, Compliance, Settings, and Harness screens are explicitly out of scope.
+- Screens in scope: `auth.signin`, `auth.states`, `auth.account-menu`, `auth.callback`, `shell.app`, `shell.launcher`, `home.landing`, `intake.applications`, `intake.onboard`, `intake.onboard-approval`, `intake.app-detail`, `intake.flows` (M1–M3); plus `intake.usecase-create`, `intake.usecase-detail`, `intake.usecase-review`, and the two shipped assessment tabs (M4). Studio, Registry, Observability, Governance, Compliance, Settings, and Harness screens are explicitly out of scope.
+- M4 integrates against intake backend that **already exists** in the governance service (`hub` modules `intake/`, `assessment/`, `intake_approval/`, `approval/`); M4 is almost entirely frontend plus the same read-wiring pattern as M1–M3. No new intake backend is built in this feature — the unbuilt assessment tabs and change-proposal flows are deferred to feature `003`.
+- M4 reference prototype: `specs/ui/verity-intake-wireframe.html` (strangler); the intake tier-quorum sign-off reuses the M3 approval/sign-off view with `kind=intake`.
+- M4 requires an `active` application (from M3) to attach intakes to; the author and the approver must be distinct principals (separation of duty), exercised via mock-auth role switches.
