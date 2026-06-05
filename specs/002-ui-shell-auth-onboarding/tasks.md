@@ -1,4 +1,4 @@
-# Tasks: UI Shell, Auth & Application Onboarding
+# Tasks: UI Shell, Auth, Application Onboarding & Intake Lifecycle
 
 **Input**: Design documents from `specs/002-ui-shell-auth-onboarding/`
 
@@ -6,7 +6,9 @@
 
 **Tests**: No test tasks are generated — not requested in the spec. Vitest/RTL setup is scaffolded in Phase 1 for later use.
 
-**Organization**: Tasks are grouped by user story. US1 (auth) is the blocker for US2 (shell), which is the blocker for US3 (onboarding). Each phase is independently deployable and demonstrable.
+**Organization**: Tasks are grouped by user story. US1 (auth) → US2 (shell) → US3 (onboarding) → **US4 (intake create) → US5 (assessment) → US6 (submit + sign-off)**. Each phase is independently deployable and demonstrable.
+
+**Milestones**: T001–T043 = M1–M3 (auth shell, app shell, application onboarding). **T044–T058 = M4 (intake lifecycle)** — frontend-only over the already-shipped intake/assessment/approval backend (no backend additions; see plan.md "API Gap Analysis — Milestone 4"). M4 depends on M3 (portal shell, API client, the kind-aware `ApprovalView` from T035, and an `active` application from the onboarding flow).
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -124,6 +126,63 @@
 
 ---
 
+# ════════════════════════════════════════════
+# MILESTONE 4 — Intake lifecycle (frontend-only; no backend additions)
+# ════════════════════════════════════════════
+
+## Phase 7: User Story 4 — Create an intake under an application (Priority: P4)
+
+**Goal**: From an `active` application, an authoring user creates an intake, sees it on the application's Use Cases tab, and lands on the intake detail page where status, requirements, and assessment progress are visible.
+
+**Independent Test**: Mock-auth with an authoring role (`VERITY_MOCK_PLATFORM_ROLES=engineer`). Open an `active` application → Use Cases tab → "New intake" → enter a title → submit → assert `POST /api/applications/{application_id}/intakes` fires and `/intakes/{id}` renders with status `proposed`. Add a requirement → assert `POST /api/intakes/{id}/requirements` fires and it appears in the list.
+
+- [ ] T044 [P] [US4] Add intake + requirement TypeScript types to `hub/portal/src/api/types.ts` (or extend the client types): `Intake`, `IntakeCreate`, `Requirement`, `RequirementCreate`, `Intake` status union — mirror `data-model.md` §8–9 and `contracts/portal-api.yaml` (field names verbatim)
+- [ ] T045 [P] [US4] Extend `hub/portal/src/components/StatusBadge.tsx` to map `intake_status_code` (`proposed`/`in_review`/`approved`/`rejected`/`retired`) to pill colour tokens, and add a `RiskTierBadge` (high/unacceptable → negative, limited → warning, minimal → positive) per `data-model.md` §13
+- [ ] T046 [US4] Create `hub/portal/src/pages/intakes/IntakeCreate.tsx`: the `intake.usecase-create` form (title required, optional description); submit calls `POST /api/applications/:appId/intakes` (body `IntakeCreate`); on 201 navigate to `/intakes/{intake_id}`; "Discard changes?" guard on dirty navigate; matches the create section of `specs/ui/verity-intake-wireframe.html`
+- [ ] T047 [US4] Create `hub/portal/src/pages/intakes/IntakeDetail.tsx`: fetch `GET /api/intakes/:id`; render title, `StatusBadge`, `RiskTierBadge` (when tier present), requirements list (`GET /api/intakes/:id/requirements`) with an add-requirement control (`POST …/requirements`, updates list in place), and an assessment-progress indicator (not-started / in-progress / tier-computed); disable all write affordances when `intake_status_code` is terminal (`rejected`/`retired`) per FR-031; matches the detail section of `specs/ui/verity-intake-wireframe.html`
+- [ ] T048 [US4] Modify `hub/portal/src/pages/applications/ApplicationDetail.tsx` (from T036) — Use Cases tab: list the application's intakes from `GET /api/applications/:id/intakes` (title + `StatusBadge`, link to `/intakes/{id}`) with an empty-state CTA; show a "New intake" CTA → `/applications/:id/intakes/new` only when `canDo("create_intake")` (FR-023)
+- [ ] T049 [US4] Wire M4 routes in `hub/portal/src/App.tsx`: `/applications/:appId/intakes/new` → `<IntakeCreate />` and `/intakes/:id` → `<IntakeDetail />`, both inside `<AppShell />` + `ProtectedRoute`
+
+**Checkpoint**: An intake can be created under an active application and viewed; requirements can be added; terminal intakes are read-only.
+
+---
+
+## Phase 8: User Story 5 — Capture the shipped assessment tabs + see the computed tier (Priority: P5)
+
+**Goal**: From an intake, the user fills the two shipped tabs (AI Decision Impact, Data) and sees the system-computed risk tier + NAIC materiality with rationale. Per-tab save sends the full snapshot; only the two shipped tabs render.
+
+**Independent Test**: Mock-auth (authoring role). Open an intake → open the assessment → complete both tabs → Save → assert `PUT /api/intakes/:id/assessment` fires with the full snapshot and the computed `ai_risk_tier_code` + materiality render. Re-open → prior answers reload (`GET /api/intakes/:id/assessment`); revisions listed (`GET …/assessment/revisions`). Assert only two tabs exist (no Security/Mitigations/Risk-Obligations tabs).
+
+- [ ] T050 [P] [US5] Add assessment TypeScript types to `hub/portal/src/api/types.ts`: `AssessmentInput`, `AIDecisionImpact`, `DataTab`, `AssessmentView`, `Computed`, `RevisionMeta` — mirror `data-model.md` §10 (strict enums) and the contract
+- [ ] T051 [US5] Create `hub/portal/src/pages/intakes/AssessmentTabs.tsx`: render **exactly two** tabs — "AI Decision Impact" (the 8 enum fields incl. nested `human_oversight`) and "Data" — and MUST NOT render Security/Mitigations/Risk-Obligations tabs (FR-026); each tab has a **Save** that issues `PUT /api/intakes/:id/assessment` with the **full** assessment snapshot (both tabs; `security_access: null`) → one revision; the response's computed tier/materiality/rationale render in a read-only summary panel; a save only succeeds once both tabs' required fields are valid (no partial PUT — research.md §12); inline validation per tab; an `auto_rejected` (unacceptable) result shows the rejected outcome and offers no submit path (FR-028)
+- [ ] T052 [US5] Integrate `AssessmentTabs` into `IntakeDetail.tsx`: open-assessment affordance; reload captured answers via `GET /api/intakes/:id/assessment`; surface the revision count from `GET /api/intakes/:id/assessment/revisions`; the assessment-progress indicator reflects whether a tier has been computed
+
+**Checkpoint**: Both shipped tabs capture; the computed tier renders from real backend computation (no mocked tier); only two tabs are present.
+
+---
+
+## Phase 9: User Story 6 — Submit an assessed intake + tier-quorum sign-off (Priority: P6)
+
+**Goal**: An author submits an assessed intake (opening a `kind=intake` approval with the tier quorum); a distinct approver signs off via the reused `ApprovalView`; a full quorum approves the intake. Reject-only; separation of duty; allow-but-warn during review.
+
+**Independent Test**: Author (`engineer`) opens an assessed intake → "Submit for approval" → assert `POST /api/intakes/:id/submit` fires, returns `approval_request_id` + `required_roles`, intake advances to `in_review`. Switch to a distinct quorum role (`VERITY_MOCK_PLATFORM_ROLES=business_owner,compliance,legal,model_risk,ai_governance`) → open `/approvals/{approval_request_id}` → scroll → "Approve" → assert `POST /api/approvals/:id/signoff` with `{decision_code:"approved"}`; once all required roles approve, the intake shows `approved`.
+
+- [ ] T053 [US6] Add the submit action to `IntakeDetail.tsx`: a "Submit for approval" control disabled until a tier is computed (FR-028); calls `POST /api/intakes/:id/submit`; on 201 show the returned `required_roles` (the tier quorum) and reflect status `in_review`; map 400 (no tier) and 409 (terminal / duplicate open approval / empty `unacceptable` quorum) to inline messages
+- [ ] T054 [US6] Add the **allow-but-warn** banner (FR-032) to `IntakeDetail.tsx` + `AssessmentTabs.tsx`: while `intake_status_code === "in_review"`, edits stay enabled but a banner warns that re-saving may change the computed tier and required quorum
+- [ ] T055 [US6] Confirm the kind-aware `ApprovalView.tsx` (from T035) handles `kind=intake`: sourced from `GET /api/approvals/:id`, shows the composed intake + quorum progress, offers **Approve / Reject only** (`decision_code` ∈ {`approved`,`rejected`} — no "Return for revision"); the submitter sees the sign-off action disabled (separation of duty; backend 403 is NOT surfaced as a route-level takeover); on resolve navigate back to `/intakes/{target_intake_id}`
+- [ ] T056 [US6] Wire navigation: from `IntakeDetail` submit → the approval view (`/approvals/:id`, route already added in T037); after approval resolves, the intake detail reflects `approved`/`rejected`
+
+**Checkpoint**: Full intake lifecycle is demoable end-to-end with two mock roles (separation of duty); reject-only; tier quorum drives the outcome.
+
+---
+
+## Phase 10: M4 Polish & Cross-Cutting
+
+- [ ] T057 [P] Audit M4 screens for empty states (no intakes on the Use Cases tab, no requirements, assessment not started) and terminal-status write-disable (no edit/submit affordances when `rejected`/`retired`); fix any blank-canvas or stuck-affordance gaps
+- [ ] T058 Update `specs/002-ui-shell-auth-onboarding/quickstart.md` §10 with any M4 deviations discovered during implementation (actual field labels, validation, tier-driving answer sets)
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -134,6 +193,17 @@
 - **Phase 4 (US2 — Shell)**: Depends on Phase 3 (session context + account menu must exist)
 - **Phase 5 (US3 — Onboarding)**: Depends on Phase 4 (shell layout wrapper must exist)
 - **Phase 6 (Polish)**: Depends on Phase 5 complete
+- **Phase 7 (US4 — Intake create)**: Depends on M3 — needs the portal shell, API client, `ApplicationDetail` (T036, modified by T048), `StatusBadge` (T033, extended by T045), and an `active` application from the onboarding flow
+- **Phase 8 (US5 — Assessment)**: Depends on Phase 7 (`IntakeDetail` hosts the assessment)
+- **Phase 9 (US6 — Submit + sign-off)**: Depends on Phase 8 (a computed tier gates submit) and on the kind-aware `ApprovalView` (T035)
+- **Phase 10 (M4 Polish)**: Depends on Phase 9 complete
+
+### Within M4 (Phases 7–9)
+
+- T044, T045, T050 are [P] (types/badges — different files) and can be done first
+- T046, T047 (US4 pages) → T048 (ApplicationDetail Use Cases) → T049 (routes)
+- T051 (AssessmentTabs) depends on T050 + T047; T052 integrates it into IntakeDetail
+- T053/T054 extend IntakeDetail; T055 reuses ApprovalView (T035); T056 wires navigation
 
 ### Within Phase 3 (US1)
 
@@ -192,6 +262,10 @@ After T014–T018 (backend) are merged:
 - **+Phase 4** → app shell + landing page; the product has a room to stand in
 - **+Phase 5** → application onboarding; the product does its first governed action
 - **+Phase 6** → polish, accessibility, themes
+- **+Phase 7–9 (M4)** → the full intake lifecycle (create → assess → submit → tier-quorum sign-off) over the shipped backend; the portal now covers everything the governance backend supports
+- **+Phase 10** → M4 polish (empty states, terminal-status guards)
+
+**M4 demo milestone**: after Phase 9, the product demonstrates the entire intake story end-to-end with mock auth and two roles (separation of duty) — no curl. This is the "loginable, clickable product over all shipped backend" target.
 
 ### Parallel Team Strategy
 
