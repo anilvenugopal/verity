@@ -19,6 +19,7 @@ from verity.hub.application.router import router as application_router
 from verity.hub.approval.router import router as approval_router
 from verity.hub.assessment.router import router as assessment_router
 from verity.hub.intake.router import router as intake_router
+from verity.hub.intake_approval.router import router as intake_approval_router
 
 logger = logging.getLogger("verity.hub")
 
@@ -77,6 +78,7 @@ def create_app() -> FastAPI:
     app.include_router(approval_router)
     app.include_router(intake_router)
     app.include_router(assessment_router)
+    app.include_router(intake_approval_router)
     return app
 
 

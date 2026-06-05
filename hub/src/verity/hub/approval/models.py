@@ -32,6 +32,7 @@ class ApprovalRequest(BaseModel):
     approval_request_id: UUID
     request_kind_code: str
     status_code: str
+    target_intake_id: UUID | None = None
     target_application_id: UUID | None = None
     required_roles: list[str]
     signoffs: list[SignoffRecord]

@@ -35,6 +35,13 @@ QUERIES: dict[str, tuple[str, str]] = {
         "FROM core.approval_request r JOIN core.application app ON app.application_id = r.target_application_id "
         "WHERE r.request_kind_code = 'application_onboarding' ORDER BY r.created_at DESC LIMIT 20",
     ),
+    "intake_approvals": (
+        "intake approvals + tier + status",
+        "SELECT r.approval_request_id, i.title, i.ai_risk_tier_code, r.status_code, "
+        "(SELECT count(*) FROM core.approval_signoff s WHERE s.approval_request_id = r.approval_request_id) AS signoffs "
+        "FROM core.approval_request r JOIN core.intake i ON i.intake_id = r.target_intake_id "
+        "WHERE r.request_kind_code = 'intake' ORDER BY r.created_at DESC LIMIT 20",
+    ),
     "intakes": (
         "intakes with classification + status",
         "SELECT intake_id, title, intake_status_code, ai_risk_tier_code, naic_materiality_code "

@@ -15,12 +15,15 @@ from verity.hub.db import queries
 
 
 async def open_request(
-    conn: AsyncConnection, *, request_kind_code: str, target_application_id: UUID,
+    conn: AsyncConnection, *, request_kind_code: str,
     opened_by_actor_id: str, opened_role_code: str,
+    target_intake_id: UUID | None = None, target_application_id: UUID | None = None,
 ) -> dict:
+    """Open a generic approval request — bind exactly one target (intake XOR application)."""
     return await queries.open_request(
         conn,
         request_kind_code=request_kind_code,
+        target_intake_id=target_intake_id,
         target_application_id=target_application_id,
         opened_by_actor_id=opened_by_actor_id,
         opened_role_code=opened_role_code,

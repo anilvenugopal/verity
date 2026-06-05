@@ -310,9 +310,11 @@ throughout.
 - **FR-IN-001**: The system MUST create an intake in status `proposed`, resolving the
   owning application (by `application_code` or `application_id`; reject if neither resolves
   or the application is unregistered), deriving a unique `code` slug from the title within
-  the application when not supplied, and atomically opening a `kind=intake` approval
-  request with `required_roles=[business_owner, ai_governance]`. The intake `(application,
-  code)` pair MUST be unique.
+  the application when not supplied. The intake `(application, code)` pair MUST be unique.
+  **Revised 2026-06-05 (Slice 4):** the intake approval is **not** opened on create with a fixed
+  `[business_owner, ai_governance]` set; per the clarified model it is opened on an explicit
+  **submit** (`POST /intakes/{id}/submit`, requires a computed tier) with the **tier-based quorum**
+  (FR-IN-005). The original on-create fixed-quorum wording is superseded.
 - **FR-IN-002**: The system MUST expose intake retrieval by natural key `(application_code,
   code)` and by id, and listing with optional filters (status, `ai_risk_tier`,
   business-owner email, application). A missing intake MUST surface as not-found.

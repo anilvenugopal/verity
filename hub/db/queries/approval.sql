@@ -4,14 +4,17 @@
 -- the owner grant. Raw SQL, no ORM (ADR-0012).
 
 -- name: open_request^
+-- Generic: bind exactly one target (intake XOR application; the version target is opened by the
+-- lifecycle slice). The ck_approval_request_one_target CHECK is the backstop.
 INSERT INTO core.approval_request
-    (request_kind_code, target_application_id, opened_by_actor_id, opened_role_code)
-VALUES (%(request_kind_code)s, %(target_application_id)s, %(opened_by_actor_id)s, %(opened_role_code)s)
-RETURNING approval_request_id, request_kind_code, status_code, target_application_id,
+    (request_kind_code, target_intake_id, target_application_id, opened_by_actor_id, opened_role_code)
+VALUES (%(request_kind_code)s, %(target_intake_id)s, %(target_application_id)s,
+        %(opened_by_actor_id)s, %(opened_role_code)s)
+RETURNING approval_request_id, request_kind_code, status_code, target_intake_id, target_application_id,
           opened_by_actor_id, opened_role_code, created_at;
 
 -- name: get_request^
-SELECT approval_request_id, request_kind_code, status_code, target_application_id,
+SELECT approval_request_id, request_kind_code, status_code, target_intake_id, target_application_id,
        opened_by_actor_id, opened_role_code, created_at
 FROM core.approval_request
 WHERE approval_request_id = %(approval_request_id)s;
