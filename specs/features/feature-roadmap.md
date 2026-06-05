@@ -16,6 +16,37 @@
 
 ---
 
+## Build Waves (execution order — balances backend / UI / POC)
+
+The numbered list below is a **catalog**, not a build order. Build in **waves**; each wave ends with
+a **demo checkpoint** a non-technical stakeholder can click (no curl in demos). POCs run in parallel.
+
+**Wave 0 — UI catch-up: get a loginable, clickable product over EVERYTHING already built (NOW).**
+- **002 · UI shell + auth + portal for all shipped backend** (M1–M3 spec-ready; **add M4 intake UI**) →
+  real login + onboarding + the full intake lifecycle (create → assess → submit → approve), all over
+  the four shipped 001 slices.  ▶ *Demo: sign in → onboard an app → create an intake → assess → submit → tier-quorum approval — no curl.*
+- This is the **highest-priority next move**: the backend is 4 slices ahead with no UI; 002 closes the gap in one feature.
+- Parallel POCs (independent): **POC-A** (compliance ontology → 015), **POC-D** (tools → 005), **POC-E** (markup browser → 014).
+
+**Wave 1 — resume backend; UI is now caught up.**
+- **003 · Intake backend completions** (no new UI shell — extends the 002 portal as tabs land): assessment tabs 2–4 (Security/mitigations/Risk), requirements grow, change proposals, asset-linking schema. *Obligation resolution stays blocked → 015.*
+- **004 · Shell polish** (toast/help/error) — small; unblocks write-feedback for all UI.
+- **POC-C** (ground-truth framework — 001 backend is running).
+
+**Wave 2 — authoring.**
+- **005 · Entity registry** (backend, large) + **006 · Studio UI** (interleaved).  ▶ *Demo: author an agent/task.*
+- **POC-B** (Opik/Comet → 011).
+
+**Wave 3 — compliance + runtime.**
+- **015 · Compliance metamodel** (seeds + enforcement; POC-A feeds it) → **un-stubs obligation resolution**, retro-wired into the assessment.
+- **007 · Packaging** → **008 · Harness runtime** → **009 · Decision logging**.
+
+**Wave 4 — the rest** — 010, 011, 012, 013/014, 016, 017, 018, 019, 020, ordered by the per-feature `Depends on` below.
+
+**Principle:** never more than ~1 wave of backend ahead of UI. The backend (001) is currently **4 slices ahead of any UI** — Wave 0 (build 002, the UI for *all* shipped backend + the missed auth) closes that gap before any new backend is written. After that, UI rides alongside each backend feature as it lands (003's tabs extend the 002 portal, etc.).
+
+---
+
 ## Main Track
 
 ---
@@ -24,7 +55,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | Shipped (slices 1–3); active slice in progress |
+| **Status** | **Shipped (slices 1–4)** — intake CRUD, application onboarding, intake assessment (capture/tier/ceiling), intake approval (tier quorum) |
 | **PCR Phase** | Phase 1 |
 | **Spec** | `specs/001-verity-governance-service/spec.md` (umbrella — all FRs live here) |
 | **Plan** | `specs/001-verity-governance-service/plan.md` |
@@ -34,9 +65,9 @@
 - Slice 2: Application onboarding — governed proposal + approval (kind=`application_onboarding`), compliance perimeter capture, app-team grants
 - Slice 3: Intake assessment capture/tier/ceiling — AI Decision Impact tab, Data tab, risk tier + NAIC materiality computation, inherent tier record
 
-**What it delivers (active — intake-approval slice)**
-- Intake approval quorum: `kind=intake` approval request, tier-based `required_roles` rewrite (FR-IN-005), sign-off recording, roll-up to `approved`, post-approval cascade (plan-gen stub, envelope lock)
-- Approval router dispatches by `request_kind_code` to both `application_onboarding` and `intake` resolvers (`hub/src/verity/hub/approval/router.py` — updated)
+- Slice 4: Intake approval — `kind=intake` approval request opened on explicit submit (requires a computed tier), tier-based quorum (FR-IN-005), sign-off recording with separation of duty (submitter ≠ signer), roll-up to `approved` via audited `change_status`, submit advances `proposed→in_review`. The approval router dispatches by `request_kind_code` to both `application_onboarding` and `intake` resolvers (`hub/src/verity/hub/approval/router.py`).
+
+**NOT built (do not assume):** the FR-AP-004 post-approval cascade (plan generation, cost-envelope lock) and the FR-AP-005 intake **promotion gate** are NOT implemented — approval only sets `intake_status = approved`. Plan generation is feature **020**; the promotion gate is **012**. The tier-classification rules are a draft pending compliance review (`specs/001-verity-governance-service/rules-mapping.md`).
 
 **Key hub modules**
 `hub/src/verity/hub/`: `intake/`, `intake_approval/`, `application/`, `approval/`, `assessment/`, `auth/`
@@ -47,27 +78,38 @@
 - Asset linking / promotion gate (FR-IN-009)
 - Assessment completion (FR-AS-004–010)
 
-**Key FRs**: FR-IN-001–018, FR-AP-001–005, FR-AS-001–003 (partial), FR-AUTHZ-001–003  
+**Key FRs**: FR-IN-001–006, FR-IN-015–018, FR-AP-001–003 (approval primitive + onboarding/intake quorum; **FR-AP-004/005 deferred**), FR-AS-001–003 + FR-AS-008 inherent tier (FR-AS-004–010 deferred to 003), FR-AUTHZ-001–003  
 **Depends on**: —  
 **Blocks**: 002, 003, 005, 006, 007, 008, 009, 010, 011, 012, 013, 014, 015, 016, 017, 018, 019, 020, 021
 
 ---
 
-### 002 · UI Shell, Auth & Application Onboarding
+### 002 · UI Shell, Auth & Portal for everything shipped (onboarding + intake)
 
 | Field | Value |
 |---|---|
-| **Status** | spec-ready |
+| **Status** | spec-ready (M1–M3); **M4 intake UI to be added** |
 | **PCR Phase** | Phase 1 |
 | **Spec** | `specs/002-ui-shell-auth-onboarding/spec.md` |
 | **Plan** | `specs/002-ui-shell-auth-onboarding/plan.md` |
-| **Tasks** | `specs/002-ui-shell-auth-onboarding/tasks.md` (43 tasks, T001–T043) |
+| **Tasks** | `specs/002-ui-shell-auth-onboarding/tasks.md` (43 tasks, T001–T043 cover M1–M3; M4 extends) |
 | **API contract** | `specs/002-ui-shell-auth-onboarding/contracts/portal-api.yaml` |
 
+> **This is the UI catch-up.** The 001 backend shipped four slices with **no UI and no real auth**.
+> 002 builds **one portal over everything that already works** — real authentication (the missed
+> piece) + onboarding + the full intake lifecycle — so there's a loginable, clickable product before
+> any more backend is written. Intake UI is **here, not in 003** (don't scatter UI across features).
+> Scope tracks the shipped backend exactly: the assessment UI covers only the **shipped tabs**
+> (AI-Decision-Impact + Data); the Security/mitigation tabs land in 003 with their backend.
+
 **What it delivers**
-- **M1 Auth shell**: `hub/src/verity/hub/auth/session.py` (NEW — 4 endpoints: `/auth/login`, `/auth/callback`, `/auth/mock`, `/auth/logout`); sign-in page (`specs/ui/kit/pages/signin.html` faithful); auth-state takeovers (session-expired, 403, disabled); account menu (identity, roles, mock indicator)
+- **M1 Auth shell — UI + auth backend** *(already scoped in 002 tasks T014–T023)*. Today the backend has a working `MockAuthenticator` but **no session and no login endpoints** — it re-resolves the principal from env vars on every request ([`auth/authenticator.py`](../../hub/src/verity/hub/auth/authenticator.py)), which suits tests but not a browser. 002 adds:
+  - *Backend (T014–T018)*: `hub/src/verity/hub/auth/session.py` (NEW) — `/auth/login`, `/auth/callback`, `POST /auth/mock`, `POST /auth/logout`; a server-side session (`request.session`) so the principal resolves from a session, not per-request env; extended `GET /me` returns `email` + `app_team_roles` + `is_mock`.
+  - *UI (T019–T023)*: sign-in page (`specs/ui/kit/pages/signin.html` faithful), auth-state takeovers (session-expired, 403, disabled), account menu (identity, roles, mock indicator).
+  - **First login is MOCK-auth based** — `POST /auth/mock` (T016) establishes a session through the existing `MockAuthenticator`; this is the working path. The Entra `/auth/login` + `/auth/callback` endpoints are scaffolded (T014/T015) but full end-to-end Entra validation needs a dev-tenant registration and the `EntraAuthenticator` (still a stub) — deferred; the "Sign in with Microsoft" button renders, mock is the path that works now.
 - **M2 App shell + landing**: five-region layout (rail/sidebar/topbar/canvas/statusbar); app-launcher modal; landing page with `display_name`, stats tiles, recent-decisions table
 - **M3 Application onboarding UI**: applications registry, onboard form (multi-step, FlowIndicator), approval view (scroll-gate), application detail (4 tabs)
+- **M4 Intake lifecycle UI** *(NEW — covers the shipped Slice 1/3/4 backend)*: intake create/detail/review screens (wireframe §2b: `intake.usecase-create/-detail/-review`); requirements list; the **shipped** assessment tabs (AI-Decision-Impact, Data) with computed tier/materiality readout; submit-for-approval + the tier-quorum sign-off view (reuses the M3 `/approvals/{id}/signoff` flow — same primitive, `kind=intake`)
 - Portal scaffold at `hub/portal/` (Vite 5 + React 18 + TypeScript 5); kit CSS copied from `specs/ui/kit/styles/`; icon sprite at `hub/portal/public/sprite.svg`
 
 **Critical implementation notes**
@@ -76,9 +118,9 @@
 - `VITE_VERITY_ENV=local` + `VITE_AUTH_MODE=mock` env vars gate the mock-auth DOM section at compile time
 - All API calls through `src/api/client.ts` — 401 → session-expired event, route-level 403 → forbidden takeover
 
-**Key FRs**: `specs/features/user-authentication.md` FR-001–030; spec FRs FR-001–022  
+**Key FRs**: `specs/features/user-authentication.md` FR-001–030; spec FRs FR-001–022; intake UI surfaces FR-IN-001–006 + FR-AS-001–003 + the approval/sign-off flow (FR-AP-001–003)  
 **Depends on**: 001  
-**Blocks**: 003 (intake UI), 004 (shell polish builds on portal)
+**Blocks**: 004 (shell polish builds on portal); 003's later assessment-tab UI extends the M4 portal
 
 ---
 
@@ -89,6 +131,15 @@
 | **Status** | placeholder |
 | **PCR Phase** | Phase 1 (completion) |
 
+> **Scope note (corrected).** 003 is **intake BACKEND completions only — no UI here.** The intake UI
+> (create / detail / review + assessment tabs + change-proposal flows) is built in **002**, alongside
+> the onboarding UI, so there is **ONE portal covering everything the backend already supports** — UI
+> is not scattered across features. Items below that are **blocked or differently-tracked**:
+> **obligation resolution (FR-IN-014) → 015** (metamodel unseeded — not stubbable); **lifecycle stepper
+> (FR-IN-011) → needs asset stages (005/012)**; **semantic dedup (FR-IN-008) → needs the embedding
+> runtime**. The buildable-now backend here: requirements grow (FR-IN-007), change proposals
+> (FR-IN-013), asset-linking schema (FR-IN-009), assessment Security/mitigation **capture**.
+
 **What it delivers**
 
 *Backend completions (hub modules: `intake/`, `assessment/`, `intake_approval/`):*
@@ -97,17 +148,17 @@
   - Mitigations & risk treatment (FR-AS-006–008): per risk-flagged answer — procedure, treatment type (avoid/reduce/transfer/accept), addressed canonical_requirement, owner, status, residual risk; `accept` of unmet required control routes to `approve_exception` (not a silent pass); inherent tier is fixed (NOT downgraded by mitigations), residual risk tracked separately
   - Risk & Obligations summary tab (FR-AS-009): computed read-only — tier + materiality + rationale, resolved obligation set, required approver quorum, outstanding justifications
   - Progressive disclosure + full revision history (FR-AS-010): follow-up questions appear only when triggered; full `intake_impact_assessment` history kept
-- **Obligation resolution** (FR-IN-014): at triage, resolve applicable `canonical_requirement` codes from governance domains + risk tier → record as the intake's obligation set (required controls + evidence specs per lifecycle phase); can land as a stub against reference seed data pending 015; the obligation set is the source for design-time control enforcement wired in 015
+- **Obligation resolution** (FR-IN-014): ⚠️ **BLOCKED — moved to depend on 015.** The compliance metamodel (`canonical_requirement`/`regulatory_provision`/`control`/`evidence_specification`) is **entirely unseeded** (0 rows), so there is *nothing to resolve against* — the "stub against reference seed data" is not viable. This item depends on **015 seeding the metamodel** (or POC-A producing a validated seed). Do NOT attempt it in this feature; the assessment captures answers forward-compatibly for it.
 - **Requirements extensions** (FR-IN-007): grow `core.intake_requirement` to add `statement`, `acceptance_criteria`, `source`, optional `parent_requirement_id`, unique `code` within intake; reconcile shipped `title`/`body` fields to this shape
 - **Semantic requirement dedup** (FR-IN-008): BGE-small 384-dim embedding via `embedding_config`; top-N similarity check (default top-5, min similarity 0.78) on candidate requirement text; non-fatal on failure
 - **Change proposals** (FR-IN-013): risk reclassification and business change as `approval_request` kinds (`risk_reclassification`, `business_change`); scoped to the intake, select impacted assets; on approval each impacted asset gets a new `draft` forked from its champion; reuse `approval_request` + intake↔asset links (no separate screen)
 - **Asset linking schema** (FR-IN-009 — partial): intake↔entity link table (intake, requirement, entity_type, entity_id, relationship: `implements`/`tests`/`monitors`/`informs`); reverse-lookup (intakes for an entity); link constraints (asset ≤1 intake, only while draft/candidate, not already linked); **promotion gate enforcement deferred to 012** (registry entities don't exist yet)
 - **Intake lifecycle stepper** (FR-IN-011 revised): `in_build`/`live` steps derived from linked-asset stage roll-up, not intake attributes
 
-*UI (hub/portal, builds on 002):*
-- Intake create/detail/review portal screens (wireframe catalog §2b: `intake.usecase-create`, `intake.usecase-detail`, `intake.usecase-review`)
-- Assessment tabs 2–4 UI (Security & Access, mitigations, Risk & Obligations) — references `specs/ui/verity-intake-wireframe.html` as strangler prototype
-- Change proposal UI: risk reclassification + business change flows within intake detail
+*UI:* the intake **shell** (create/detail/review + shipped assessment tabs + submit/approval) ships in
+**002 M4**, not here. What 003 adds to that portal as its backend lands:
+- Assessment tabs 2–4 UI (Security & Access, mitigations, Risk & Obligations) — references `specs/ui/verity-intake-wireframe.html` as strangler prototype — built alongside their FR-AS-004–010 backend
+- Change proposal UI: risk reclassification + business change flows within intake detail — built alongside the FR-IN-013 backend
 
 **Key FRs**: FR-AS-004–010, FR-IN-007–009 (partial), FR-IN-011–014  
 **Depends on**: 001 (intake approval shipped), 002 (portal exists for UI screens)  
