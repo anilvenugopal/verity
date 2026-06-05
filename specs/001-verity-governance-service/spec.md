@@ -65,6 +65,8 @@ consolidated under *What changes for production*.
 *(Intake model simplification + assessment — guides the next slice; the shipped US1–US4 stays the thin CRUD foundation.)*
 
 - Q: Is application onboarding in scope for intake, and how is it governed? → A: Yes. `onboard_application` is a documented v2 action (FR-AUTHZ-001 addition). **Any platform author** (`engineer`/`ai_governance`/`business_owner`) MAY propose onboarding; approval requires **AI Governance**, **plus the `business_owner` when they were not the proposer** (the business owner must be proposer or approver). A dedicated **Application Onboarding** screen is added (potentially the app's first screen). See FR-IN-015.
+- Q: What does onboarding capture, and how are environments/harnesses handled? → A: Onboarding captures name, description, **business owner (required)**, **governance domains** (app defaults; intake refines — FR-IN-014), and **cost center/quota**; it creates the app `pending` → AI-Governance-approved (+ business_owner if not the proposer) → `active` (status set `{pending, active, suspended, retired}`), establishing the owner's `app_team_role` grant and a unique application `code`. The application screen is **multi-tab** (Overview · Environments · Harnesses · Inventory). **Environments are defined here with no approval**; **harness provisioning happens elsewhere** and a harness is **tied to an environment**, after which **standard environment/deployment rules apply** (Principle VII / ADR-0006, ADR-0010). See FR-IN-015/FR-IN-016.
+- Q: Onboarding field & compliance-perimeter design decisions? → A: Onboarding draws the **regulatory perimeter** (app level); intakes inherit and set act-level risk (FR-IN-017/018). (1) Compliance perimeter is **editable post-approval via re-approval** (change proposal — FR-IN-013); the **TLA/`code` is immutable**. (2) **≥1 regulatory framework mandatory** (explicit `internal_only`/`nist_ai_rmf` sentinel, never blank). (3) **jurisdictions = controlled `reference.jurisdiction`** ("Other" is a non-driving note). (4) **data classification: app = ceiling, intake = actual** (intake MUST NOT exceed; `processes_pii` ⇒ ceiling ≥ `confidential`). (5) **app-team roles renamed** `app_demo_*` → `app_{owner,lead,dev,sre,ops}` (intentional v2 rename). (6) **`line_of_business` = controlled `reference.line_of_business` + "Other"**. `application.code` = 3-char TLA; approval kind `application_onboarding`; grants in `core.actor_app_role_grant`. Implied schema growth (code, data_classification_code, the three booleans, the framework/domain/jurisdiction joins, `reference.jurisdiction`, `line_of_business`, `actor_app_role_grant`, `application_onboarding` kind) is deferred to `/plan`.
 - Q: Does the intake itself carry `in_build`/`live` states? → A: No. The intake status set is `{proposed, in_review, impact_assessment, approved, rejected, retired}`. `in_build`/`live` are **asset** stages surfaced on the intake by linking, not intake attributes — revises FR-IN-011/FR-IN-012 and removes `in_build`/`live` from `reference.intake_status` for intake use.
 - Q: How do assets relate to an intake, and what gates promotion? → A: Assets **link to an intake** at the **asset level (not asset-version)**. An asset MAY link to at most one intake, only while `draft`/`candidate` and not already linked. Moving an asset **beyond `candidate`** (→ `champion`) requires a link to an **approved** intake; **`draft` is exempt** (free POC). The intake page rolls up each linked asset's most-advanced stage and flags lower-stage versions. Elevates FR-IN-009 as the promotion gate.
 - Q: Are approvals part of intake? → A: Yes — approval is **core** to intake (no longer deferred). The intake approval (`kind=intake`, FR-IN-001) uses the tier→required-roles mapping (FR-IN-005). An approved intake is the unit that unlocks asset promotion.
@@ -394,12 +396,54 @@ throughout.
   (FR-RP-008) accrues. This is what makes the product implement controls and capture
   evidence **starting from intake**.
 - **FR-IN-015** *(v2-new — clarified 2026-06-04)*: The system MUST support **application
-  onboarding** via the `onboard_application` action (a documented v2 addition to the
-  FR-AUTHZ-001 matrix). Any platform author (`engineer` | `ai_governance` | `business_owner`)
-  MAY propose onboarding; approval MUST require **AI Governance**, **plus the `business_owner`
-  when they were not the proposer** (the business owner MUST be proposer or approver). Until
-  approved, the application is pending and MUST NOT own promotable intakes/assets. An
-  **Application Onboarding** UI surface is provided (potentially the application's first screen).
+  onboarding** as a **governed proposal** (not an instant create) via the `onboard_application`
+  action (a documented v2 addition to the FR-AUTHZ-001 matrix). **Identity:** `name` (unique,
+  non-blank), a 3-letter **`code`** — the TLA, `^[A-Z]{3}$`, unique, **immutable after approval**,
+  the audit-correlation key used in run IDs / breadcrumbs / the Application-Scope filter — a
+  `description` (intended purpose, EU-AI-Act Art. 11 baseline), and optional `line_of_business`
+  (a `reference.line_of_business` value with an "Other" escape). **Ownership:** a **designated
+  business owner** (required; resolves to an actor) and an optional **initial app-team** (rows of
+  person + `reference.app_team_role`), recorded as grants in `core.actor_app_role_grant`; the
+  proposer is server-resolved (D6), never client-supplied. **Approval:** any platform author
+  (`engineer` | `ai_governance` | `business_owner`) MAY propose; approval (an `approval_request`
+  of kind **`application_onboarding`**) MUST require **AI Governance**, **plus the named business
+  owner when they were not the proposer** (the business owner MUST be proposer or approver).
+  **Lifecycle:** onboarding creates the application **`pending`**; approval transitions it to
+  **`active`** and writes the owner's `app_owner` grant; status is `{pending, active, suspended,
+  retired}`; a non-`active` application MUST NOT own promotable intakes/assets. An **Application
+  Onboarding** UI surface is provided (potentially the application's first screen). The
+  application's **compliance perimeter** is captured per FR-IN-017 and inherited by intakes per
+  FR-IN-018.
+- **FR-IN-016** *(v2-new — clarified 2026-06-04)*: Beyond onboarding, the application is managed
+  via a multi-tab **application screen** (Overview · Environments · Harnesses · Inventory). The
+  **Environments** tab lets the application owner **define** environments (definitions only —
+  **no approval gate**). **Harness provisioning happens elsewhere** (infra / harness — ADR-0010);
+  a **harness is tied to an environment**, and once bound the **standard environment/deployment
+  governance rules apply** (governed deployment — Principle VII / ADR-0006). The **Harnesses** and
+  **Inventory** tabs are read/maintenance references to those separately-governed concerns; their
+  detail is out of scope for the onboarding screen.
+- **FR-IN-017** *(v2-new — clarified 2026-06-04)*: Onboarding MUST capture the application's
+  **compliance perimeter** (app-wide), which downstream intakes inherit (FR-IN-018): (a) a
+  **data-classification ceiling** — `reference.data_classification` (`public` | `internal` |
+  `confidential` | `pii_restricted`) — the maximum sensitivity any intake under the app may
+  declare; (b) **regulatory frameworks in scope** — **at least one** `core.regulatory_framework`
+  (an explicit `internal_only` / `nist_ai_rmf` sentinel where no external regime applies — never
+  blank); (c) **governance domains in scope** — **at least one** `reference.governance_domain`
+  (the 9: `model_risk`, `fairness`, `privacy`, `security`, `transparency`, `robustness`,
+  `data_governance`, `human_oversight`, `accountability`); (d) **jurisdictions of operation** —
+  **at least one** `reference.jurisdiction` (a controlled list; an "Other" free-text is a
+  non-driving annotation only); and (e) three **explicit Yes/No attestations** (no silent
+  default) — `affects_consumers`, `processes_pii`, `consumer_facing`. A **justification** is
+  recorded as the approval rationale.
+- **FR-IN-018** *(v2-new — clarified 2026-06-04)*: The application perimeter (FR-IN-017) is the
+  boundary intakes **inherit and refine** per use-case — per-intake risk fields
+  (`ai_risk_tier` / `naic_materiality`) stay **off** the onboarding screen. The selected
+  **regulatory frameworks** bound the candidate `regulatory_provision`s that become per-intake
+  obligations (FR-IN-014); the **governance domains** scope the app's `domain_maturity`; the
+  **data classification** is a **ceiling** — an intake's actual classification MUST NOT exceed
+  it, and `processes_pii = yes` implies a ceiling ≥ `confidential`. The compliance perimeter is
+  **editable only via re-approval** (a change proposal — FR-IN-013); the application **`code`
+  (TLA) is immutable** once approved.
 
 ### Capability area: Intake assessment, obligation elicitation & risk treatment *(v2-new — clarified 2026-06-04)*
 
