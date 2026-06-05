@@ -9,6 +9,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from psycopg import AsyncConnection
+from psycopg.errors import ForeignKeyViolation
 
 from verity.hub.assessment import service
 from verity.hub.assessment.models import AssessmentInput, AssessmentView, RevisionMeta
@@ -30,7 +31,14 @@ async def submit_assessment(
     conn: AsyncConnection = Depends(get_conn),
     ctx: AuthContext = Depends(require_action("edit_impact_assessment")),
 ) -> AssessmentView:
-    view = await service.capture(conn, intake_id, body, ctx)
+    try:
+        view = await service.capture(conn, intake_id, body, ctx)
+    except service.AssessmentConflict as exc:  # terminal intake (U1)
+        raise HTTPException(409, str(exc)) from exc
+    except ValueError as exc:  # ceiling / PII rule (FR-IN-018)
+        raise HTTPException(400, str(exc)) from exc
+    except ForeignKeyViolation as exc:  # bad data_classification_code
+        raise HTTPException(400, "invalid data_classification_code") from exc
     if view is None:
         raise HTTPException(404, "intake not found")
     return view

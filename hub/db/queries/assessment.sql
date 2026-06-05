@@ -26,3 +26,16 @@ SELECT revision, valid_from, valid_to, created_by_actor_id
 FROM core.intake_impact_assessment
 WHERE intake_id = %(intake_id)s
 ORDER BY revision;
+
+-- name: get_intake_app_ceiling^
+-- The owning application's data-classification ceiling, to validate the intake's actual
+-- classification (US3, FR-IN-018). Null app_ceiling = the app declared none.
+SELECT a.data_classification_code AS app_ceiling
+FROM core.intake i JOIN core.application a ON a.application_id = i.application_id
+WHERE i.intake_id = %(intake_id)s;
+
+-- name: set_intake_classification!
+-- Set the intake's actual data sensitivity (from the assessment Data tab); a bad code trips
+-- fk_intake_data_classification -> 400.
+UPDATE core.intake SET data_classification_code = %(data_classification_code)s, updated_at = now()
+WHERE intake_id = %(intake_id)s;

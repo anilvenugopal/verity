@@ -50,6 +50,13 @@ QUERIES: dict[str, tuple[str, str]] = {
         "SELECT intake_requirement_id, intake_id, requirement_kind_code, requirement_status_code, title "
         "FROM core.intake_requirement ORDER BY created_at DESC LIMIT 20",
     ),
+    "assessments": (
+        "current intake assessments + computed tier/classification/status",
+        "SELECT a.intake_id, a.revision, i.ai_risk_tier_code, i.naic_materiality_code, "
+        "i.data_classification_code, i.intake_status_code "
+        "FROM core.intake_impact_assessment_current a JOIN core.intake i ON i.intake_id = a.intake_id "
+        "ORDER BY a.created_at DESC LIMIT 20",
+    ),
     "dispatch": (
         "dispatch state",
         "SELECT run_dispatch_status_code, count(*) FROM core.harness_dispatch GROUP BY 1",

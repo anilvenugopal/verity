@@ -55,10 +55,10 @@ slice builds **capture + inherent tier + ceiling**, storing answers forward-comp
 **Goal**: the AI-Decision-Impact answers compute the intake's inherent `ai_risk_tier` + `naic_materiality`; `unacceptable` auto-rejects the intake (audited).
 **Independent test**: high-risk answers (autonomous + consumer + denial/discriminatory in an insurance domain) → `intake.ai_risk_tier_code='high'`; an `unacceptable` pattern → `intake.intake_status_code='rejected'` + exactly one `audit.status_transition` row.
 
-- [ ] T011 [P] [US2] Tier rules — `hub/src/verity/hub/assessment/rules.py`: deterministic `compute_tier(ai_decision_impact) -> (ai_risk_tier_code, naic_materiality_code)` per EU-AI-Act framing (inherent — FR-AS-002/008); document the mapping
-- [ ] T012 [US2] Service: on capture, set the intake tier via the existing `intake.service.classify_intake`; if `ai_risk_tier_code == 'unacceptable'` → auto-reject via the existing audited `intake.service.change_status` (one txn, D-INT-1) — `hub/src/verity/hub/assessment/service.py`
-- [ ] T013 [US2] Populate `AssessmentView.computed` (tier / materiality / `intake_status_code` / `auto_rejected`) — `hub/src/verity/hub/assessment/{models,service}.py`
-- [ ] T014 [US2] e2e test — `test_assessment.py`: high-risk → `ai_risk_tier='high'`; unacceptable → intake `rejected` + one audit row (from/to/actor)
+- [X] T011 [P] [US2] Tier rules — `hub/src/verity/hub/assessment/rules.py`: deterministic `compute_tier(ai_decision_impact) -> (ai_risk_tier_code, naic_materiality_code)` per EU-AI-Act framing (inherent — FR-AS-002/008); document the mapping
+- [X] T012 [US2] Service: on capture, set the intake tier via the existing `intake.service.classify_intake`; if `ai_risk_tier_code == 'unacceptable'` → auto-reject via the existing audited `intake.service.change_status` (one txn, D-INT-1) — `hub/src/verity/hub/assessment/service.py`
+- [X] T013 [US2] Populate `AssessmentView.computed` (tier / materiality / `intake_status_code` / `auto_rejected`) — `hub/src/verity/hub/assessment/{models,service}.py`
+- [X] T014 [US2] e2e test — `test_assessment.py`: high-risk → `ai_risk_tier='high'`; unacceptable → intake `rejected` + one audit row (from/to/actor)
 
 ---
 
@@ -67,17 +67,17 @@ slice builds **capture + inherent tier + ceiling**, storing answers forward-comp
 **Goal**: the Data tab sets `intake.data_classification_code`, rejected if it exceeds the application ceiling or violates the PII rule.
 **Independent test**: a within-ceiling classification persists on the intake; one exceeding the app ceiling → 400; `pii_presence != none` without ≥ `tier3_confidential` → 400.
 
-- [ ] T015 [P] [US3] Raw SQL — `assessment.sql` (`set_intake_classification`, `get_intake_app_ceiling` joining `core.application`)
-- [ ] T016 [US3] Service: on capture, set `intake.data_classification_code` from the Data tab; enforce rank ≤ app ceiling and `pii_presence != none ⇒ ≥ tier3_confidential` (reuse the rank map; ValueError → 400) — `hub/src/verity/hub/assessment/service.py`
-- [ ] T017 [US3] e2e test — `test_assessment.py`: within-ceiling persists; over-ceiling → 400; PII-without-confidential → 400
+- [X] T015 [P] [US3] Raw SQL — `assessment.sql` (`set_intake_classification`, `get_intake_app_ceiling` joining `core.application`)
+- [X] T016 [US3] Service: on capture, set `intake.data_classification_code` from the Data tab; enforce rank ≤ app ceiling and `pii_presence != none ⇒ ≥ tier3_confidential` (reuse the rank map; ValueError → 400) — `hub/src/verity/hub/assessment/service.py`
+- [X] T017 [US3] e2e test — `test_assessment.py`: within-ceiling persists; over-ceiling → 400; PII-without-confidential → 400
 
 ---
 
 ## Phase 6: Polish & cross-cutting
 
-- [ ] T018 [P] Dev console read-only queries (current assessment per intake; computed tier; revision count) — `tools/src/verity/dev/catalog.py`
-- [ ] T019 [P] Refresh `quickstart.md` if endpoint shapes shifted; confirm acceptance mapping
-- [ ] T020 Full hub suite green (`pytest -q`) + `ruff check` clean + `migrate`/`reset` idempotent on PG18
+- [X] T018 [P] Dev console read-only queries (current assessment per intake; computed tier; revision count) — `tools/src/verity/dev/catalog.py`
+- [X] T019 [P] Refresh `quickstart.md` if endpoint shapes shifted; confirm acceptance mapping
+- [X] T020 Full hub suite green (`pytest -q`) + `ruff check` clean + `migrate`/`reset` idempotent on PG18
 
 ---
 
@@ -104,3 +104,12 @@ dedicated content slice); **Security & Access approvable records + ITSM export**
 **mitigations / risk-treatment + `approve_exception`** (FR-AS-006/007); the **Risk & Obligations**
 tab's obligation portion (FR-AS-009). The Security & Access answers are **captured** in the
 assessment `jsonb` (US1) for those later slices.
+
+Additionally (recorded from /speckit.analyze — G1/G2; not silent):
+- **FR-AS-008 residual risk** — only the **inherent** tier is computed this slice; residual risk is
+  produced by mitigations (FR-AS-006/007), so it lands with the mitigations slice.
+- **FR-AS-010 "intake not approvable while justifications outstanding"** — there is no intake-approval
+  path yet; this gate lands with the **intake-approval** slice (FR-IN-001/005).
+- **FR-AS-010 progressive disclosure** — a UI behavior (the `002` UI track); the API captures a flat
+  body regardless, which is forward-compatible.
+- **R1 tier rules** require compliance review — see [rules-mapping.md](rules-mapping.md).

@@ -30,6 +30,12 @@ unseeded, so obligation resolution is out of scope (see plan.md Scope).
 - **Rationale**: one source of truth for the intake's `*_code` columns; reuse, no duplication.
 - **Alternatives**: a separate assessment-owned tier column (rejected — the intake already owns
   `ai_risk_tier_code`).
+- **⚠️ Policy (R1)**: the actual answer→tier mapping is a **governance policy artifact**, documented
+  in [rules-mapping.md](rules-mapping.md) and authored as a conservative draft — it **requires
+  compliance/domain-expert review before production use**. The tier-driving answers are strict enums
+  (A1) so an unexpected value 422s rather than silently down-tiering. Note the seeded
+  `reference.data_classification` codes are tier-prefixed (`tier1_public`…`tier4_pii_restricted`),
+  not the shorthand used in prose (D1).
 
 ## D-ASM-4 — `unacceptable` auto-rejects the intake (audited), reusing change_status
 - **Decision**: a computed `unacceptable` tier triggers the FR-IN-004 safety behavior — the intake

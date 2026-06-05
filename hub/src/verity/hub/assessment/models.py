@@ -8,32 +8,37 @@ named fields. `Computed` is the read-only result (tier/materiality/classificatio
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+# The tier-driving answers are strict enums (A1): an out-of-vocabulary value MUST be rejected (422)
+# rather than silently falling through compute_tier to a lower tier. Non-driving captured fields
+# stay free `str` for forward-compatibility (D-ASM-2).
+
 
 class HumanOversight(BaseModel):
-    strategy: str  # none | on_the_loop | in_the_loop
+    strategy: Literal["none", "on_the_loop", "in_the_loop"]
     threshold: str | None = None
 
 
 class AIDecisionImpact(BaseModel):
-    decision_role: str  # assists | recommends_with_signoff | autonomous
-    decision_domain: str
-    affected_population: str  # internal_only | brokers_agents | policyholders_consumers | vulnerable
-    adverse_impact: str  # negligible | financial | coverage_or_claim_denial | unfair_discriminatory | safety
+    decision_role: Literal["assists", "recommends_with_signoff", "autonomous"]
+    decision_domain: Literal["underwriting", "pricing", "claims", "fraud", "marketing", "servicing", "internal_ops"]
+    affected_population: Literal["internal_only", "brokers_agents", "policyholders_consumers", "vulnerable"]
+    adverse_impact: Literal["negligible", "financial", "coverage_or_claim_denial", "unfair_discriminatory", "safety"]
     human_oversight: HumanOversight
-    reversibility: str
+    reversibility: Literal["easily_reversible", "reversible_with_effort", "irreversible"]
     gdpr_art22: bool
-    deployment_scale: str
+    deployment_scale: Literal["pilot", "limited", "production_wide"]
 
 
 class DataTab(BaseModel):
     description: str = Field(min_length=1)
     sources: list[str] = Field(default_factory=list)
     data_classification_code: str
-    pii_presence: str  # none | direct | indirect | special_category
+    pii_presence: Literal["none", "direct", "indirect", "special_category"]
     sensitive_categories: list[str] = Field(default_factory=list)
     lawful_basis: str | None = None
     residency: str | None = None

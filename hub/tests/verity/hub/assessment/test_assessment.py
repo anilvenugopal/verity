@@ -40,8 +40,8 @@ def _app(url, *, oid, roles):
     return create_app()
 
 
-def _seed_active_application(pg_url, code, name):
-    """An active application with a high ceiling (so the assessment's tier3 classification fits)."""
+def _seed_active_application(pg_url, code, name, ceiling="tier4_pii_restricted"):
+    """An active application with the given data-classification ceiling."""
     with psycopg.connect(pg_url, autocommit=True) as conn:
         owner = conn.execute(
             "INSERT INTO core.actor (actor_type_code, display_name) VALUES ('human', %s) RETURNING actor_id",
@@ -51,9 +51,9 @@ def _seed_active_application(pg_url, code, name):
             "INSERT INTO core.application (code, name, description, application_status_code, "
             "data_classification_code, business_owner_actor_id, affects_consumers, processes_pii, "
             "consumer_facing, created_by_actor_id, created_role_code) VALUES "
-            "(%s, %s, %s, 'active', 'tier4_pii_restricted', %s, true, true, false, %s, 'business_owner') "
+            "(%s, %s, %s, 'active', %s, %s, true, true, false, %s, 'business_owner') "
             "RETURNING application_id",
-            (code, name, f"{name} active app for assessment tests.", owner, owner),
+            (code, name, f"{name} active app for assessment tests.", ceiling, owner, owner),
         ).fetchone()[0])
 
 
@@ -72,6 +72,18 @@ def _assessment_body():
         },
         "rationale": "Underwriting recommendation affecting policyholders.",
     }
+
+
+def _unacceptable_body():
+    """An autonomous decision with no oversight that discriminates against a vulnerable population."""
+    body = _assessment_body()
+    body["ai_decision_impact"].update({
+        "decision_role": "autonomous",
+        "affected_population": "vulnerable",
+        "adverse_impact": "unfair_discriminatory",
+        "human_oversight": {"strategy": "none"},
+    })
+    return body
 
 
 def test_capture_revisions_and_gate(pg_url):
@@ -114,3 +126,103 @@ def test_bad_body_is_422(pg_url):
         body = _assessment_body()
         del body["data"]
         assert c.put(f"/intakes/{intake_id}/assessment", json=body).status_code == 422
+
+
+def test_high_risk_computes_high(pg_url):
+    app = _app(pg_url, oid=AUTHOR_OID, roles="business_owner")
+    application_id = _seed_active_application(pg_url, "HIR", "HighRisk")
+    with TestClient(app) as c:
+        intake_id = c.post(f"/applications/{application_id}/intakes", json={"title": "hr"}).json()["intake_id"]
+        r = c.put(f"/intakes/{intake_id}/assessment", json=_assessment_body())
+        assert r.status_code == 200, r.text
+        computed = r.json()["computed"]
+        assert computed["ai_risk_tier_code"] == "high"
+        assert computed["naic_materiality_code"] == "material"
+        assert computed["auto_rejected"] is False
+    with psycopg.connect(pg_url) as conn:
+        tier = conn.execute(
+            "SELECT ai_risk_tier_code FROM core.intake WHERE intake_id = %s", (intake_id,)
+        ).fetchone()[0]
+        assert tier == "high"
+
+
+def test_unacceptable_auto_rejects(pg_url):
+    app = _app(pg_url, oid=AUTHOR_OID, roles="business_owner")
+    application_id = _seed_active_application(pg_url, "UNA", "Unacceptable")
+    with TestClient(app) as c:
+        intake_id = c.post(f"/applications/{application_id}/intakes", json={"title": "prohibited"}).json()["intake_id"]
+        r = c.put(f"/intakes/{intake_id}/assessment", json=_unacceptable_body())
+        assert r.status_code == 200, r.text
+        computed = r.json()["computed"]
+        assert computed["ai_risk_tier_code"] == "unacceptable"
+        assert computed["auto_rejected"] is True
+        assert computed["intake_status_code"] == "rejected"
+    with psycopg.connect(pg_url) as conn:
+        status = conn.execute(
+            "SELECT intake_status_code FROM core.intake WHERE intake_id = %s", (intake_id,)
+        ).fetchone()[0]
+        assert status == "rejected"
+        audit_rows = conn.execute(
+            "SELECT count(*) FROM audit.status_transition WHERE entity_id = %s AND entity_type = 'intake'",
+            (intake_id,),
+        ).fetchone()[0]
+        assert audit_rows == 1
+
+
+def test_classification_within_ceiling_persists(pg_url):
+    app = _app(pg_url, oid=AUTHOR_OID, roles="business_owner")
+    application_id = _seed_active_application(pg_url, "CIN", "WithinCeiling")  # ceiling tier4
+    with TestClient(app) as c:
+        intake_id = c.post(f"/applications/{application_id}/intakes", json={"title": "c"}).json()["intake_id"]
+        r = c.put(f"/intakes/{intake_id}/assessment", json=_assessment_body())  # tier3_confidential
+        assert r.status_code == 200, r.text
+        assert r.json()["computed"]["data_classification_code"] == "tier3_confidential"
+    with psycopg.connect(pg_url) as conn:
+        dc = conn.execute(
+            "SELECT data_classification_code FROM core.intake WHERE intake_id = %s", (intake_id,)
+        ).fetchone()[0]
+        assert dc == "tier3_confidential"
+
+
+def test_classification_over_ceiling_is_400(pg_url):
+    app = _app(pg_url, oid=AUTHOR_OID, roles="business_owner")
+    application_id = _seed_active_application(pg_url, "COV", "OverCeiling", ceiling="tier2_internal")
+    with TestClient(app) as c:
+        intake_id = c.post(f"/applications/{application_id}/intakes", json={"title": "c"}).json()["intake_id"]
+        # assessment tier3_confidential > app ceiling tier2_internal -> 400
+        r = c.put(f"/intakes/{intake_id}/assessment", json=_assessment_body())
+        assert r.status_code == 400
+        assert "ceiling" in r.json()["detail"]
+
+
+def test_pii_requires_confidential_is_400(pg_url):
+    app = _app(pg_url, oid=AUTHOR_OID, roles="business_owner")
+    application_id = _seed_active_application(pg_url, "PII", "PiiLow")  # ceiling tier4
+    with TestClient(app) as c:
+        intake_id = c.post(f"/applications/{application_id}/intakes", json={"title": "c"}).json()["intake_id"]
+        body = _assessment_body()
+        body["data"]["data_classification_code"] = "tier2_internal"  # below confidential
+        body["data"]["pii_presence"] = "direct"  # but PII is present
+        r = c.put(f"/intakes/{intake_id}/assessment", json=body)
+        assert r.status_code == 400
+
+
+def test_invalid_enum_value_is_422(pg_url):
+    # A1: an out-of-vocabulary tier-driving answer must 422, not silently down-tier.
+    app = _app(pg_url, oid=AUTHOR_OID, roles="business_owner")
+    application_id = _seed_active_application(pg_url, "ENM", "EnumApp")
+    with TestClient(app) as c:
+        intake_id = c.post(f"/applications/{application_id}/intakes", json={"title": "e"}).json()["intake_id"]
+        body = _assessment_body()
+        body["ai_decision_impact"]["decision_role"] = "autonmous"  # typo — not a valid enum
+        assert c.put(f"/intakes/{intake_id}/assessment", json=body).status_code == 422
+
+
+def test_terminal_intake_blocks_assessment(pg_url):
+    # U1: re-assessing a terminal (rejected) intake is rejected with 409.
+    app = _app(pg_url, oid=AUTHOR_OID, roles="business_owner")
+    application_id = _seed_active_application(pg_url, "TRM", "TerminalApp")
+    with TestClient(app) as c:
+        intake_id = c.post(f"/applications/{application_id}/intakes", json={"title": "t"}).json()["intake_id"]
+        assert c.put(f"/intakes/{intake_id}/assessment", json=_unacceptable_body()).status_code == 200  # -> rejected
+        assert c.put(f"/intakes/{intake_id}/assessment", json=_assessment_body()).status_code == 409
