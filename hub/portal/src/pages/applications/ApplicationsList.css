@@ -1,0 +1,11 @@
+/* Registry-specific composition — verbatim from specs/ui/kit/pages/applications.html <style>.
+   Reuses canonical .log-table/.log-row/.search-field/.btn/.eyebrow + shared page.css. */
+
+.tla { font-family: var(--font-mono); font-weight: var(--fw-medium); font-size: 11px; letter-spacing: 0.04em;
+       color: var(--color-brand); background: var(--color-brand-faint); border: 1px solid var(--color-brand-border);
+       border-radius: var(--radius-sm); padding: 1px 6px; }
+
+.reg-grid { display: grid; grid-template-columns: 64px 1fr 150px 120px 110px 80px; gap: var(--space-4);
+            align-items: center; padding: 11px 16px; }
+.reg-name { font-size: var(--fs-label); font-weight: var(--fw-medium); }
+.reg-sub  { font-size: var(--fs-caption); color: var(--text-tertiary); }

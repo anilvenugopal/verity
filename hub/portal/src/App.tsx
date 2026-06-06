@@ -3,6 +3,8 @@ import { SessionProvider } from './auth/SessionContext'
 import { useSession } from './auth/useSession'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { AppShell } from './shell/AppShell'
+import { ApplicationsList } from './pages/applications/ApplicationsList'
+import { OnboardForm } from './pages/applications/OnboardForm'
 import { SignIn } from './pages/SignIn'
 import { AuthCallback } from './pages/AuthCallback'
 import { SessionExpiredPage, ForbiddenPage, DisabledPage } from './pages/AuthStatePage'
@@ -23,6 +25,8 @@ function AppRoutes() {
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />}>
           <Route path="/" element={<Landing />} />
+          <Route path="/applications" element={<ApplicationsList />} />
+          <Route path="/applications/new" element={<OnboardForm />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

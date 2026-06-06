@@ -1,0 +1,27 @@
+/* Onboard-form composition — verbatim from specs/ui/kit/pages/onboard-application.html <style>.
+   Reuses canonical .form-field/.form-label/.input/.input-hint/.chip/.btn/.callout/.badge.
+   Shared canvas-page classes come from styles/page.css. */
+
+.fsec       { background: var(--surface-panel); border: 0.5px solid var(--border-default); border-radius: var(--radius-lg); padding: var(--space-5); margin-top: var(--space-4); }
+.fsec__head { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-4); padding-bottom: var(--space-3); border-bottom: 0.5px solid var(--border-faint); }
+.fsec__num  { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: var(--radius-sm); background: var(--color-brand-faint); color: var(--color-brand); font-size: 11px; font-weight: var(--fw-semibold); flex-shrink: 0; }
+.fsec__title{ font-size: var(--fs-h3); font-weight: var(--fw-semibold); }
+.fsec__note { font-size: var(--fs-caption); color: var(--text-tertiary); margin-left: auto; }
+.field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+.field-full { grid-column: 1 / -1; }
+.field + .field { margin-top: var(--space-4); }
+.req        { color: var(--color-negative); font-weight: var(--fw-semibold); }
+.sublabel   { font-size: var(--fs-caption); font-weight: var(--fw-semibold); color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+textarea.input { min-height: 76px; line-height: 1.5; }
+select.input   { appearance: auto; }
+.proposer       { display: flex; align-items: center; gap: var(--space-2); padding: 8px 10px; background: var(--surface-recessed); border: 1px solid var(--border-default); border-radius: var(--radius-md); font-size: var(--fs-label); color: var(--text-secondary); }
+.proposer .avatar { width: 22px; height: 22px; font-size: 9px; }
+.proposer__tag  { margin-left: auto; font-size: var(--fs-caption); color: var(--text-tertiary); }
+.flag-row       { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: 11px 0; border-bottom: 0.5px solid var(--border-faint); }
+.flag-row:first-of-type { padding-top: 0; }
+.flag-row:last-of-type  { border-bottom: none; }
+.flag-row__text { font-size: var(--fs-label); }
+.flag-row__hint { font-size: var(--fs-caption); color: var(--text-tertiary); margin-top: 1px; }
+.form-actions   { position: sticky; bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-6); padding: var(--space-3) var(--space-4); background: var(--surface-panel); border: 0.5px solid var(--border-strong); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); }
+.form-actions__summary   { font-size: var(--fs-caption); color: var(--text-tertiary); }
+.form-actions__summary b { color: var(--text-secondary); font-weight: var(--fw-medium); }

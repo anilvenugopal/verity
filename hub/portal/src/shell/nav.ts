@@ -18,6 +18,11 @@ export interface NavNode {
   mode?: string // optional landing mode; capabilities are resolved on the destination
   scope?: 'global' | 'application'
   requires?: string // affordance gate: an action code or role; omitted = visible to all
+  section?: string // sidebar group label (eyebrow); ungrouped if omitted
+  badge?: string | number // sidebar static badge (presentation)
+  count?: { provider: string; cap?: number } // OPTIONAL live count badge: provider resolves to a
+  // number in the shell; if it exceeds `cap` we render `${cap}+` instead of the exact value.
+  status?: { table: string; code: string } // object-row status → <Badge> (query-result nav items)
   children?: NavNode[] // sidebar nodes under an app
 }
 
@@ -26,7 +31,17 @@ export interface NavNode {
 // any authenticated user; per-app gating is added when those areas exist.
 export const NAV: NavNode[] = [
   { key: 'home', kind: 'app', label: 'Home', desc: 'Landing & getting started', icon: 'i-app-home', to: '/' },
-  { key: 'intake', kind: 'app', label: 'Intake', desc: 'Onboard applications', icon: 'i-app-intake' },
+  {
+    key: 'intake', kind: 'app', label: 'Intake', desc: 'Onboard applications', icon: 'i-app-intake', to: '/applications',
+    children: [
+      { key: 'applications', kind: 'page', label: 'Applications', icon: 'i-entity-application', to: '/applications', section: 'Intake', count: { provider: 'applications', cap: 99 } },
+      { key: 'usecases', kind: 'page', label: 'Use cases', icon: 'i-entity-task', section: 'Intake' },
+      { key: 'obligations', kind: 'page', label: 'Obligations', icon: 'i-app-compliance', section: 'Intake' },
+      // actions — bottom-stacked under an ACTIONS header (the recorded design)
+      { key: 'onboard-app', kind: 'action', label: 'Onboard app.', icon: 'i-add', to: '/applications/new', requires: 'onboard_application' },
+      { key: 'intake-uc', kind: 'action', label: 'Intake use case', icon: 'i-add' },
+    ],
+  },
   { key: 'studio', kind: 'app', label: 'Studio', desc: 'Author agents & tasks', icon: 'i-app-studio' },
   { key: 'registry', kind: 'app', label: 'Registry', desc: 'Entities & versions', icon: 'i-app-registry' },
   { key: 'observability', kind: 'app', label: 'Observability', desc: 'Runs & traces', icon: 'i-app-observability' },

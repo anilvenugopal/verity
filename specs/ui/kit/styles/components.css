@@ -82,7 +82,9 @@
   border: 1px solid transparent;
   white-space: nowrap;
 }
-.badge__dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+.badge__dot   { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+.badge__icon  { width: 12px; height: 12px; flex-shrink: 0; }  /* sprite glyph, when a row carries one */
+.badge__label { display: inline; }                            /* wrapped so .badge--icon-only can hide it */
 
 /* Lifecycle states */
 .badge--draft      { background: var(--surface-panel);     color: var(--text-tertiary);  border-color: var(--border-default); }
@@ -331,4 +333,16 @@
 [data-tooltip]:focus-visible::after { opacity: 1; }
 [data-tooltip-pos="top"]::after {
   left: 50%; top: auto; bottom: calc(100% + 8px); transform: translateX(-50%);
+}
+
+/* Portal tooltip — rendered at <body> so it escapes overflow:hidden/auto ancestors (sidebar, tables).
+   top/left are set inline from the trigger's rect; this rule is just the bubble's look. Wraps (a
+   description is a sentence), unlike the inline [data-tooltip] which is nowrap. */
+.tooltip {
+  position: fixed; z-index: 200; pointer-events: none;
+  max-width: 280px; white-space: normal; line-height: 1.4;
+  background: var(--surface-panel); color: var(--text-primary);
+  border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  padding: 4px 8px; font-size: var(--fs-caption);
 }

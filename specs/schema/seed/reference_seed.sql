@@ -39,9 +39,15 @@ INSERT INTO reference.approval_request_kind (code, label, sort_order) VALUES
     ON CONFLICT (code) DO NOTHING;
 
 -- Application onboarding vocabularies (FR-IN-015/017).
-INSERT INTO reference.application_status (code, label, sort_order) VALUES
-    ('pending','Pending',1),('active','Active',2),('suspended','Suspended',3),('retired','Retired',4)
-    ON CONFLICT (code) DO NOTHING;
+-- description -> badge tooltip; metadata.tone -> badge colour (closed palette: positive|warning|negative|info|neutral).
+INSERT INTO reference.application_status (code, label, description, sort_order, metadata) VALUES
+    ('pending',  'Pending',  'Proposed; awaiting AI-Governance and business-owner approval.', 1, '{"tone":"warning"}'),
+    ('active',   'Active',   'Approved; may own promotable intakes and assets.',             2, '{"tone":"positive"}'),
+    ('suspended','Suspended','Temporary hold; cannot own promotable intakes or assets.',      3, '{"tone":"negative"}'),
+    ('retired',  'Retired',  'Terminal; decommissioned.',                                     4, '{"tone":"neutral"}')
+    ON CONFLICT (code) DO UPDATE SET
+        label = EXCLUDED.label, description = EXCLUDED.description,
+        sort_order = EXCLUDED.sort_order, metadata = EXCLUDED.metadata;
 
 INSERT INTO reference.line_of_business (code, label, sort_order) VALUES
     ('pc','Property & Casualty',1),('life','Life',2),('health','Health',3),('annuities','Annuities',4),

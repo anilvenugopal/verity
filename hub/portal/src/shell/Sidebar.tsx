@@ -1,0 +1,114 @@
+import { type KeyboardEvent, useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { api } from '@/api/client'
+import type { Application } from '@/api/types'
+import { useSession } from '@/auth/useSession'
+import { Badge } from '@/components/Badge'
+import { NAV, type NavNode, resolveNav } from './nav'
+
+// Per-app sidebar (contextual): renders the active app's children — pages/objects grouped by section
+// (top), actions stacked at the bottom (the recorded design). Objects return here as a *query result
+// projected into the nav* (MY APPLICATIONS): the rows are fetched, bounded (top 3 + "See all"), and
+// injected via resolveNav's postProcess hook so they're RE-GATED — the projection can never surface
+// what the affordance gate would hide. Reuses canonical sidebar/nav-item/badge classes — no new CSS.
+const MY_APPS_MAX = 3
+
+export function Sidebar() {
+  const { pathname } = useLocation()
+  const navigate = useNavigate()
+  const { canDo, hasRole, principal } = useSession()
+  const [apps, setApps] = useState<Application[]>([])
+
+  // Applications drive two nav features: the MY APPLICATIONS object projection (apps I own) and the
+  // live count badge on the Applications page. Fetched once; both derive from it.
+  useEffect(() => {
+    api.get<Application[]>('/api/applications').then(setApps).catch(() => setApps([]))
+  }, [])
+
+  const myApps = principal ? apps.filter((a) => a.business_owner_actor_id === principal.actor_id) : []
+  // provider → live count for nav `count` badges (grow as pages gain counts; absent = no badge).
+  const counts: Record<string, number> = { applications: apps.length }
+
+  const gate = (req: string) => canDo(req) || hasRole(req)
+  const navApps = resolveNav(NAV, gate).filter((n) => n.kind === 'app')
+  const active = navApps.find((a) => a.to && a.to !== '/' && pathname.startsWith(a.to) && a.children?.length)
+  if (!active?.children?.length) return null
+
+  // Project my applications into the Intake sidebar as a bounded, re-gated "My applications" section.
+  const projectMyApps = (nodes: NavNode[]): NavNode[] => {
+    if (active.key !== 'intake' || myApps.length === 0) return nodes
+    const objs: NavNode[] = myApps.slice(0, MY_APPS_MAX).map((a) => ({
+      key: `obj-app-${a.application_id}`,
+      kind: 'page',
+      label: a.name,
+      icon: 'i-entity-application',
+      to: `/applications/${a.application_id}`,
+      section: 'My applications',
+      status: { table: 'application_status', code: a.application_status_code },
+    }))
+    if (myApps.length > MY_APPS_MAX) {
+      objs.push({ key: 'obj-app-more', kind: 'page', label: 'See all', icon: 'i-next', to: '/applications', section: 'My applications' })
+    }
+    return [...objs, ...nodes]
+  }
+
+  const children = resolveNav(active.children, gate, projectMyApps)
+  const pages = children.filter((n) => n.kind !== 'action')
+  const actions = children.filter((n) => n.kind === 'action')
+  const isActive = (to?: string) => !!to && (pathname === to || pathname.startsWith(`${to}/`))
+  const sections = [...new Set(pages.map((p) => p.section ?? ''))]
+
+  const countBadge = (n: NavNode): string | number | undefined => {
+    if (n.badge != null) return n.badge
+    if (!n.count) return undefined
+    const v = counts[n.count.provider]
+    if (v == null) return undefined // provider not resolved → no badge (count is optional)
+    const cap = n.count.cap
+    return cap != null && v > cap ? `${cap}+` : v
+  }
+
+  const item = (n: NavNode) => {
+    const go = n.to ? () => navigate(n.to!) : undefined
+    const badge = countBadge(n)
+    return (
+      <div
+        key={n.key}
+        className={`nav-item${isActive(n.to) ? ' is-active' : ''}`}
+        role={go ? 'button' : undefined}
+        tabIndex={go ? 0 : undefined}
+        aria-current={isActive(n.to) ? 'page' : undefined}
+        onClick={go}
+        onKeyDown={go ? (e: KeyboardEvent) => (e.key === 'Enter' || e.key === ' ') && go() : undefined}
+      >
+        <svg className="icon" aria-hidden="true"><use href={`#${n.icon}`} /></svg>
+        {n.label}
+        {n.status && <><span className="l-spacer" /><Badge table={n.status.table} code={n.status.code} quiet size="sm" /></>}
+        {badge != null && <span className="nav-item__badge">{badge}</span>}
+      </div>
+    )
+  }
+
+  return (
+    <nav className="app__sidebar" aria-label={active.label}>
+      <div className="sidebar__header">
+        <svg className="icon" aria-hidden="true"><use href={`#${active.icon}`} /></svg>
+        <span className="sidebar__app-name">{active.label}</span>
+      </div>
+      {sections.map((sec) => (
+        <div className="sidebar__section" key={sec || 'default'}>
+          {sec && <div className="sidebar__section-label">{sec}</div>}
+          {pages.filter((p) => (p.section ?? '') === sec).map(item)}
+        </div>
+      ))}
+      {actions.length > 0 && (
+        <>
+          <span className="l-spacer" />
+          <div className="sidebar__section">
+            <div className="sidebar__section-label">Actions</div>
+            {actions.map(item)}
+          </div>
+        </>
+      )}
+    </nav>
+  )
+}

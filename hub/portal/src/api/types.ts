@@ -23,6 +23,25 @@ export interface ApiError {
   request_id: string
 }
 
+// Mirrors hub/src/verity/hub/application/models.py::Application
+export interface Application {
+  application_id: string
+  code: string
+  name: string
+  description: string
+  application_status_code: string
+  line_of_business_code: string | null
+  data_classification_code: string
+  business_owner_actor_id: string
+  regulatory_framework_codes: string[]
+  governance_domain_codes: string[]
+  jurisdiction_codes: string[]
+  affects_consumers: boolean
+  processes_pii: boolean
+  consumer_facing: boolean
+  created_at: string
+}
+
 export type AuthState =
   | 'loading'
   | 'authenticated'

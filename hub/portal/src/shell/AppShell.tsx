@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Topbar } from './Topbar'
 import { Rail } from './Rail'
+import { Sidebar } from './Sidebar'
 import { AppLauncher } from './AppLauncher'
 import { CommandPalette } from './CommandPalette'
 import './AppShell.css'
@@ -30,6 +31,7 @@ export function AppShell() {
       <Topbar onSearch={() => setPaletteOpen(true)} />
       <div className="app__body">
         <Rail onLauncher={() => setLauncherOpen(true)} />
+        <Sidebar />
         <main className="app__canvas">
           <Outlet />
         </main>

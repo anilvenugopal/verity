@@ -25,6 +25,7 @@ from verity.hub.approval.router import router as approval_router
 from verity.hub.assessment.router import router as assessment_router
 from verity.hub.intake.router import router as intake_router
 from verity.hub.intake_approval.router import router as intake_approval_router
+from verity.hub.reference.router import router as reference_router
 
 # Local-dev fallback so SessionMiddleware has a key when session_secret is unset (mock/local).
 # Prod requires a real per-env secret — enforced in config.validate_startup (FR-013a).
@@ -76,9 +77,18 @@ def create_app() -> FastAPI:
         return {"status": "ready", "reference_roles": roles}
 
     @app.get("/me", tags=["auth"])
-    async def me(principal: Principal = Depends(get_principal)) -> dict[str, object]:
+    async def me(request: Request, principal: Principal = Depends(get_principal)) -> dict[str, object]:
         # logged_out / mock-session resolution lives in get_principal now.
         s = get_settings()
+        # is_mock reflects THIS session, not the server mode: a real Entra session (actor_id present)
+        # is never mock even when the server runs auth_mode=mock for local dev.
+        session = getattr(request, "session", {})
+        if "actor_id" in session:
+            is_mock = False
+        elif "mock_actor_id" in session:
+            is_mock = True
+        else:
+            is_mock = s.auth_mode == "mock"
         return {
             "actor_id": principal.actor_id,
             "display_name": principal.display_name,
@@ -86,7 +96,7 @@ def create_app() -> FastAPI:
             "platform_roles": sorted(principal.platform_roles),
             # app_team_roles surfaced in a later milestone (account-menu pills); empty for now.
             "app_team_roles": [],
-            "is_mock": s.auth_mode == "mock",
+            "is_mock": is_mock,
         }
 
     # Example action-gated route: granting a platform role is security-only (FR-023).
@@ -97,6 +107,7 @@ def create_app() -> FastAPI:
         return {"status": "authorized", "actor_id": ctx.principal.actor_id, "acting_role": ctx.acting_role}
 
     app.include_router(session_router)
+    app.include_router(reference_router)
     app.include_router(application_router)
     app.include_router(approval_router)
     app.include_router(intake_router)

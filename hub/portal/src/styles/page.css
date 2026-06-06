@@ -1,0 +1,8 @@
+/* Shared canvas-page composition — the common header/section layout every canvas page uses.
+   Dedups what the wireframes repeat per page. Component-scoped (portal), reviewed; layer CSS unchanged. */
+.canvas-pad      { padding: var(--space-6) var(--space-7) 48px; max-width: 1000px; }
+.page-head       { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-6); }
+.page-head__title{ font-size: var(--fs-hero); font-weight: var(--fw-semibold); letter-spacing: -0.02em; }
+.page-head__sub  { font-size: var(--fs-label); color: var(--text-secondary); margin-top: 4px; }
+.section         { margin-top: var(--space-7); }
+.section__head   { display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-3); }
