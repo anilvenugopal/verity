@@ -4,6 +4,7 @@ from __future__ import annotations
 from fastapi import Depends, Request
 
 from verity.hub.config import get_settings
+from verity.hub.db import queries
 from verity.hub.auth.authenticator import get_authenticator
 from verity.hub.auth.events import emit_auth_event
 from verity.hub.auth.matrix import acting_role_for, is_action_allowed
@@ -12,6 +13,20 @@ from verity.hub.auth.models import AuthContext, AuthError, Principal
 
 def _request_id(request: Request) -> str:
     return request.headers.get("x-request-id", "local-dev")
+
+
+async def _principal_from_db(pool, sess: dict) -> Principal:
+    """Resolve a real (Entra) principal: identity from the session, roles live from the DB (FR-007)."""
+    async with pool.connection() as conn:
+        roles = {r["role_code"] async for r in queries.get_platform_roles(conn, actor_id=sess["actor_id"])}
+        acct = await queries.get_account_state(conn, tenant_id=sess["tenant_id"], microsoft_oid=sess["oid"])
+    return Principal(
+        actor_id=sess["actor_id"], tenant_id=sess["tenant_id"], microsoft_oid=sess["oid"],
+        display_name=sess.get("display_name", "User"), email=sess.get("email"),
+        platform_roles=roles,
+        session_epoch=acct["session_epoch"] if acct else 0,
+        disabled=bool(acct and acct["disabled_at"] is not None),
+    )
 
 
 def _principal_from_session(settings, sess: dict) -> Principal:
@@ -39,7 +54,9 @@ async def get_principal(request: Request) -> Principal:
     sess = getattr(request, "session", {})
     if sess.get("logged_out"):
         raise AuthError(401, "unauthenticated", "signed out")
-    if settings.auth_mode == "mock" and sess.get("mock_actor_id"):
+    if sess.get("actor_id"):  # real (Entra) session — identity from session, roles live from DB
+        principal = await _principal_from_db(request.app.state.pool, sess)
+    elif settings.auth_mode == "mock" and sess.get("mock_actor_id"):
         principal = _principal_from_session(settings, sess)
     else:
         auth = get_authenticator(settings)

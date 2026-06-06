@@ -47,6 +47,7 @@ def _hub_env() -> dict[str, str]:
         "VERITY_AUTH_MODE": "mock",
         "VERITY_SESSION_SECRET": "local-dev-insecure-session-secret",
         "VERITY_MOCK_PLATFORM_ROLES": "ai_governance,security,viewer",
+        "VERITY_APP_BASE_URL": "http://localhost:5173",  # Entra callback redirects back to the portal
     }
 
 

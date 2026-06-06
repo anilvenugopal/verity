@@ -23,11 +23,23 @@ class Settings(BaseSettings):
     mock_email: str | None = "dev@localhost"
     mock_platform_roles: str = "security,viewer"  # comma-separated reference.role codes
 
+    # --- Entra OIDC (real sign-in; optional in dev, required in prod entra mode) ---
+    entra_tenant_id: str = ""
+    entra_client_id: str = ""
+    entra_client_secret: str = ""  # the secret VALUE (not its ID); lives only in hub/.env, gitignored
+    entra_redirect_uri: str = "http://localhost:8000/auth/callback"
+    entra_admin_object_id: str = ""  # local-dev: this Entra user gets the admin role set on first login
+    app_base_url: str = ""  # absolute origin for post-login redirects (dev: portal :5173; prod: "" = same origin)
+
     log_level: str = "INFO"
 
     @property
     def mock_roles(self) -> list[str]:
         return [r.strip() for r in self.mock_platform_roles.split(",") if r.strip()]
+
+    @property
+    def entra_configured(self) -> bool:
+        return bool(self.entra_tenant_id and self.entra_client_id and self.entra_client_secret)
 
 
 @lru_cache
