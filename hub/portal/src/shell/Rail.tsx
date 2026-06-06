@@ -25,7 +25,7 @@ export function Rail({ onLauncher }: { onLauncher: () => void }) {
               className={`rail-app-icon${isActive(app.to) ? ' is-active' : ''}`}
               role="button"
               tabIndex={0}
-              title={app.desc ? `${app.label} — ${app.desc}` : app.label}
+              data-tooltip={app.desc ? `${app.label} — ${app.desc}` : app.label}
               aria-current={isActive(app.to) ? 'page' : undefined}
               onClick={go}
               onKeyDown={activate(go)}
@@ -36,10 +36,10 @@ export function Rail({ onLauncher }: { onLauncher: () => void }) {
         })}
       </div>
       <span className="l-spacer" />
-      <div className="rail-app-icon" role="button" tabIndex={0} title="App launcher" onClick={onLauncher} onKeyDown={activate(onLauncher)}>
+      <div className="rail-app-icon" role="button" tabIndex={0} data-tooltip="App launcher" onClick={onLauncher} onKeyDown={activate(onLauncher)}>
         <svg className="icon" aria-hidden="true"><use href="#i-app-launcher" /></svg>
       </div>
-      <div className="rail-app-icon" role="button" tabIndex={0} title="Settings">
+      <div className="rail-app-icon" role="button" tabIndex={0} data-tooltip="Settings">
         <svg className="icon" aria-hidden="true"><use href="#i-app-settings" /></svg>
       </div>
     </nav>

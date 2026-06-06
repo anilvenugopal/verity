@@ -311,3 +311,24 @@
 .search-field input { flex: 1; border: none; background: transparent; font-size: var(--fs-label); color: var(--text-primary); }
 .search-field kbd { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary);
                     border: 1px solid var(--border-default); border-radius: var(--radius-xs); padding: 1px 5px; }
+
+
+/* ═══ TOOLTIP — add data-tooltip="text" to any element; shows on hover/focus ════════════════════
+   Default placement: right (icon rails); override with data-tooltip-pos="top". */
+[data-tooltip] { position: relative; }
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute; z-index: 60;
+  left: calc(100% + 8px); top: 50%; transform: translateY(-50%);
+  white-space: nowrap; pointer-events: none;
+  background: var(--surface-panel); color: var(--text-primary);
+  border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  padding: 4px 8px; font-size: var(--fs-caption);
+  opacity: 0; transition: opacity var(--dur-fast);
+}
+[data-tooltip]:hover::after,
+[data-tooltip]:focus-visible::after { opacity: 1; }
+[data-tooltip-pos="top"]::after {
+  left: 50%; top: auto; bottom: calc(100% + 8px); transform: translateX(-50%);
+}
