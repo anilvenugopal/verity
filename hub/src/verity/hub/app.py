@@ -26,6 +26,7 @@ from verity.hub.assessment.router import router as assessment_router
 from verity.hub.intake.router import router as intake_router
 from verity.hub.intake_approval.router import router as intake_approval_router
 from verity.hub.reference.router import router as reference_router
+from verity.hub.dashboard.router import router as dashboard_router
 
 # Local-dev fallback so SessionMiddleware has a key when session_secret is unset (mock/local).
 # Prod requires a real per-env secret — enforced in config.validate_startup (FR-013a).
@@ -108,6 +109,7 @@ def create_app() -> FastAPI:
 
     app.include_router(session_router)
     app.include_router(reference_router)
+    app.include_router(dashboard_router)
     app.include_router(application_router)
     app.include_router(approval_router)
     app.include_router(intake_router)
