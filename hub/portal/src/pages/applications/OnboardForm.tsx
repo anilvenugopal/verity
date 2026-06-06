@@ -1,7 +1,8 @@
 import { type FormEvent, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { api, ApiException } from '@/api/client'
 import { useSession } from '@/auth/useSession'
+import type { Application } from '@/api/types'
 import './ApplicationWorkspace.css' // shared workspace layout (band/tabs/rail)
 import './OnboardForm.css'
 
@@ -36,8 +37,11 @@ const FIELD_TAB: Record<string, string> = {
 // marker, live count, inline errors + a focusing summary on attempt (no silently disabled button).
 export function OnboardForm() {
   const navigate = useNavigate()
+  const { id } = useParams<{ id: string }>() // set => edit mode (pending app), unset => create
+  const editing = !!id
   const { principal } = useSession()
   const [ref, setRef] = useState<Ref | null>(null)
+  const [ownerId, setOwnerId] = useState('') // business owner (self on create; loaded on edit)
   const [name, setName] = useState('')
   const [code, setCode] = useState('')
   const [description, setDescription] = useState('')
@@ -59,6 +63,20 @@ export function OnboardForm() {
   useEffect(() => {
     api.get<Ref>('/api/reference/onboarding').then(setRef).catch(() => setError('Could not load reference data.'))
   }, [])
+
+  // Edit mode: prefill from the pending application. Justification is not persisted, so it starts
+  // blank and must be re-entered (a known backend gap).
+  useEffect(() => {
+    if (!id) return
+    api.get<Application>(`/api/applications/${id}`).then((a) => {
+      setName(a.name); setCode(a.code); setDescription(a.description); setLob(a.line_of_business_code ?? '')
+      setClassification(a.data_classification_code)
+      setFrameworks(new Set(a.regulatory_framework_codes)); setDomains(new Set(a.governance_domain_codes))
+      setJurisdictions(new Set(a.jurisdiction_codes))
+      setAffectsConsumers(a.affects_consumers); setProcessesPii(a.processes_pii); setConsumerFacing(a.consumer_facing)
+      setOwnerId(a.business_owner_actor_id)
+    }).catch(() => setError('Could not load the application.'))
+  }, [id])
 
   function toggle(set: Set<string>, setter: (s: Set<string>) => void, v: string) {
     const next = new Set(set)
@@ -118,23 +136,26 @@ export function OnboardForm() {
     }
     setBusy(true)
     setError('')
+    const payload = {
+      code, name, description,
+      line_of_business_code: lob || null,
+      data_classification_code: classification,
+      regulatory_framework_codes: [...frameworks],
+      governance_domain_codes: [...domains],
+      jurisdiction_codes: [...jurisdictions],
+      business_owner_actor_id: ownerId || principal.actor_id,
+      initial_app_team: [],
+      affects_consumers: affectsConsumers,
+      processes_pii: processesPii,
+      consumer_facing: consumerFacing,
+      justification,
+    }
     try {
-      const app = await api.post<{ application_id: string }>('/api/applications', {
-        code, name, description,
-        line_of_business_code: lob || null,
-        data_classification_code: classification,
-        regulatory_framework_codes: [...frameworks],
-        governance_domain_codes: [...domains],
-        jurisdiction_codes: [...jurisdictions],
-        business_owner_actor_id: principal.actor_id,
-        initial_app_team: [],
-        affects_consumers: affectsConsumers,
-        processes_pii: processesPii,
-        consumer_facing: consumerFacing,
-        justification,
-      })
-      if (alsoSubmit) await api.post(`/api/applications/${app.application_id}/submit`, {})
-      navigate(`/applications/${app.application_id}`) // into the workspace
+      const appId = editing
+        ? (await api.put<{ application_id: string }>(`/api/applications/${id}`, payload)).application_id
+        : (await api.post<{ application_id: string }>('/api/applications', payload)).application_id
+      if (alsoSubmit) await api.post(`/api/applications/${appId}/submit`, {})
+      navigate(`/applications/${appId}`) // into the workspace
     } catch (err) {
       setError(err instanceof ApiException ? err.body.detail : 'Submit failed.')
       setBusy(false)
@@ -175,8 +196,10 @@ export function OnboardForm() {
     <form className="canvas-pad" onSubmit={(e) => submit(e, true)} noValidate>
       <div className="page-head">
         <div>
-          <div className="page-head__title">Onboard application</div>
-          <div className="page-head__sub">Register a business application under governance. This opens an approval — it stays <strong>pending</strong> until AI Governance (and the business owner) sign off.</div>
+          <div className="page-head__title">{editing ? 'Edit application' : 'Onboard application'}</div>
+          <div className="page-head__sub">{editing
+            ? 'Revise this pending application and re-submit. Re-submitting opens a fresh approval.'
+            : <>Register a business application under governance. This opens an approval — it stays <strong>pending</strong> until AI Governance (and the business owner) sign off.</>}</div>
         </div>
       </div>
 
@@ -333,9 +356,9 @@ export function OnboardForm() {
             {error && <div className="field"><span className="input-error-text">{error}</span></div>}
 
             <div className="rail-actions">
-              <button type="submit" className="btn btn--primary btn--md" disabled={busy}>{busy ? 'Submitting…' : 'Submit for approval'}</button>
-              <button type="button" className="btn btn--secondary btn--md" disabled={busy} onClick={(e) => submit(e, false)}>Save draft</button>
-              <button type="button" className="btn btn--ghost btn--md" onClick={() => navigate('/applications')}>Cancel</button>
+              <button type="submit" className="btn btn--primary btn--md" disabled={busy}>{busy ? 'Submitting…' : editing ? 'Re-submit for approval' : 'Submit for approval'}</button>
+              <button type="button" className="btn btn--secondary btn--md" disabled={busy} onClick={(e) => submit(e, false)}>{editing ? 'Save changes' : 'Save draft'}</button>
+              <button type="button" className="btn btn--ghost btn--md" onClick={() => navigate(editing ? `/applications/${id}` : '/applications')}>Cancel</button>
             </div>
           </div>
         </aside>

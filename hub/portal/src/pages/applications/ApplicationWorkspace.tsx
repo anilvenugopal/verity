@@ -107,6 +107,18 @@ export function ApplicationWorkspace() {
   const allReviewed = TABS.every((t) => visited.has(t.key))
   const canSign = pending && !iSigned && !!myRequiredRole
 
+  // remediation: a closed (rejected/changes-requested) approval, and whether this user may edit.
+  // The backend allows the proposer OR owner; the workspace only knows the owner, so non-owner
+  // proposers reach edit via the URL. canEdit also covers a never-submitted draft (no approval).
+  const last = appr?.signoffs.length ? appr.signoffs[appr.signoffs.length - 1] : undefined
+  const outcome = appr?.status_code === 'rejected'
+    ? { label: last?.decision_code === 'requested_changes' ? 'Changes requested' : 'Rejected', comment: last?.comment }
+    : null
+  const canEdit = app.application_status_code === 'pending' && !!owned && (!appr || appr.status_code === 'rejected')
+  const editBtn = canEdit && (
+    <button className="btn btn--primary btn--md" onClick={() => navigate(`/applications/${app.application_id}/edit`)}>Edit &amp; re-submit</button>
+  )
+
   async function decide(decision_code: string) {
     if (!appr || busy) return
     setBusy(true); setError('')
@@ -216,14 +228,20 @@ export function ApplicationWorkspace() {
                   </div>
                 ) : (
                   <div className="rail-actions">
-                    <p className="input-hint">
-                      {!pending ? `This request is ${appr.status_code}.` : iSigned ? 'You have recorded your decision.' : 'You do not hold a required role.'}
-                    </p>
+                    {outcome ? (
+                      <p className="input-error-text"><b>{outcome.label}.</b>{outcome.comment ? ` ${outcome.comment}` : ''}</p>
+                    ) : (
+                      <p className="input-hint">{pending ? (iSigned ? 'You have recorded your decision.' : 'Awaiting the required sign-off(s).') : `This request is ${appr.status_code}.`}</p>
+                    )}
+                    {editBtn}
                   </div>
                 )}
               </>
             ) : (
-              <p className="input-hint">Not submitted for approval.</p>
+              <div className="rail-actions">
+                <p className="input-hint">Not submitted for approval.</p>
+                {editBtn}
+              </div>
             )}
           </div>
         </aside>

@@ -38,6 +38,21 @@ WHERE application_id = %(application_id)s;
 UPDATE core.application SET application_status_code = %(status_code)s, updated_at = now()
 WHERE application_id = %(application_id)s;
 
+-- name: update_application^
+-- Edit a still-pending application in place (pre-activation remediation, e.g. after a rejection).
+-- The status guard means an active/approved application is never edited this way (that is the
+-- governed change-proposal flow). Returns the row, or nothing if it was not pending / not found.
+UPDATE core.application SET
+    code = %(code)s, name = %(name)s, description = %(description)s,
+    line_of_business_code = %(line_of_business_code)s, data_classification_code = %(data_classification_code)s,
+    business_owner_actor_id = %(business_owner_actor_id)s,
+    affects_consumers = %(affects_consumers)s, processes_pii = %(processes_pii)s, consumer_facing = %(consumer_facing)s,
+    updated_at = now()
+WHERE application_id = %(application_id)s AND application_status_code = 'pending'
+RETURNING application_id, code, name, description, application_status_code, line_of_business_code,
+          data_classification_code, business_owner_actor_id,
+          affects_consumers, processes_pii, consumer_facing, created_at;
+
 -- name: list_applications
 SELECT application_id, code, name, description, application_status_code, line_of_business_code,
        data_classification_code, business_owner_actor_id,

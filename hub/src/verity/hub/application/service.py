@@ -92,6 +92,49 @@ async def propose(conn: AsyncConnection, body: ApplicationPropose, ctx: AuthCont
     return _to_model(row, frameworks, domains, jurisdictions)
 
 
+async def update(conn: AsyncConnection, application_id: UUID, body: ApplicationPropose, ctx: AuthContext) -> Application | None:
+    """Edit a still-pending application in place (pre-activation remediation, e.g. after a rejection).
+    None => 404. Raises OnboardingConflict (409) if not pending, AuthError (403) if the caller is
+    neither the proposer nor the business owner. Active apps change via change-proposal (deferred)."""
+    gate = await queries.get_application_gate(conn, application_id=application_id)
+    if gate is None:
+        return None
+    if gate["application_status_code"] != "pending":
+        raise OnboardingConflict("only a pending application can be edited")
+    actor = str(ctx.principal.actor_id)
+    if actor not in (str(gate["created_by_actor_id"]), str(gate["business_owner_actor_id"])):
+        raise AuthError(403, "not_editor", "only the proposer or business owner may edit this application")
+
+    rank = _CLASSIFICATION_RANK.get(body.data_classification_code)
+    if body.processes_pii and rank is not None and rank < _CONFIDENTIAL_RANK:
+        raise ValueError("data_classification_code must be at least tier3_confidential when processes_pii is true")
+
+    actor_id = ctx.principal.actor_id
+    async with conn.transaction():
+        row = await queries.update_application(
+            conn, application_id=application_id,
+            code=body.code, name=body.name, description=body.description,
+            line_of_business_code=body.line_of_business_code,
+            data_classification_code=body.data_classification_code,
+            business_owner_actor_id=body.business_owner_actor_id,
+            affects_consumers=body.affects_consumers, processes_pii=body.processes_pii,
+            consumer_facing=body.consumer_facing,
+        )
+        if row is None:  # raced out of pending between the gate read and the guarded UPDATE
+            raise OnboardingConflict("only a pending application can be edited")
+        await queries.clear_application_frameworks(conn, application_id=application_id)
+        await queries.clear_application_domains(conn, application_id=application_id)
+        await queries.clear_application_jurisdictions(conn, application_id=application_id)
+        for framework_code in body.regulatory_framework_codes:
+            await queries.add_application_framework(conn, application_id=application_id, framework_code=framework_code, created_by_actor_id=actor_id)
+        for governance_domain_code in body.governance_domain_codes:
+            await queries.add_application_domain(conn, application_id=application_id, governance_domain_code=governance_domain_code, created_by_actor_id=actor_id)
+        for jurisdiction_code in body.jurisdiction_codes:
+            await queries.add_application_jurisdiction(conn, application_id=application_id, jurisdiction_code=jurisdiction_code, created_by_actor_id=actor_id)
+        frameworks, domains, jurisdictions = await _perimeter(conn, application_id)
+    return _to_model(row, frameworks, domains, jurisdictions)
+
+
 async def get_application(conn: AsyncConnection, application_id: UUID) -> Application | None:
     row = await queries.get_application(conn, application_id=application_id)
     if row is None:
@@ -223,7 +266,10 @@ async def sign_off(conn: AsyncConnection, approval_request_id: UUID, ctx: AuthCo
             signed_as_role_code=signed_as, decision_code=decision_code, comment=comment,
         )
         signoffs = await approval_service.list_signoffs(conn, approval_request_id)
-        if any(s["decision_code"] == "rejected" for s in signoffs):
+        # A rejection OR a changes-requested closes the approval (status `rejected`) so it never
+        # deadlocks with a filled slot — the proposer remediates by editing + re-submitting (which
+        # opens a fresh approval). The signoff's decision_code preserves the rejected/changes nuance.
+        if any(s["decision_code"] in ("rejected", "requested_changes") for s in signoffs):
             await approval_service.set_request_status(conn, approval_request_id, "rejected")
         elif _satisfied(signoffs, owner, owner_needed):
             await approval_service.set_request_status(conn, approval_request_id, "approved")

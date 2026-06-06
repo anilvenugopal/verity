@@ -56,6 +56,30 @@ async def propose_application(
         raise HTTPException(400, str(exc)) from exc
 
 
+@router.put("/applications/{application_id}", response_model=Application)
+async def update_application(
+    application_id: UUID,
+    body: ApplicationPropose,
+    conn: AsyncConnection = Depends(get_conn),
+    ctx: AuthContext = Depends(require_action("onboard_application")),
+) -> Application:
+    """Edit a pending application (pre-activation remediation, e.g. after a rejection)."""
+    try:
+        updated = await service.update(conn, application_id, body, ctx)
+    except service.OnboardingConflict as exc:
+        raise HTTPException(409, str(exc)) from exc
+    except UniqueViolation as exc:
+        raise HTTPException(409, f"application code '{body.code}' already exists") from exc
+    except ForeignKeyViolation as exc:
+        field = _FK_FIELD.get(getattr(exc.diag, "constraint_name", "") or "", "reference code")
+        raise HTTPException(400, f"invalid {field}") from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    if updated is None:
+        raise HTTPException(404, "application not found")
+    return updated
+
+
 @router.get("/applications", response_model=list[Application])
 async def list_applications(
     conn: AsyncConnection = Depends(get_conn),

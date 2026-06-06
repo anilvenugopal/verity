@@ -29,6 +29,7 @@ function AppRoutes() {
           <Route path="/" element={<Landing />} />
           <Route path="/applications" element={<ApplicationsList />} />
           <Route path="/applications/new" element={<OnboardForm />} />
+          <Route path="/applications/:id/edit" element={<OnboardForm />} />
           <Route path="/applications/:id" element={<ApplicationWorkspace />} />
           <Route path="/approvals/:id" element={<ApprovalRedirect />} />
         </Route>
