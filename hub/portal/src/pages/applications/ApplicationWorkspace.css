@@ -1,0 +1,46 @@
+/* Application workspace — shared shell for view / approve (later create). Identity band on top,
+   tabbed body + right rail (Risk Profile + Governance & Approval), derived history below.
+   Reuses canonical .card/.badge/.stat/.chip--static/.tabs/.btn + shared page.css (.kv/.yn). */
+
+/* layout — 2 rows: tabs (left, row 1); content panel + rail share row 2 so the rail top aligns with
+   the content card (not the tab strip). */
+.aw-body { display: grid; grid-template-columns: 1fr 320px; column-gap: var(--space-6); row-gap: var(--space-4); align-items: start; margin-top: var(--space-5); }
+.aw-tabs { grid-column: 1; grid-row: 1; }
+.aw-main { grid-column: 1; grid-row: 2; min-width: 0; }
+.aw-rail { grid-column: 2; grid-row: 2; display: flex; flex-direction: column; gap: var(--space-4); position: sticky; top: var(--space-5); }
+@media (max-width: 920px) {
+  .aw-body { grid-template-columns: 1fr; }
+  .aw-tabs, .aw-main, .aw-rail { grid-column: 1; grid-row: auto; }
+  .aw-rail { position: static; }
+}
+
+/* rail panel rows (Risk Profile) */
+.rail-panel__title { font-size: var(--fs-eyebrow); font-weight: var(--fw-semibold); text-transform: uppercase;
+                     letter-spacing: var(--tracking-eyebrow); color: var(--text-tertiary); margin-bottom: var(--space-3); }
+.rail-row    { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: 7px 0; border-bottom: 0.5px solid var(--border-faint); }
+.rail-row:last-child { border-bottom: none; }
+.rail-row__k { font-size: var(--fs-caption); color: var(--text-tertiary); }
+.rail-row__v { font-size: var(--fs-label); font-weight: var(--fw-medium); text-align: right; }
+.rail-actions { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-3); }
+.rail-actions .btn { width: 100%; justify-content: center; }
+
+/* sign-off gate */
+.appr        { display: flex; flex-direction: column; }
+.appr__row   { display: flex; align-items: center; gap: var(--space-2); padding: 8px 0; border-bottom: 0.5px solid var(--border-faint); }
+.appr__row:last-child { border-bottom: none; }
+.appr__role  { font-size: var(--fs-label); font-weight: var(--fw-medium); flex: 1; }
+.appr__state { font-size: var(--fs-caption); display: inline-flex; align-items: center; gap: 5px; }
+.appr__state--done { color: var(--color-positive); } .appr__state--wait { color: var(--color-warning); } .appr__state--rejected { color: var(--color-negative); }
+
+/* derived history timeline */
+.tl-item       { display: flex; gap: var(--space-3); padding: 8px 0; }
+.tl-item__dot  { width: 7px; height: 7px; border-radius: 50%; background: var(--color-brand); margin-top: 5px; flex-shrink: 0; }
+.tl-item__time { font-size: var(--fs-caption); color: var(--text-tertiary); }
+
+/* collapsible history (native <details>) */
+.aw-hist { margin-top: var(--space-6); }
+.aw-hist > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px;
+                     font-size: var(--fs-eyebrow); font-weight: var(--fw-semibold); text-transform: uppercase;
+                     letter-spacing: var(--tracking-eyebrow); color: var(--text-tertiary); }
+.aw-hist > summary::-webkit-details-marker { display: none; }
+.aw-hist[open] > summary { margin-bottom: var(--space-3); }

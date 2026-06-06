@@ -18,3 +18,12 @@ WHERE application_id = %(application_id)s;
 SELECT application_id, name, description, created_at
 FROM core.application
 ORDER BY created_at DESC;
+
+-- name: get_latest_application_approval^
+-- The most recent approval request bound to an application (the onboarding approval). Lets the
+-- application workspace surface the sign-off gate without the caller knowing the approval id.
+SELECT approval_request_id
+FROM core.approval_request
+WHERE target_application_id = %(application_id)s
+ORDER BY created_at DESC
+LIMIT 1;

@@ -157,6 +157,15 @@ async def change_status(conn: AsyncConnection, application_id: UUID, to_status_c
     return await get_application(conn, application_id)
 
 
+async def get_application_approval_view(conn: AsyncConnection, application_id: UUID) -> ApprovalRequest | None:
+    """The latest approval for an application, as the read view. None => the app has no approval yet
+    (e.g. a saved-but-not-submitted draft). Powers the workspace governance rail."""
+    row = await queries.get_latest_application_approval(conn, application_id=application_id)
+    if row is None:
+        return None
+    return await get_request_view(conn, row["approval_request_id"])
+
+
 async def get_request_view(conn: AsyncConnection, approval_request_id: UUID) -> ApprovalRequest | None:
     """The approval read view with the computed onboarding quorum. None => 404."""
     request = await approval_service.get_request(conn, approval_request_id)

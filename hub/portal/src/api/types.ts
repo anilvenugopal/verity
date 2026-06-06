@@ -47,6 +47,7 @@ export interface SignoffRecord {
   signed_as_role_code: string
   decision_code: string
   comment: string | null
+  created_at: string | null
 }
 
 export interface ApprovalRequest {

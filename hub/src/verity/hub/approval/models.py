@@ -26,6 +26,7 @@ class SignoffRecord(BaseModel):
     signed_as_role_code: str
     decision_code: str
     comment: str | None = None
+    created_at: datetime | None = None
 
 
 class ApprovalRequest(BaseModel):

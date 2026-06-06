@@ -20,7 +20,7 @@ FROM core.approval_request
 WHERE approval_request_id = %(approval_request_id)s;
 
 -- name: list_signoffs
-SELECT approver_actor_id, signed_as_role_code, decision_code, comment
+SELECT approver_actor_id, signed_as_role_code, decision_code, comment, created_at
 FROM core.approval_signoff
 WHERE approval_request_id = %(approval_request_id)s
 ORDER BY created_at;
