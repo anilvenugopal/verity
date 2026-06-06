@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { SessionProvider } from './auth/SessionContext'
 import { useSession } from './auth/useSession'
 import { ProtectedRoute } from './auth/ProtectedRoute'
+import { AppShell } from './shell/AppShell'
 import { SignIn } from './pages/SignIn'
 import { AuthCallback } from './pages/AuthCallback'
 import { SessionExpiredPage, ForbiddenPage, DisabledPage } from './pages/AuthStatePage'
@@ -20,7 +21,9 @@ function AppRoutes() {
       <Route path="/signin" element={<SignIn />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route element={<ProtectedRoute />}>
-        <Route path="/" element={<Landing />} />
+        <Route element={<AppShell />}>
+          <Route path="/" element={<Landing />} />
+        </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

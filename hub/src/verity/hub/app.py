@@ -10,7 +10,10 @@ from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
+
+from verity.hub.paths import component_root
 
 from verity.hub.auth.dependencies import get_principal, require_action
 from verity.hub.auth.models import AuthContext, AuthError, Principal
@@ -99,6 +102,12 @@ def create_app() -> FastAPI:
     app.include_router(intake_router)
     app.include_router(assessment_router)
     app.include_router(intake_approval_router)
+
+    # Serve the built portal (prod). Mounted LAST so the API routes above take priority; a no-op in
+    # local dev where Vite serves the portal. `portal/dist/` is gitignored.
+    portal_dist = component_root() / "portal" / "dist"
+    if (portal_dist / "index.html").exists():
+        app.mount("/", StaticFiles(directory=str(portal_dist), html=True), name="portal")
     return app
 
 
