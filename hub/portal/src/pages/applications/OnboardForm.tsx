@@ -80,8 +80,12 @@ export function OnboardForm() {
         consumer_facing: consumerFacing,
         justification,
       })
-      if (alsoSubmit) await api.post(`/api/applications/${app.application_id}/submit`, {})
-      navigate('/applications')
+      if (alsoSubmit) {
+        const appr = await api.post<{ approval_request_id: string }>(`/api/applications/${app.application_id}/submit`, {})
+        navigate(`/approvals/${appr.approval_request_id}`) // straight to the review/sign-off
+      } else {
+        navigate('/applications')
+      }
     } catch (err) {
       setError(err instanceof ApiException ? err.body.detail : 'Submit failed.')
       setBusy(false)

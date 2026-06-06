@@ -1,8 +1,22 @@
-/* Shared canvas-page composition — the common header/section layout every canvas page uses.
-   Dedups what the wireframes repeat per page. Component-scoped (portal), reviewed; layer CSS unchanged. */
+/* Shared canvas-page composition — header/section + key-value + sticky actions used across canvas
+   pages. Dedups what the wireframes repeat per page. Component-scoped (portal), reviewed; layer CSS
+   unchanged. */
 .canvas-pad      { padding: var(--space-6) var(--space-7) 48px; max-width: 1000px; }
 .page-head       { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-6); }
 .page-head__title{ font-size: var(--fs-hero); font-weight: var(--fw-semibold); letter-spacing: -0.02em; }
 .page-head__sub  { font-size: var(--fs-label); color: var(--text-secondary); margin-top: 4px; }
 .section         { margin-top: var(--space-7); }
 .section__head   { display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-3); }
+
+/* key-value grid — detail + approval review */
+.kv    { display: grid; grid-template-columns: 160px 1fr; gap: 12px 16px; }
+.kv__k { font-size: var(--fs-eyebrow); font-weight: var(--fw-semibold); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-tertiary); padding-top: 2px; }
+.kv__v { font-size: var(--fs-label); color: var(--text-primary); line-height: 1.5; min-width: 0; }
+.yn    { font-weight: var(--fw-medium); }
+.yn--y { color: var(--color-positive); }
+.yn--n { color: var(--text-secondary); }
+
+/* sticky action bar — onboard + approval */
+.form-actions          { position: sticky; bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-6); padding: var(--space-3) var(--space-4); background: var(--surface-panel); border: 0.5px solid var(--border-strong); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); }
+.form-actions__summary { font-size: var(--fs-caption); color: var(--text-tertiary); }
+.form-actions__summary b { color: var(--text-secondary); font-weight: var(--fw-medium); }

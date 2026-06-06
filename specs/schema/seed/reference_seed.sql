@@ -26,9 +26,11 @@ INSERT INTO reference.approval_decision (code, label, sort_order) VALUES
     ('approved','Approved',1),('rejected','Rejected',2),('requested_changes','Requested Changes',3),('abstained','Abstained',4)
     ON CONFLICT (code) DO NOTHING;
 
-INSERT INTO reference.approval_request_status (code, label, sort_order) VALUES
-    ('pending','Pending',1),('approved','Approved',2),('rejected','Rejected',3),('cancelled','Cancelled',4)
-    ON CONFLICT (code) DO NOTHING;
+-- metadata.tone -> badge colour (closed palette: positive|warning|negative|info|neutral).
+INSERT INTO reference.approval_request_status (code, label, sort_order, metadata) VALUES
+    ('pending','Pending',1,'{"tone":"warning"}'),('approved','Approved',2,'{"tone":"positive"}'),
+    ('rejected','Rejected',3,'{"tone":"negative"}'),('cancelled','Cancelled',4,'{"tone":"neutral"}')
+    ON CONFLICT (code) DO UPDATE SET label = EXCLUDED.label, sort_order = EXCLUDED.sort_order, metadata = EXCLUDED.metadata;
 
 -- approval_request kinds (was unseeded): the gating-request kinds across slices. application_onboarding
 -- is this slice; intake/risk_reclassification/business_change/promote_*/retire are wired by their slices.

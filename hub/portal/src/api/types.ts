@@ -42,6 +42,24 @@ export interface Application {
   created_at: string
 }
 
+export interface SignoffRecord {
+  approver_actor_id: string
+  signed_as_role_code: string
+  decision_code: string
+  comment: string | null
+}
+
+export interface ApprovalRequest {
+  approval_request_id: string
+  request_kind_code: string
+  status_code: string
+  target_intake_id: string | null
+  target_application_id: string | null
+  required_roles: string[]
+  signoffs: SignoffRecord[]
+  created_at: string
+}
+
 export type AuthState =
   | 'loading'
   | 'authenticated'

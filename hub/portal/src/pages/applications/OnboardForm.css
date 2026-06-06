@@ -22,6 +22,4 @@ select.input   { appearance: auto; }
 .flag-row:last-of-type  { border-bottom: none; }
 .flag-row__text { font-size: var(--fs-label); }
 .flag-row__hint { font-size: var(--fs-caption); color: var(--text-tertiary); margin-top: 1px; }
-.form-actions   { position: sticky; bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-6); padding: var(--space-3) var(--space-4); background: var(--surface-panel); border: 0.5px solid var(--border-strong); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); }
-.form-actions__summary   { font-size: var(--fs-caption); color: var(--text-tertiary); }
-.form-actions__summary b { color: var(--text-secondary); font-weight: var(--fw-medium); }
+/* .form-actions / .form-actions__summary moved to shared page.css (onboard + approval). */
