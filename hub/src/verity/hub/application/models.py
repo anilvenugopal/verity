@@ -49,6 +49,7 @@ class Application(BaseModel):
     line_of_business_code: str | None = None
     data_classification_code: str
     business_owner_actor_id: UUID
+    created_by_actor_id: UUID
     regulatory_framework_codes: list[str]
     governance_domain_codes: list[str]
     jurisdiction_codes: list[str]
@@ -56,3 +57,6 @@ class Application(BaseModel):
     processes_pii: bool
     consumer_facing: bool
     created_at: datetime
+    # latest-approval review status (read-only; from the LATERAL join in get/list, null elsewhere)
+    latest_approval_status: str | None = None
+    latest_decision: str | None = None

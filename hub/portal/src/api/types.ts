@@ -33,6 +33,7 @@ export interface Application {
   line_of_business_code: string | null
   data_classification_code: string
   business_owner_actor_id: string
+  created_by_actor_id: string
   regulatory_framework_codes: string[]
   governance_domain_codes: string[]
   jurisdiction_codes: string[]
@@ -40,6 +41,9 @@ export interface Application {
   processes_pii: boolean
   consumer_facing: boolean
   created_at: string
+  // latest-approval review status (read-only; null when never submitted)
+  latest_approval_status: string | null
+  latest_decision: string | null
 }
 
 export interface SignoffRecord {

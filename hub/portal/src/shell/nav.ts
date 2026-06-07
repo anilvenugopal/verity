@@ -22,7 +22,6 @@ export interface NavNode {
   badge?: string | number // sidebar static badge (presentation)
   count?: { provider: string; cap?: number } // OPTIONAL live count badge: provider resolves to a
   // number in the shell; if it exceeds `cap` we render `${cap}+` instead of the exact value.
-  status?: { table: string; code: string } // object-row status → <Badge> (query-result nav items)
   children?: NavNode[] // sidebar nodes under an app
 }
 

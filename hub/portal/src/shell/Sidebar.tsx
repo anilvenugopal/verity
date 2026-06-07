@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { api } from '@/api/client'
 import type { Application } from '@/api/types'
 import { useSession } from '@/auth/useSession'
-import { Badge } from '@/components/Badge'
+import { ReviewBadge } from '@/components/ReviewBadge'
 import { NAV, type NavNode, resolveNav } from './nav'
 
 // Per-app sidebar (contextual): renders the active app's children — pages/objects grouped by section
@@ -44,7 +44,6 @@ export function Sidebar() {
       icon: 'i-entity-application',
       to: `/applications/${a.application_id}`,
       section: 'My applications',
-      status: { table: 'application_status', code: a.application_status_code },
     }))
     if (myApps.length > MY_APPS_MAX) {
       objs.push({ key: 'obj-app-more', kind: 'page', label: 'See all', icon: 'i-next', to: '/applications', section: 'My applications' })
@@ -70,6 +69,8 @@ export function Sidebar() {
   const item = (n: NavNode) => {
     const go = n.to ? () => navigate(n.to!) : undefined
     const badge = countBadge(n)
+    // app-object rows carry the application's derived review status (Draft / In review / Rejected / …)
+    const objApp = n.key.startsWith('obj-app-') ? myApps.find((a) => `obj-app-${a.application_id}` === n.key) : undefined
     return (
       <div
         key={n.key}
@@ -82,7 +83,7 @@ export function Sidebar() {
       >
         <svg className="icon" aria-hidden="true"><use href={`#${n.icon}`} /></svg>
         {n.label}
-        {n.status && <><span className="l-spacer" /><Badge table={n.status.table} code={n.status.code} quiet size="sm" /></>}
+        {objApp && <><span className="l-spacer" /><ReviewBadge app={objApp} quiet size="sm" /></>}
         {badge != null && <span className="nav-item__badge">{badge}</span>}
       </div>
     )

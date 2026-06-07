@@ -9,15 +9,9 @@ INSERT INTO core.application (name, description, created_by_actor_id, created_ro
 VALUES (%(name)s, %(description)s, %(created_by_actor_id)s, %(created_role_code)s)
 RETURNING application_id, name, description, created_at;
 
--- name: get_application^
-SELECT application_id, name, description, created_at
-FROM core.application
-WHERE application_id = %(application_id)s;
-
--- name: list_applications
-SELECT application_id, name, description, created_at
-FROM core.application
-ORDER BY created_at DESC;
+-- (get_application / list_applications live in application_onboarding.sql — the full read with the
+--  compliance perimeter + latest-approval review status. The earlier minimal copies were removed to
+--  avoid duplicate aiosql query names.)
 
 -- name: get_latest_application_approval^
 -- The most recent approval request bound to an application (the onboarding approval). Lets the

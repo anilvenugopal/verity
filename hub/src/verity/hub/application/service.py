@@ -101,9 +101,9 @@ async def update(conn: AsyncConnection, application_id: UUID, body: ApplicationP
         return None
     if gate["application_status_code"] != "pending":
         raise OnboardingConflict("only a pending application can be edited")
-    actor = str(ctx.principal.actor_id)
-    if actor not in (str(gate["created_by_actor_id"]), str(gate["business_owner_actor_id"])):
-        raise AuthError(403, "not_editor", "only the proposer or business owner may edit this application")
+    # Authorization is the route's require_action("onboard_application"); a pending application is a
+    # pre-activation draft the app team may revise (the audit trail records who). We deliberately do
+    # NOT require the caller to be the proposer/owner — that blocked legitimate remediation.
 
     rank = _CLASSIFICATION_RANK.get(body.data_classification_code)
     if body.processes_pii and rank is not None and rank < _CONFIDENTIAL_RANK:
@@ -177,6 +177,8 @@ async def submit_for_approval(conn: AsyncConnection, application_id: UUID, ctx: 
         raise OnboardingConflict(f"application is '{gate['application_status_code']}', not pending")
     owner_needed = gate["business_owner_actor_id"] != gate["created_by_actor_id"]
     async with conn.transaction():
+        # supersede any open approval (e.g. re-submit after an edit) so there's one live request
+        await queries.cancel_pending_application_approvals(conn, application_id=application_id)
         row = await approval_service.open_request(
             conn, request_kind_code=_ONBOARDING_KIND, target_application_id=application_id,
             opened_by_actor_id=ctx.principal.actor_id, opened_role_code=ctx.acting_role,

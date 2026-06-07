@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { api, ApiException } from '@/api/client'
 import { useSession } from '@/auth/useSession'
 import type { Application, ApprovalRequest } from '@/api/types'
-import { Badge } from '@/components/Badge'
+import { ReviewBadge } from '@/components/ReviewBadge'
 import './ApplicationWorkspace.css'
 
 interface Code { code: string; label: string }
@@ -44,7 +44,7 @@ const TABS = [
 export function ApplicationWorkspace() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { principal } = useSession()
+  const { principal, canDo } = useSession()
   const [app, setApp] = useState<Application | null>(null)
   const [ref, setRef] = useState<Ref | null>(null)
   const [appr, setAppr] = useState<ApprovalRequest | null>(null)
@@ -114,7 +114,10 @@ export function ApplicationWorkspace() {
   const outcome = appr?.status_code === 'rejected'
     ? { label: last?.decision_code === 'requested_changes' ? 'Changes requested' : 'Rejected', comment: last?.comment }
     : null
-  const canEdit = app.application_status_code === 'pending' && !!owned && (!appr || appr.status_code === 'rejected')
+  // edit is available for any still-pending application (draft / in review / rejected) to anyone who
+  // can onboard — the app team remediates, identity isn't required to match the (mock) owner.
+  // Re-submitting supersedes a prior pending approval server-side.
+  const canEdit = app.application_status_code === 'pending' && canDo('onboard_application')
   const editBtn = canEdit && (
     <button className="btn btn--primary btn--md" onClick={() => navigate(`/applications/${app.application_id}/edit`)}>Edit &amp; re-submit</button>
   )
@@ -144,7 +147,7 @@ export function ApplicationWorkspace() {
         <div>
           <div className="page-head__title l-cluster">
             {app.name} <span className="tla">{app.code}</span>
-            <Badge table="application_status" code={app.application_status_code} quiet />
+            <ReviewBadge app={app} quiet />
           </div>
           <div className="page-head__sub">{app.description}</div>
           <div className="page-head__sub">Owner: {owned ? `${principal?.display_name} · you` : '—'} · {labelOf(ref?.lines_of_business, app.line_of_business_code)} · onboarded {onboarded}</div>
@@ -233,16 +236,13 @@ export function ApplicationWorkspace() {
                     ) : (
                       <p className="input-hint">{pending ? (iSigned ? 'You have recorded your decision.' : 'Awaiting the required sign-off(s).') : `This request is ${appr.status_code}.`}</p>
                     )}
-                    {editBtn}
                   </div>
                 )}
               </>
             ) : (
-              <div className="rail-actions">
-                <p className="input-hint">Not submitted for approval.</p>
-                {editBtn}
-              </div>
+              <p className="input-hint">Not submitted for approval.</p>
             )}
+            {editBtn && <div className="rail-actions">{editBtn}</div>}
           </div>
         </aside>
       </div>

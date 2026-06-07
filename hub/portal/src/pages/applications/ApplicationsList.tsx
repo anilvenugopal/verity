@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '@/api/client'
 import { useSession } from '@/auth/useSession'
 import type { Application } from '@/api/types'
-import { Badge } from '@/components/Badge'
+import { ReviewBadge } from '@/components/ReviewBadge'
 import './ApplicationsList.css'
 
 // Registry (FR-014): GET /applications, real-time client-side search, Onboard CTA gated on
@@ -96,7 +96,7 @@ export function ApplicationsList() {
                 <span className="reg-name">{a.name}</span>
                 <span className="reg-sub">—</span>
                 <span className="reg-sub">{a.line_of_business_code ?? '—'}</span>
-                <Badge table="application_status" code={a.application_status_code} quiet />
+                <ReviewBadge app={a} quiet />
                 <span className="reg-sub">—</span>
               </div>
             ))}

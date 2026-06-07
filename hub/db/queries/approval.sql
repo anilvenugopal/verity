@@ -35,6 +35,12 @@ VALUES (%(approval_request_id)s, %(approver_actor_id)s, %(signed_as_role_code)s,
 UPDATE core.approval_request SET status_code = %(status_code)s, updated_at = now()
 WHERE approval_request_id = %(approval_request_id)s;
 
+-- name: cancel_pending_application_approvals!
+-- Supersede any still-open approval for an application (e.g. when re-submitting after an edit) so a
+-- stale review can't be acted on and the latest request is unambiguous.
+UPDATE core.approval_request SET status_code = 'cancelled', updated_at = now()
+WHERE target_application_id = %(application_id)s AND status_code = 'pending';
+
 -- name: set_application_active!
 UPDATE core.application SET application_status_code = 'active', updated_at = now()
 WHERE application_id = %(application_id)s;

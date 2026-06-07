@@ -15,15 +15,22 @@ VALUES (
     %(affects_consumers)s, %(processes_pii)s, %(consumer_facing)s,
     %(created_by_actor_id)s, %(created_role_code)s)
 RETURNING application_id, code, name, description, application_status_code, line_of_business_code,
-          data_classification_code, business_owner_actor_id,
+          data_classification_code, business_owner_actor_id, created_by_actor_id,
           affects_consumers, processes_pii, consumer_facing, created_at;
 
 -- name: get_application^
-SELECT application_id, code, name, description, application_status_code, line_of_business_code,
-       data_classification_code, business_owner_actor_id,
-       affects_consumers, processes_pii, consumer_facing, created_at
-FROM core.application
-WHERE application_id = %(application_id)s;
+-- Includes the latest approval's status + last decision (LATERAL) so the UI can derive a review
+-- status (Draft / In review / Rejected / Changes requested) for a still-pending application.
+SELECT a.application_id, a.code, a.name, a.description, a.application_status_code, a.line_of_business_code,
+       a.data_classification_code, a.business_owner_actor_id, a.created_by_actor_id,
+       a.affects_consumers, a.processes_pii, a.consumer_facing, a.created_at,
+       ar.status_code AS latest_approval_status, sd.decision_code AS latest_decision
+FROM core.application a
+LEFT JOIN LATERAL (SELECT status_code, approval_request_id FROM core.approval_request
+                   WHERE target_application_id = a.application_id ORDER BY created_at DESC LIMIT 1) ar ON true
+LEFT JOIN LATERAL (SELECT decision_code FROM core.approval_signoff
+                   WHERE approval_request_id = ar.approval_request_id ORDER BY created_at DESC LIMIT 1) sd ON true
+WHERE a.application_id = %(application_id)s;
 
 -- name: get_application_gate^
 -- The fields needed to gate submit + compute the onboarding quorum (US2): status, the designated
@@ -50,12 +57,17 @@ UPDATE core.application SET
     updated_at = now()
 WHERE application_id = %(application_id)s AND application_status_code = 'pending'
 RETURNING application_id, code, name, description, application_status_code, line_of_business_code,
-          data_classification_code, business_owner_actor_id,
+          data_classification_code, business_owner_actor_id, created_by_actor_id,
           affects_consumers, processes_pii, consumer_facing, created_at;
 
 -- name: list_applications
-SELECT application_id, code, name, description, application_status_code, line_of_business_code,
-       data_classification_code, business_owner_actor_id,
-       affects_consumers, processes_pii, consumer_facing, created_at
-FROM core.application
-ORDER BY created_at DESC;
+SELECT a.application_id, a.code, a.name, a.description, a.application_status_code, a.line_of_business_code,
+       a.data_classification_code, a.business_owner_actor_id, a.created_by_actor_id,
+       a.affects_consumers, a.processes_pii, a.consumer_facing, a.created_at,
+       ar.status_code AS latest_approval_status, sd.decision_code AS latest_decision
+FROM core.application a
+LEFT JOIN LATERAL (SELECT status_code, approval_request_id FROM core.approval_request
+                   WHERE target_application_id = a.application_id ORDER BY created_at DESC LIMIT 1) ar ON true
+LEFT JOIN LATERAL (SELECT decision_code FROM core.approval_signoff
+                   WHERE approval_request_id = ar.approval_request_id ORDER BY created_at DESC LIMIT 1) sd ON true
+ORDER BY a.created_at DESC;
