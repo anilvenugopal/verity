@@ -34,6 +34,8 @@ export interface Application {
   data_classification_code: string
   business_owner_actor_id: string
   created_by_actor_id: string
+  business_owner_name: string | null
+  created_by_name: string | null
   regulatory_framework_codes: string[]
   governance_domain_codes: string[]
   jurisdiction_codes: string[]

@@ -50,6 +50,8 @@ class Application(BaseModel):
     data_classification_code: str
     business_owner_actor_id: UUID
     created_by_actor_id: UUID
+    business_owner_name: str | None = None  # core.actor.display_name (read joins; null on create/update return)
+    created_by_name: str | None = None
     regulatory_framework_codes: list[str]
     governance_domain_codes: list[str]
     jurisdiction_codes: list[str]

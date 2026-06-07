@@ -150,7 +150,7 @@ export function ApplicationWorkspace() {
             <ReviewBadge app={app} quiet />
           </div>
           <div className="page-head__sub">{app.description}</div>
-          <div className="page-head__sub">Owner: {owned ? `${principal?.display_name} · you` : '—'} · {labelOf(ref?.lines_of_business, app.line_of_business_code)} · onboarded {onboarded}</div>
+          <div className="page-head__sub">Owner: {app.business_owner_name ?? '—'}{owned ? ' · you' : ''} · {labelOf(ref?.lines_of_business, app.line_of_business_code)} · onboarded {onboarded}</div>
         </div>
       </div>
 
@@ -179,7 +179,7 @@ export function ApplicationWorkspace() {
           {tab === 'ownership' && (
             <div className="aw-tabpanel card">
               <div className="kv">
-                <span className="kv__k">Business owner</span><span className="kv__v">{owned ? `${principal?.display_name} · you` : '—'}</span>
+                <span className="kv__k">Business owner</span><span className="kv__v">{app.business_owner_name ?? '—'}{owned ? ' · you' : ''}</span>
                 <span className="kv__k">App team</span><span className="kv__v u-text-tertiary">No additional members yet (people directory coming later).</span>
               </div>
             </div>

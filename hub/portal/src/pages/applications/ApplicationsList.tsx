@@ -94,7 +94,7 @@ export function ApplicationsList() {
               >
                 <span className="tla">{a.code}</span>
                 <span className="reg-name">{a.name}</span>
-                <span className="reg-sub">—</span>
+                <span className="reg-sub">{a.business_owner_name ?? '—'}</span>
                 <span className="reg-sub">{a.line_of_business_code ?? '—'}</span>
                 <ReviewBadge app={a} quiet />
                 <span className="reg-sub">—</span>

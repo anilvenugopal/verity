@@ -23,9 +23,12 @@ RETURNING application_id, code, name, description, application_status_code, line
 -- status (Draft / In review / Rejected / Changes requested) for a still-pending application.
 SELECT a.application_id, a.code, a.name, a.description, a.application_status_code, a.line_of_business_code,
        a.data_classification_code, a.business_owner_actor_id, a.created_by_actor_id,
+       bo.display_name AS business_owner_name, cb.display_name AS created_by_name,
        a.affects_consumers, a.processes_pii, a.consumer_facing, a.created_at,
        ar.status_code AS latest_approval_status, sd.decision_code AS latest_decision
 FROM core.application a
+LEFT JOIN core.actor bo ON bo.actor_id = a.business_owner_actor_id
+LEFT JOIN core.actor cb ON cb.actor_id = a.created_by_actor_id
 LEFT JOIN LATERAL (SELECT status_code, approval_request_id FROM core.approval_request
                    WHERE target_application_id = a.application_id ORDER BY created_at DESC LIMIT 1) ar ON true
 LEFT JOIN LATERAL (SELECT decision_code FROM core.approval_signoff
@@ -63,9 +66,12 @@ RETURNING application_id, code, name, description, application_status_code, line
 -- name: list_applications
 SELECT a.application_id, a.code, a.name, a.description, a.application_status_code, a.line_of_business_code,
        a.data_classification_code, a.business_owner_actor_id, a.created_by_actor_id,
+       bo.display_name AS business_owner_name, cb.display_name AS created_by_name,
        a.affects_consumers, a.processes_pii, a.consumer_facing, a.created_at,
        ar.status_code AS latest_approval_status, sd.decision_code AS latest_decision
 FROM core.application a
+LEFT JOIN core.actor bo ON bo.actor_id = a.business_owner_actor_id
+LEFT JOIN core.actor cb ON cb.actor_id = a.created_by_actor_id
 LEFT JOIN LATERAL (SELECT status_code, approval_request_id FROM core.approval_request
                    WHERE target_application_id = a.application_id ORDER BY created_at DESC LIMIT 1) ar ON true
 LEFT JOIN LATERAL (SELECT decision_code FROM core.approval_signoff
