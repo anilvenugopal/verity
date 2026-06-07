@@ -120,6 +120,58 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
 
 # ─────────────────────────────────────────────
+# REFERENCE + DASHBOARD (M3 — portal support)
+# ─────────────────────────────────────────────
+
+  /reference/codes/{table}:
+    get:
+      summary: >
+        Rows of a whitelisted reference list for the badge system: code/label/description plus the
+        metadata presentation hints (tone → colour, icon → sprite). 404 if `table` is not whitelisted.
+      tags: [reference]
+      parameters:
+        - name: table
+          in: path
+          required: true
+          schema: { type: string, description: 'whitelisted reference table (e.g. application_status, approval_request_status)' }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [code, label]
+                  properties:
+                    code:        { type: string }
+                    label:       { type: string }
+                    description: { type: string, nullable: true }
+                    tone:        { type: string, nullable: true, description: 'closed palette: positive | warning | negative | info | neutral' }
+                    icon:        { type: string, nullable: true, description: sprite id }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dashboard/stats:
+    get:
+      summary: Home landing quick-stats (counts from the live tables; view-gated)
+      tags: [dashboard]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [applications, pending_approvals, active_decisions]
+                properties:
+                  applications:      { type: integer }
+                  pending_approvals: { type: integer }
+                  active_decisions:  { type: integer, description: '0 until a decision/run log exists (surfaced honestly)' }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+# ─────────────────────────────────────────────
 # APPLICATIONS (M3)
 # ─────────────────────────────────────────────
 
