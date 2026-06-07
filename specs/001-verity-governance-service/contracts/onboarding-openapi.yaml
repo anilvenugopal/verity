@@ -31,16 +31,39 @@ paths:
 
   /applications/{application_id}:
     get:
-      summary: Get an application (with its perimeter)
+      summary: Get an application (with its perimeter + derived review status)
       x-action: view
       parameters: [ { $ref: '#/components/parameters/ApplicationId' } ]
       responses:
         "200": { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/Application' } } } }
         "404": { $ref: '#/components/responses/NotFound' }
+    put:
+      summary: >
+        Edit a still-pending application in place (pre-activation remediation, e.g. after a
+        rejection). Pending-only (active/suspended/retired => 409); gated by onboard_application,
+        not restricted to the proposer/owner. Distinct from change-proposal (FR-IN-013, active apps).
+      x-action: onboard_application
+      parameters: [ { $ref: '#/components/parameters/ApplicationId' } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ApplicationPropose' } } } }
+      responses:
+        "200": { description: updated, content: { application/json: { schema: { $ref: '#/components/schemas/Application' } } } }
+        "400": { $ref: '#/components/responses/BadInput' }
+        "403": { $ref: '#/components/responses/Denied' }
+        "404": { $ref: '#/components/responses/NotFound' }
+        "409": { description: not pending (or duplicate code), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+  /applications/{application_id}/approval:
+    get:
+      summary: The latest approval request for an application (powers the workspace governance rail)
+      x-action: view
+      parameters: [ { $ref: '#/components/parameters/ApplicationId' } ]
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/ApprovalRequest' } } } }
+        "404": { description: the application has no approval yet (e.g. a never-submitted draft), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
 
   /applications/{application_id}/submit:
     post:
-      summary: Submit a pending application for approval (opens the onboarding approval)
+      summary: Submit a pending application for approval (opens the onboarding approval; supersedes any prior pending approval → cancelled)
       x-action: onboard_application
       parameters: [ { $ref: '#/components/parameters/ApplicationId' } ]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/SubmitForApproval' } } } }
@@ -132,10 +155,13 @@ components:
         governance_domain_codes: { type: array, items: { type: string } }
         jurisdiction_codes: { type: array, items: { type: string } }
         business_owner_actor_id: { type: string, format: uuid }
+        created_by_actor_id: { type: string, format: uuid, description: the proposer (server-resolved) }
         affects_consumers: { type: boolean }
         processes_pii: { type: boolean }
         consumer_facing: { type: boolean }
         created_at: { type: string, format: date-time }
+        latest_approval_status: { type: string, nullable: true, description: status of the most recent approval (null if never submitted); for deriving a display review status }
+        latest_decision: { type: string, nullable: true, description: the most recent sign-off decision on the latest approval (null if none) }
 
     SubmitForApproval:
       type: object
@@ -153,8 +179,9 @@ components:
       properties:
         approval_request_id: { type: string, format: uuid }
         request_kind_code: { type: string, description: application_onboarding }
-        status_code: { type: string, description: pending | approved | rejected }
-        target_application_id: { type: string, format: uuid }
+        status_code: { type: string, description: 'pending | approved | rejected | cancelled (a requested_changes sign-off closes the request as rejected; a re-submit cancels a prior pending one)' }
+        target_intake_id: { type: string, format: uuid, nullable: true }
+        target_application_id: { type: string, format: uuid, nullable: true }
         required_roles: { type: array, items: { type: string }, description: computed (AI Governance + business-owner-if-not-proposer) }
         signoffs:
           type: array
@@ -165,6 +192,7 @@ components:
               signed_as_role_code: { type: string }
               decision_code: { type: string }
               comment: { type: string, nullable: true }
+              created_at: { type: string, format: date-time, nullable: true }
 
     Signoff:
       type: object

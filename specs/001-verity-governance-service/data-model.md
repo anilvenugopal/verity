@@ -16,8 +16,9 @@ bind `target_intake_id`.
 
 ### `core.approval_signoff`
 `approval_request_id`, `approver_actor_id`, `signed_as_role_code` (a required role for the tier),
-`decision_code` (→ `reference.approval_decision`), `comment`. `uq_approval_signoff_request_role`
-gives one sign-off per role slot.
+`decision_code` (→ `reference.approval_decision`), `comment`, `created_at` (now surfaced in the read
+view — drives the onboarding workspace history timeline). `uq_approval_signoff_request_role` gives one
+sign-off per role slot.
 
 ### `core.intake`
 `ai_risk_tier_code` (read — drives the quorum; set by the Slice-3 assessment); `intake_status_code`
@@ -57,6 +58,18 @@ intake (ai_risk_tier_code) ──submit──> approval_request (kind=intake, ta
 `approval.sql` `open_request` is generalized to bind **`target_intake_id`** alongside
 `target_application_id` (one null). The onboarding caller passes `target_intake_id = NULL`; the
 intake caller passes `target_application_id = NULL`.
+
+## Onboarding remediation reuse (FR-IN-015a — query-only, no schema change)
+
+Pre-activation edit + rejection remediation reuse the existing tables; **no new tables or columns**:
+- `update_application` edits a `core.application` row while `application_status_code = 'pending'`
+  (guarded in SQL); its perimeter join rows are cleared + re-inserted in one transaction.
+- `cancel_pending_application_approvals` sets any still-`pending` `core.approval_request` for the
+  app to **`cancelled`** (a seeded `reference.approval_request_status` code) on re-submit, so one
+  review is live. A `requested_changes` sign-off closes the request as `rejected` (no deadlock).
+- The application read exposes `created_by_actor_id` and, via a `LATERAL` join, the latest approval's
+  `status_code` + last `decision_code` — so the UI derives a **display** review status (Draft / In
+  review / Rejected / Changes requested) for a pending app. No persisted status codes added.
 
 ## Deferred (NOT touched)
 

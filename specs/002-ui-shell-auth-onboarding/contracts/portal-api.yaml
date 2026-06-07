@@ -174,6 +174,50 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      summary: >
+        Edit a still-pending application in place (pre-activation remediation, e.g. after a
+        rejection). Pending-only (409 otherwise); requires onboard_application (not restricted to
+        the owner/proposer). The portal's edit mode uses this; re-submit then opens a fresh approval.
+      tags: [applications]
+      parameters:
+        - name: application_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ApplicationPropose" }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Application" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /applications/{application_id}/approval:
+    get:
+      summary: Latest approval for an application (powers the workspace governance rail)
+      tags: [applications]
+      parameters:
+        - name: application_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApprovalRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: the application has no approval yet (e.g. a never-submitted draft) }
 
   /applications/{application_id}/submit:
     post:
@@ -491,6 +535,7 @@ components:
         - affects_consumers
         - processes_pii
         - consumer_facing
+        - created_by_actor_id
         - created_at
       properties:
         application_id:             { type: string, format: uuid }
@@ -503,6 +548,7 @@ components:
         line_of_business_code:      { type: string, nullable: true }
         data_classification_code:   { type: string }
         business_owner_actor_id:    { type: string, format: uuid }
+        created_by_actor_id:        { type: string, format: uuid, description: the proposer (server-resolved) }
         regulatory_framework_codes: { type: array, items: { type: string } }
         governance_domain_codes:    { type: array, items: { type: string } }
         jurisdiction_codes:         { type: array, items: { type: string } }
@@ -510,6 +556,10 @@ components:
         processes_pii:              { type: boolean }
         consumer_facing:            { type: boolean }
         created_at:                 { type: string, format: date-time }
+        # latest-approval review status — lets the portal derive a display status (Draft / In review /
+        # Rejected / Changes requested) for a pending app. Null when never submitted. Display only.
+        latest_approval_status:     { type: string, nullable: true }
+        latest_decision:            { type: string, nullable: true }
 
     ApplicationPropose:
       type: object
@@ -574,16 +624,18 @@ components:
               signed_as_role_code: { type: string }
               decision_code:       { type: string, enum: [approved, rejected, requested_changes, abstained] }
               comment:             { type: string, nullable: true }
+              created_at:          { type: string, format: date-time, nullable: true, description: sign-off time (drives the workspace history timeline) }
         created_at:            { type: string, format: date-time }
 
     Signoff:
       type: object
       description: >
         Sign-off body for the shared POST /approvals/{id}/signoff (both kinds). `decision_code` is a
-        `reference.approval_decision` value. Resolution terminates the request only on `rejected`
-        (→ rejected) or a full quorum of `approved` (→ approved); `requested_changes` / `abstained`
-        leave it `pending`. UI note: the onboarding view offers Approve / Return-for-revision
-        (`requested_changes`); the intake view offers Approve / Reject only (`rejected`).
+        `reference.approval_decision` value. Resolution is per-kind. Onboarding closes the request on
+        `rejected` OR `requested_changes` (both → request `rejected`, so it never deadlocks) or a full
+        quorum of `approved` (→ approved + the application activated); a re-submit supersedes a prior
+        pending request (→ `cancelled`). The portal onboarding workspace offers Approve / Request
+        changes / Reject, and surfaces a derived review status (see Application.latest_*).
       required: [decision_code]
       properties:
         decision_code:
