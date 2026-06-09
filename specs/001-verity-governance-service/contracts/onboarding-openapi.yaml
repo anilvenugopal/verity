@@ -51,6 +51,31 @@ paths:
         "403": { $ref: '#/components/responses/Denied' }
         "404": { $ref: '#/components/responses/NotFound' }
         "409": { description: not pending (or duplicate code), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    delete:
+      summary: >
+        Hard-delete a PENDING application + its dependents (sign-offs, approvals, perimeter, app-team
+        grants). Security-only, API-only maintenance — no UI. Active apps are retired via lifecycle (409).
+      x-action: delete_application
+      parameters: [ { $ref: '#/components/parameters/ApplicationId' } ]
+      responses:
+        "204": { description: deleted }
+        "403": { $ref: '#/components/responses/Denied' }
+        "404": { $ref: '#/components/responses/NotFound' }
+        "409": { description: not pending (retire active apps instead), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+  /applications/{application_id}/withdraw:
+    post:
+      summary: >
+        Cancel the application's pending approval — the requester withdrawing their own submission.
+        Gated onboard_application (the app team, not approver roles); requires a live pending approval
+        (else 409). The approval becomes `cancelled` and the application returns to an editable draft.
+      x-action: onboard_application
+      parameters: [ { $ref: '#/components/parameters/ApplicationId' } ]
+      responses:
+        "200": { description: cancelled, content: { application/json: { schema: { $ref: '#/components/schemas/Application' } } } }
+        "403": { $ref: '#/components/responses/Denied' }
+        "404": { $ref: '#/components/responses/NotFound' }
+        "409": { description: no pending approval to cancel, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
 
   /applications/{application_id}/approval:
     get:

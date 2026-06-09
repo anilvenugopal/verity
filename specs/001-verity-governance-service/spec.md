@@ -438,6 +438,15 @@ throughout.
   and the **latest approval's status + last decision** so the UI can derive a non-persisted review
   status (Draft / In review / Rejected / Changes requested) for a `pending` application — no new
   status codes are introduced (`cancelled`, `requested_changes` already exist in reference data).
+  **Cancel vs. delete (distinct from approver-side `withdraw_approval`):** (a) **Cancel** is the
+  *requester* withdrawing their own live submission — `POST /applications/{id}/withdraw`, gated
+  `onboard_application` (the app team, **not** approver roles); it MUST require an actual pending
+  approval (else 409) and sets it `cancelled`, returning the app to an editable draft. This is NOT
+  `withdraw_approval` (the approver-side action, APPROVAL_ROLES), which stays a separate concept.
+  (b) **Delete** is an API-only, **security-only** hard delete (`DELETE /applications/{id}`, new
+  `delete_application` action) of a **pending** application + its dependents (sign-offs, approvals,
+  perimeter, app-team grants); **active** applications are retired via lifecycle, never hard-deleted
+  (409). No UI affordance for delete.
 - **FR-IN-016** *(v2-new — clarified 2026-06-04)*: Beyond onboarding, the application is managed
   via a multi-tab **application screen** (Overview · Environments · Harnesses · Inventory). The
   **Environments** tab lets the application owner **define** environments (definitions only —
