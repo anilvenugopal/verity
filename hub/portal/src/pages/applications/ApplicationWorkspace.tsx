@@ -125,6 +125,10 @@ export function ApplicationWorkspace() {
   const cancelBtn = pending && canDo('onboard_application') && (
     <button className="btn btn--ghost btn--md" disabled={busy} onClick={withdraw}>Cancel request</button>
   )
+  // the app team may delete a still-pending application (draft / in review / rejected)
+  const deleteBtn = canEdit && (
+    <button className="btn btn--danger btn--md" disabled={busy} onClick={del}>Delete</button>
+  )
 
   async function withdraw() {
     if (!app || busy) return
@@ -136,6 +140,19 @@ export function ApplicationWorkspace() {
     } catch (e) {
       setError(e instanceof ApiException ? e.body.detail : 'Cancel failed.')
     } finally {
+      setBusy(false)
+    }
+  }
+
+  async function del() {
+    if (!app || busy) return
+    if (!window.confirm(`Delete "${app.name}"? This permanently removes the application and its approvals. This cannot be undone.`)) return
+    setBusy(true); setError('')
+    try {
+      await api.del(`/api/applications/${app.application_id}`)
+      navigate('/applications')
+    } catch (e) {
+      setError(e instanceof ApiException ? e.body.detail : 'Delete failed.')
       setBusy(false)
     }
   }
@@ -260,7 +277,7 @@ export function ApplicationWorkspace() {
             ) : (
               <p className="input-hint">Not submitted for approval.</p>
             )}
-            {(editBtn || cancelBtn) && <div className="rail-actions">{editBtn}{cancelBtn}</div>}
+            {(editBtn || cancelBtn || deleteBtn) && <div className="rail-actions">{editBtn}{cancelBtn}{deleteBtn}</div>}
           </div>
         </aside>
       </div>

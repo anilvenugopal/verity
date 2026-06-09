@@ -28,7 +28,7 @@ ACTION_ROLES: dict[str, frozenset[str]] = {
     "view_reports": PLATFORM_ROLES,
     # intake authoring / lifecycle
     "onboard_application": frozenset({"business_owner", "ai_governance", "security"}),
-    "delete_application": frozenset({"security"}),  # API-only hard delete (maintenance/admin); no UI
+    "delete_application": frozenset({"business_owner", "ai_governance", "security"}),  # the app team may delete a still-pending app (draft/in-review/rejected)
     "create_intake": _AUTHORS,
     "edit_intake": _AUTHORS,
     "triage_intake": _GOVERNANCE,
