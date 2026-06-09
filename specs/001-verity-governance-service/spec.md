@@ -443,10 +443,11 @@ throughout.
   `onboard_application` (the app team, **not** approver roles); it MUST require an actual pending
   approval (else 409) and sets it `cancelled`, returning the app to an editable draft. This is NOT
   `withdraw_approval` (the approver-side action, APPROVAL_ROLES), which stays a separate concept.
-  (b) **Delete** is an API-only, **security-only** hard delete (`DELETE /applications/{id}`, new
-  `delete_application` action) of a **pending** application + its dependents (sign-offs, approvals,
-  perimeter, app-team grants); **active** applications are retired via lifecycle, never hard-deleted
-  (409). No UI affordance for delete.
+  (b) **Delete** is a hard delete (`DELETE /applications/{id}`, `delete_application` action gated to
+  the **app team** — `business_owner`/`ai_governance`/`security`) of a **pending** application + its
+  dependents (sign-offs, approvals, perimeter, app-team grants); a pending app is un-activated work
+  the team may discard, surfaced as a workspace **Delete** button (any pending state). **Active**
+  applications are retired via lifecycle, never hard-deleted (409).
 - **FR-IN-016** *(v2-new — clarified 2026-06-04)*: Beyond onboarding, the application is managed
   via a multi-tab **application screen** (Overview · Environments · Harnesses · Inventory). The
   **Environments** tab lets the application owner **define** environments (definitions only —

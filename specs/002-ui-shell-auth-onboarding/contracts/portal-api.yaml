@@ -252,6 +252,23 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
+    delete:
+      summary: >
+        Delete a still-pending application + its dependents (the workspace "Delete" button). Gated
+        delete_application (the app team — business_owner/ai_governance/security); pending-only (active
+        apps are retired via lifecycle, 409).
+      tags: [applications]
+      parameters:
+        - name: application_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: deleted }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
 
   /applications/{application_id}/withdraw:
     post:
@@ -259,8 +276,7 @@ paths:
         Cancel the application's pending approval — the requester withdrawing their own submission
         (the workspace "Cancel request" button). Requires onboard_application + a live pending
         approval (409 otherwise); the app returns to an editable draft. NOTE: this is the requester's
-        cancel, distinct from the approver-side withdraw_approval. (DELETE of an application is
-        security-only API maintenance with no portal UI — see onboarding-openapi.yaml.)
+        cancel, distinct from the approver-side withdraw_approval.
       tags: [applications]
       parameters:
         - name: application_id
