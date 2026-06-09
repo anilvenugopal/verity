@@ -121,6 +121,24 @@ export function ApplicationWorkspace() {
   const editBtn = canEdit && (
     <button className="btn btn--primary btn--md" onClick={() => navigate(`/applications/${app.application_id}/edit`)}>Edit &amp; re-submit</button>
   )
+  // the requester may cancel a live (pending) request, returning the app to an editable draft
+  const cancelBtn = pending && canDo('onboard_application') && (
+    <button className="btn btn--ghost btn--md" disabled={busy} onClick={withdraw}>Cancel request</button>
+  )
+
+  async function withdraw() {
+    if (!app || busy) return
+    setBusy(true); setError('')
+    try {
+      const fresh = await api.post<Application>(`/api/applications/${app.application_id}/withdraw`, {})
+      setApp(fresh)
+      setAppr(await api.get<ApprovalRequest>(`/api/applications/${app.application_id}/approval`).catch(() => null))
+    } catch (e) {
+      setError(e instanceof ApiException ? e.body.detail : 'Cancel failed.')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   async function decide(decision_code: string) {
     if (!appr || busy) return
@@ -242,7 +260,7 @@ export function ApplicationWorkspace() {
             ) : (
               <p className="input-hint">Not submitted for approval.</p>
             )}
-            {editBtn && <div className="rail-actions">{editBtn}</div>}
+            {(editBtn || cancelBtn) && <div className="rail-actions">{editBtn}{cancelBtn}</div>}
           </div>
         </aside>
       </div>

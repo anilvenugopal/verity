@@ -135,6 +135,39 @@ async def update(conn: AsyncConnection, application_id: UUID, body: ApplicationP
     return _to_model(row, frameworks, domains, jurisdictions)
 
 
+async def withdraw(conn: AsyncConnection, application_id: UUID, ctx: AuthContext) -> Application | None:
+    """Cancel the application's pending approval — the *requester* withdrawing their submission (gated
+    onboard_application). The application drops back to an editable pending draft. None => 404."""
+    gate = await queries.get_application_gate(conn, application_id=application_id)
+    if gate is None:
+        return None
+    pending = await queries.get_pending_application_approval(conn, application_id=application_id)
+    if pending is None:
+        raise OnboardingConflict("no pending approval to cancel")
+    async with conn.transaction():
+        await queries.cancel_pending_application_approvals(conn, application_id=application_id)
+    return await get_application(conn, application_id)
+
+
+async def delete_application(conn: AsyncConnection, application_id: UUID) -> bool | None:
+    """Hard-delete a PENDING application + its dependents (security-only, API maintenance). None => 404;
+    raises OnboardingConflict (409) for a non-pending app (retire active ones via lifecycle instead)."""
+    gate = await queries.get_application_gate(conn, application_id=application_id)
+    if gate is None:
+        return None
+    if gate["application_status_code"] != "pending":
+        raise OnboardingConflict("only a pending application can be deleted (retire active ones instead)")
+    async with conn.transaction():
+        await queries.delete_application_signoffs(conn, application_id=application_id)
+        await queries.delete_application_approvals(conn, application_id=application_id)
+        await queries.clear_application_frameworks(conn, application_id=application_id)
+        await queries.clear_application_domains(conn, application_id=application_id)
+        await queries.clear_application_jurisdictions(conn, application_id=application_id)
+        await queries.delete_application_grants(conn, application_id=application_id)
+        await queries.delete_application(conn, application_id=application_id)
+    return True
+
+
 async def get_application(conn: AsyncConnection, application_id: UUID) -> Application | None:
     row = await queries.get_application(conn, application_id=application_id)
     if row is None:

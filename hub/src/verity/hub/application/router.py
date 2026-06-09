@@ -100,6 +100,37 @@ async def get_application(
     return application
 
 
+@router.post("/applications/{application_id}/withdraw", response_model=Application)
+async def withdraw_application(
+    application_id: UUID,
+    conn: AsyncConnection = Depends(get_conn),
+    ctx: AuthContext = Depends(require_action("onboard_application")),
+) -> Application:
+    """Cancel the application's pending approval (the requester withdrawing their submission)."""
+    try:
+        app = await service.withdraw(conn, application_id, ctx)
+    except service.OnboardingConflict as exc:
+        raise HTTPException(409, str(exc)) from exc
+    if app is None:
+        raise HTTPException(404, "application not found")
+    return app
+
+
+@router.delete("/applications/{application_id}", status_code=204)
+async def delete_application(
+    application_id: UUID,
+    conn: AsyncConnection = Depends(get_conn),
+    ctx: AuthContext = Depends(require_action("delete_application")),
+) -> None:
+    """Hard-delete a pending application + its dependents (security-only, API maintenance; no UI)."""
+    try:
+        deleted = await service.delete_application(conn, application_id)
+    except service.OnboardingConflict as exc:
+        raise HTTPException(409, str(exc)) from exc
+    if deleted is None:
+        raise HTTPException(404, "application not found")
+
+
 @router.get("/applications/{application_id}/approval", response_model=ApprovalRequest)
 async def get_application_approval(
     application_id: UUID,

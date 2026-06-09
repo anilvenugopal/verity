@@ -21,3 +21,27 @@ FROM core.approval_request
 WHERE target_application_id = %(application_id)s
 ORDER BY created_at DESC
 LIMIT 1;
+
+-- name: get_pending_application_approval^
+-- The app's open (pending) approval, if any — used to confirm there is something to cancel.
+SELECT approval_request_id FROM core.approval_request
+WHERE target_application_id = %(application_id)s AND status_code = 'pending'
+ORDER BY created_at DESC LIMIT 1;
+
+-- ── Hard delete (security-only, pending apps; API maintenance) ───────────────────────────────────
+-- Run in FK order inside one transaction: sign-offs → approvals → perimeter (clear_* in
+-- application_perimeter.sql) → app-team grants → the application row.
+
+-- name: delete_application_signoffs!
+DELETE FROM core.approval_signoff
+WHERE approval_request_id IN (SELECT approval_request_id FROM core.approval_request
+                              WHERE target_application_id = %(application_id)s);
+
+-- name: delete_application_approvals!
+DELETE FROM core.approval_request WHERE target_application_id = %(application_id)s;
+
+-- name: delete_application_grants!
+DELETE FROM core.actor_app_role_grant WHERE application_id = %(application_id)s;
+
+-- name: delete_application!
+DELETE FROM core.application WHERE application_id = %(application_id)s;
