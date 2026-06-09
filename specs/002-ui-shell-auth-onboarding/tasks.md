@@ -8,7 +8,7 @@
 
 **Organization**: Tasks are grouped by user story. US1 (auth) → US2 (shell) → US3 (onboarding) → **US4 (intake create) → US5 (assessment) → US6 (submit + sign-off)**. Each phase is independently deployable and demonstrable.
 
-**Milestones**: T001–T043 = M1–M3 (auth shell, app shell, application onboarding). **T044–T058 = M4 (intake lifecycle)** — frontend-only over the already-shipped intake/assessment/approval backend (no backend additions; see plan.md "API Gap Analysis — Milestone 4"). M4 depends on M3 (portal shell, API client, the kind-aware `ApprovalView` from T035, and an `active` application from the onboarding flow).
+**Milestones**: T001–T043 = M1–M3 (auth shell, app shell, application onboarding). **T044–T058 = M4 (intake lifecycle)** — frontend-only over the already-shipped intake/assessment/approval backend (no backend additions; see plan.md "API Gap Analysis — Milestone 4"). M4 depends on M3 (portal shell, API client, the `ApplicationWorkspace` + its shared sign-off gate — the standalone `ApprovalView` was folded into the workspace during M3, the `Badge`/`ReviewBadge` system, and an `active` application from the onboarding flow). NOTE (2026-06-09 reconciliation): M3 shipped as a single `ApplicationWorkspace` (not the original `ApplicationDetail`/`ApprovalView`/`StatusBadge`); T045/T048/T055 re-pointed accordingly.
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -104,7 +104,15 @@
 
 ## Phase 5: User Story 3 — Browse and onboard an application (Priority: P3)
 
-**Goal**: A user with `ai_governance` role can view the application registry, onboard a new application through the multi-step form, and an approver can record a sign-off decision. Application detail with four tabs is accessible for active applications.
+> **Shipped reconciliation (2026-06-09):** T032–T037 below describe the original M3 plan (separate
+> `ApplicationDetail` / `ApprovalView` / `StatusBadge` / read-only modal / 4 tabs). M3 actually
+> shipped as a single **`ApplicationWorkspace`** (identity band · Compliance/Ownership tabs · Risk
+> Profile + Governance & Approval rail · derived history) with create/view/approve modes, the
+> reference-driven `Badge`/`ReviewBadge`, a **tab-gate** (not scroll-gate), and the requester
+> cancel / app-team delete / edit-&-resubmit remediation (001 FR-IN-015a). Read T032–T037 as the
+> historical plan; the live FRs (FR-014–020) and M4 tasks reflect the shipped surface.
+
+**Goal**: A user with `ai_governance` role can view the application registry, onboard a new application through the workspace create mode, and an approver can record a sign-off decision in the workspace governance rail.
 
 **Independent Test**: Mock-auth with `ai_governance` role (set `VERITY_MOCK_PLATFORM_ROLES=ai_governance,viewer`). Navigate to `/applications`. Assert registry table renders. Click "Onboard application". Complete all four steps. Assert `POST /api/applications` fires. Switch mock role to `security` (signoff-capable). Find the pending application → click to open → submit for approval → navigate to approval view → scroll → click "Approve" → assert `POST /api/approvals/{id}/signoff` fires with `decision_code: "approved"`.
 
@@ -116,7 +124,7 @@
 - [ ] T037 [US3] Update `hub/portal/src/App.tsx`: add routes for `/applications` → `<ApplicationsList />`, `/applications/new` → `<OnboardForm />` (within shell), `/applications/:id` → `<ApplicationDetail />`, `/approvals/:id` → `<ApprovalView />`; confirm all routes render inside `<AppShell />`
 - [ ] T038 [P] [US3] Add `GET /dashboard/stats` endpoint to `hub/src/verity/hub/app.py` (or a new `hub/src/verity/hub/stats/router.py`): returns `{applications: int, pending_approvals: int, active_decisions: int}` via three COUNT queries; requires `view` action; the landing page silently falls back to zeros if this endpoint is absent (already handled in T029)
 
-**Checkpoint**: Full onboarding flow works end-to-end with mock auth. Registry → onboard form → submit → approval view → sign-off → application shows as `active` in registry → detail page renders four tabs.
+**Checkpoint**: Full onboarding flow works end-to-end with mock auth. Registry → workspace create mode → submit → workspace governance rail sign-off → application shows as `active` in registry → workspace renders identity band + Compliance/Ownership tabs + Risk Profile / Governance rail.
 
 ---
 
@@ -143,10 +151,10 @@
 **Independent Test**: Mock-auth with an authoring role (`VERITY_MOCK_PLATFORM_ROLES=engineer`). Open an `active` application → Use Cases tab → "New intake" → enter a title → submit → assert `POST /api/applications/{application_id}/intakes` fires and `/intakes/{id}` renders with status `proposed`. Add a requirement → assert `POST /api/intakes/{id}/requirements` fires and it appears in the list.
 
 - [ ] T044 [P] [US4] Add intake + requirement TypeScript types to `hub/portal/src/api/types.ts` (or extend the client types): `Intake`, `IntakeCreate`, `Requirement`, `RequirementCreate`, `Intake` status union — mirror `data-model.md` §8–9 and `contracts/portal-api.yaml` (field names verbatim)
-- [ ] T045 [P] [US4] Extend `hub/portal/src/components/StatusBadge.tsx` to map `intake_status_code` (`proposed`/`in_review`/`approved`/`rejected`/`retired`) to pill colour tokens, and add a `RiskTierBadge` (high/unacceptable → negative, limited → warning, minimal → positive) per `data-model.md` §13
+- [ ] T045 [P] [US4] Intake status + risk-tier badges on the **reference-driven badge system** (`StatusBadge` was removed in M3 — use `Badge`/`ReviewBadge` + `/reference/codes`): seed `metadata.tone` for `reference.intake_status` (proposed/in_review/approved/rejected/retired) so `<Badge table="intake_status">` colours correctly, and add a `RiskTierBadge` (high/unacceptable → negative, limited → warning, minimal → positive) per `data-model.md` §13
 - [ ] T046 [US4] Create `hub/portal/src/pages/intakes/IntakeCreate.tsx`: the `intake.usecase-create` form (title required, optional description); submit calls `POST /api/applications/:appId/intakes` (body `IntakeCreate`); on 201 navigate to `/intakes/{intake_id}`; "Discard changes?" guard on dirty navigate; matches the create section of `specs/ui/verity-intake-wireframe.html`
-- [ ] T047 [US4] Create `hub/portal/src/pages/intakes/IntakeDetail.tsx`: fetch `GET /api/intakes/:id`; render title, `StatusBadge`, `RiskTierBadge` (when tier present), requirements list (`GET /api/intakes/:id/requirements`) with an add-requirement control (`POST …/requirements`, updates list in place), and an assessment-progress indicator (not-started / in-progress / tier-computed); disable all write affordances when `intake_status_code` is terminal (`rejected`/`retired`) per FR-031; matches the detail section of `specs/ui/verity-intake-wireframe.html`
-- [ ] T048 [US4] Modify `hub/portal/src/pages/applications/ApplicationDetail.tsx` (from T036) — Use Cases tab: list the application's intakes from `GET /api/applications/:id/intakes` (title + `StatusBadge`, link to `/intakes/{id}`) with an empty-state CTA; show a "New intake" CTA → `/applications/:id/intakes/new` only when `canDo("create_intake")` (FR-023)
+- [ ] T047 [US4] Create `hub/portal/src/pages/intakes/IntakeDetail.tsx`: fetch `GET /api/intakes/:id`; render title, intake `<Badge table="intake_status">`, `RiskTierBadge` (when tier present), requirements list (`GET /api/intakes/:id/requirements`) with an add-requirement control (`POST …/requirements`, updates list in place), and an assessment-progress indicator (not-started / in-progress / tier-computed); disable all write affordances when `intake_status_code` is terminal (`rejected`/`retired`) per FR-031; matches the detail section of `specs/ui/verity-intake-wireframe.html`
+- [ ] T048 [US4] Add a **Use cases** tab to `hub/portal/src/pages/applications/ApplicationWorkspace.tsx` (ApplicationDetail was replaced by the workspace in M3; add to the existing `TABS`): list the application's intakes from `GET /api/applications/:id/intakes` (title + intake `<Badge table="intake_status">`, link to `/intakes/{id}`) with an empty-state CTA; show a "New intake" CTA → `/applications/:id/intakes/new` only when `canDo("create_intake")` (FR-023)
 - [ ] T049 [US4] Wire M4 routes in `hub/portal/src/App.tsx`: `/applications/:appId/intakes/new` → `<IntakeCreate />` and `/intakes/:id` → `<IntakeDetail />`, both inside `<AppShell />` + `ProtectedRoute`
 
 **Checkpoint**: An intake can be created under an active application and viewed; requirements can be added; terminal intakes are read-only.
@@ -169,13 +177,13 @@
 
 ## Phase 9: User Story 6 — Submit an assessed intake + tier-quorum sign-off (Priority: P6)
 
-**Goal**: An author submits an assessed intake (opening a `kind=intake` approval with the tier quorum); a distinct approver signs off via the reused `ApprovalView`; a full quorum approves the intake. Reject-only; separation of duty; allow-but-warn during review.
+**Goal**: An author submits an assessed intake (opening a `kind=intake` approval with the tier quorum); a distinct approver signs off via the **shared sign-off gate** (extracted from `ApplicationWorkspace`, reused on `IntakeDetail`); a full quorum approves the intake. Reject-only; separation of duty; allow-but-warn during review.
 
 **Independent Test**: Author (`engineer`) opens an assessed intake → "Submit for approval" → assert `POST /api/intakes/:id/submit` fires, returns `approval_request_id` + `required_roles`, intake advances to `in_review`. Switch to a distinct quorum role (`VERITY_MOCK_PLATFORM_ROLES=business_owner,compliance,legal,model_risk,ai_governance`) → open `/approvals/{approval_request_id}` → scroll → "Approve" → assert `POST /api/approvals/:id/signoff` with `{decision_code:"approved"}`; once all required roles approve, the intake shows `approved`.
 
-- [ ] T053 [US6] Add the submit action to `IntakeDetail.tsx`: a "Submit for approval" control disabled until a tier is computed (FR-028); calls `POST /api/intakes/:id/submit`; on 201 show the returned `required_roles` (the tier quorum) and reflect status `in_review`; map 400 (no tier) and 409 (terminal / duplicate open approval / empty `unacceptable` quorum) to inline messages
+- [ ] T053 [US6] Add the submit action to `IntakeDetail.tsx`: a "Submit for approval" control disabled until a tier is computed (FR-028); calls `POST /api/intakes/:id/submit`; on 201 show the returned `required_roles` (the tier quorum) and reflect status `in_review`; map 400 (no tier) and 409 (terminal / duplicate open approval / empty `unacceptable` quorum) to inline messages. NOTE: intake submit does NOT supersede a prior open approval (it 409s) — unlike application onboarding which cancels-and-reopens (001 FR-IN-015a); surface the 409 rather than silently re-submitting
 - [ ] T054 [US6] Add the **allow-but-warn** banner (FR-032) to `IntakeDetail.tsx` + `AssessmentTabs.tsx`: while `intake_status_code === "in_review"`, edits stay enabled but a banner warns that re-saving may change the computed tier and required quorum
-- [ ] T055 [US6] Confirm the kind-aware `ApprovalView.tsx` (from T035) handles `kind=intake`: sourced from `GET /api/approvals/:id`, shows the composed intake + quorum progress, offers **Approve / Reject only** (`decision_code` ∈ {`approved`,`rejected`} — no "Return for revision"); the submitter sees the sign-off action disabled (separation of duty; backend 403 is NOT surfaced as a route-level takeover); on resolve navigate back to `/intakes/{target_intake_id}`
+- [ ] T055 [US6] Extract a **shared sign-off gate** from `ApplicationWorkspace`'s Governance & Approval rail (the `.appr` quorum rows + Approve/Reject + tab-gate + SoD/comment logic) into a reusable component, and present it on `IntakeDetail` with `kind=intake` (the standalone `ApprovalView` was folded into the workspace in M3): sourced from `GET /api/approvals/:id` (resolved from the intake's open approval), shows the composed intake + quorum progress, offers **Approve / Reject only** (`decision_code` ∈ {`approved`,`rejected`} — no "Request changes"); the submitter sees the sign-off action disabled (separation of duty; backend 403 is NOT surfaced as a route-level takeover); on resolve the intake detail reflects `approved`/`rejected`
 - [ ] T056 [US6] Wire navigation: from `IntakeDetail` submit → the approval view (`/approvals/:id`, route already added in T037); after approval resolves, the intake detail reflects `approved`/`rejected`
 
 **Checkpoint**: Full intake lifecycle is demoable end-to-end with two mock roles (separation of duty); reject-only; tier quorum drives the outcome.
@@ -199,17 +207,17 @@
 - **Phase 4 (US2 — Shell)**: Depends on Phase 3 (session context + account menu must exist)
 - **Phase 5 (US3 — Onboarding)**: Depends on Phase 4 (shell layout wrapper must exist)
 - **Phase 6 (Polish)**: Depends on Phase 5 complete
-- **Phase 7 (US4 — Intake create)**: Depends on M3 — needs the portal shell, API client, `ApplicationDetail` (T036, modified by T048), `StatusBadge` (T033, extended by T045), and an `active` application from the onboarding flow
+- **Phase 7 (US4 — Intake create)**: Depends on M3 — needs the portal shell, API client, `ApplicationWorkspace` (a Use cases tab is added by T048), the `Badge`/`ReviewBadge` system (intake badges added by T045), and an `active` application from the onboarding flow
 - **Phase 8 (US5 — Assessment)**: Depends on Phase 7 (`IntakeDetail` hosts the assessment)
-- **Phase 9 (US6 — Submit + sign-off)**: Depends on Phase 8 (a computed tier gates submit) and on the kind-aware `ApprovalView` (T035)
+- **Phase 9 (US6 — Submit + sign-off)**: Depends on Phase 8 (a computed tier gates submit) and on the shared sign-off gate extracted from `ApplicationWorkspace` (T055)
 - **Phase 10 (M4 Polish)**: Depends on Phase 9 complete
 
 ### Within M4 (Phases 7–9)
 
 - T044, T045, T050 are [P] (types/badges — different files) and can be done first
-- T046, T047 (US4 pages) → T048 (ApplicationDetail Use Cases) → T049 (routes)
+- T046, T047 (US4 pages) → T048 (ApplicationWorkspace Use cases tab) → T049 (routes)
 - T051 (AssessmentTabs) depends on T050 + T047; T052 integrates it into IntakeDetail
-- T053/T054 extend IntakeDetail; T055 reuses ApprovalView (T035); T056 wires navigation
+- T053/T054 extend IntakeDetail; T055 extracts the shared sign-off gate (from ApplicationWorkspace) + uses it on IntakeDetail; T056 wires navigation
 
 ### Within Phase 3 (US1)
 

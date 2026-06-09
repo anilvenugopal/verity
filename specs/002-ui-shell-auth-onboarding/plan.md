@@ -31,7 +31,7 @@ Build the first usable React + TypeScript product surface for Verity v2 — a po
 - No frontend-side authorization logic — all permission decisions come from the API; the portal only hides/shows affordances based on what the API returns.
 - Mock-auth section must have zero DOM presence when `VITE_VERITY_ENV` ≠ `local`.
 
-**Scale/Scope**: ~15 screens (M1: 4, M2: 3, M3: 5, M4: 3 — intake create/detail/review), single SPA, single tenant. M4 reuses the M3 approval view (scroll-gate) for `kind=intake` and the shipped assessment tabs.
+**Scale/Scope**: ~15 screens (M1: 4, M2: 3, M3: 5, M4: 3 — intake create/detail/review), single SPA, single tenant. M4 reuses the M3 **tab-gated sign-off gate** (extracted from `ApplicationWorkspace`) for `kind=intake` and the shipped assessment tabs.
 
 ---
 
@@ -115,15 +115,17 @@ hub/
 │           ├── AuthStatePage.tsx   (auth.states — session-expired/forbidden/disabled)
 │           ├── Landing.tsx         (home.landing wireframe)
 │           ├── applications/
-│           │   ├── ApplicationsList.tsx    (intake.applications)
-│           │   ├── OnboardForm.tsx         (intake.onboard — multi-step)
-│           │   ├── ApprovalView.tsx        (intake.onboard-approval — REUSED by M4 for kind=intake)
-│           │   └── ApplicationDetail.tsx   (intake.app-detail + tabs; Use Cases tab lists intakes — M4)
+│           │   ├── ApplicationsList.tsx       (intake.applications)
+│           │   ├── OnboardForm.tsx            (workspace create mode — Identity card + tabs + required-field UX)
+│           │   └── ApplicationWorkspace.tsx   (view/approve — identity band, tabs, Risk Profile + Governance rail,
+│           │       #                            history; the sign-off gate lives here. M3 SHIPPED THIS — it replaced
+│           │       #                            the planned ApplicationDetail + ApprovalView + StatusBadge. A Use
+│           │       #                            cases tab is added in M4; extract the sign-off gate as shared.)
 │           └── intakes/                     ← M4
 │               ├── IntakeCreate.tsx        (intake.usecase-create — form under an application)
-│               ├── IntakeDetail.tsx        (intake.usecase-detail — status, requirements, assessment progress)
+│               ├── IntakeDetail.tsx        (intake.usecase-detail — status, requirements, assessment progress,
+│               │   #                          + Governance & Approval panel reusing the shared sign-off gate)
 │               └── AssessmentTabs.tsx      (the two shipped tabs: AI Decision Impact + Data; per-tab save)
-│                   # the intake sign-off view reuses ApprovalView.tsx with kind=intake (approve/reject only)
 │
 └── src/verity/hub/
     └── auth/
@@ -188,7 +190,7 @@ The spec's auth endpoints are not yet in the running hub. These must be added be
 | `POST /approvals/{approval_request_id}/signoff` | **EXISTS** | `signoff` | Sign off; separation of duty enforced backend-side (submitter→403); REUSED from M3 |
 
 **Clarification-driven behaviors (Session 2026-06-05):**
-- **Reject-only**: the reused `ApprovalView` omits the "Return for revision" button when `kind=intake` (no withdraw route exists for intake). `decision_code` ∈ {`approved`, `rejected`}.
+- **Reject-only**: the reused **shared sign-off gate** (extracted from `ApplicationWorkspace`) omits the "Request changes" button when `kind=intake` (no withdraw route exists for intake). `decision_code` ∈ {`approved`, `rejected`}.
 - **Per-tab save**: each assessment tab save issues `PUT …/assessment` with the **full** assessment snapshot → one revision per save; the response's computed tier re-renders.
 - **Allow-but-warn**: edits stay enabled in `in_review` (backend blocks only terminal status); the detail/assessment surfaces show a banner that re-saving may change the tier/quorum.
 - **New-intake CTA**: gated on `create_intake` (matches the backend route gate).
