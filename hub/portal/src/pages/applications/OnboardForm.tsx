@@ -329,7 +329,9 @@ export function OnboardForm() {
             <div className="rail-row"><span className="rail-row__k">Data sensitivity</span><span className="rail-row__v"><span className="badge badge--sm" data-tone={sens.tone}><span className="badge__dot" /><span className="badge__label">{sens.label}</span></span></span></div>
             <div className="rail-row"><span className="rail-row__k">Consumer impact</span><span className="rail-row__v"><span className="badge badge--sm" data-tone={affectsConsumers ? 'warning' : 'neutral'}><span className="badge__dot" /><span className="badge__label">{affectsConsumers ? (consumerFacing ? 'Decisions · facing' : 'Decisions') : consumerFacing ? 'Consumer-facing' : 'None'}</span></span></span></div>
             <div className="rail-row"><span className="rail-row__k">Privacy</span><span className="rail-row__v"><span className="badge badge--sm" data-tone={processesPii ? 'warning' : 'neutral'}><span className="badge__dot" /><span className="badge__label">{processesPii ? 'PII / PHI' : 'None'}</span></span></span></div>
-            <div className="rail-row"><span className="rail-row__k">Regulatory surface</span><span className="rail-row__v">{frameworks.size} fw · {jurisdictions.size} juris.</span></div>
+            <div className="rail-row"><span className="rail-row__k">Frameworks</span><span className="rail-row__v">{frameworks.size}</span></div>
+            <div className="rail-row"><span className="rail-row__k">Jurisdictions</span><span className="rail-row__v">{jurisdictions.size}</span></div>
+            <div className="rail-row"><span className="rail-row__k">Governance domains</span><span className="rail-row__v">{domains.size}</span></div>
           </div>
 
           <div className="card">

@@ -228,7 +228,9 @@ export function ApplicationWorkspace() {
             <div className="rail-row"><span className="rail-row__k">Data sensitivity</span><span className="rail-row__v"><span className="badge badge--sm" data-tone={sensitivity.tone}><span className="badge__dot" /><span className="badge__label">{sensitivity.label}</span></span></span></div>
             <div className="rail-row"><span className="rail-row__k">Consumer impact</span><span className="rail-row__v"><span className="badge badge--sm" data-tone={app.affects_consumers ? 'warning' : 'neutral'}><span className="badge__dot" /><span className="badge__label">{app.affects_consumers ? (app.consumer_facing ? 'Decisions · facing' : 'Decisions') : app.consumer_facing ? 'Consumer-facing' : 'None'}</span></span></span></div>
             <div className="rail-row"><span className="rail-row__k">Privacy</span><span className="rail-row__v"><span className="badge badge--sm" data-tone={app.processes_pii ? 'warning' : 'neutral'}><span className="badge__dot" /><span className="badge__label">{app.processes_pii ? 'PII / PHI' : 'None'}</span></span></span></div>
-            <div className="rail-row"><span className="rail-row__k">Regulatory surface</span><span className="rail-row__v">{app.regulatory_framework_codes.length} fw · {app.jurisdiction_codes.length} juris.</span></div>
+            <div className="rail-row"><span className="rail-row__k">Frameworks</span><span className="rail-row__v">{app.regulatory_framework_codes.length}</span></div>
+            <div className="rail-row"><span className="rail-row__k">Jurisdictions</span><span className="rail-row__v">{app.jurisdiction_codes.length}</span></div>
+            <div className="rail-row"><span className="rail-row__k">Governance domains</span><span className="rail-row__v">{app.governance_domain_codes.length}</span></div>
           </div>
 
           <div className="card">
