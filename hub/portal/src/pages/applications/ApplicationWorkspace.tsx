@@ -279,10 +279,23 @@ export function ApplicationWorkspace() {
             ) : (
               <p className="input-hint">Not submitted for approval.</p>
             )}
-            {(editBtn || cancelBtn || deleteBtn) && <div className="rail-actions">{editBtn}{cancelBtn}{deleteBtn}</div>}
           </div>
         </aside>
       </div>
+
+      {/* Application actions (owner/requester lifecycle) — kept out of the governance rail; the
+          destructive Delete is separated to the far end. */}
+      {(editBtn || cancelBtn || deleteBtn) && (
+        <section className="section">
+          <div className="section__head"><span className="eyebrow">Application actions</span></div>
+          <div className="l-cluster">
+            {editBtn}
+            {cancelBtn}
+            <span className="l-spacer" />
+            {deleteBtn}
+          </div>
+        </section>
+      )}
 
       {/* Derived history */}
       <details className="aw-hist">
