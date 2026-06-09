@@ -15,7 +15,7 @@ from psycopg.errors import ForeignKeyViolation
 
 from verity.hub.application import service as onboarding
 from verity.hub.approval import service as approval_service
-from verity.hub.approval.models import ApprovalRequest, Signoff
+from verity.hub.approval.models import ApprovalRequest, AwaitingApproval, Signoff
 from verity.hub.auth.dependencies import require_action
 from verity.hub.auth.models import AuthContext
 from verity.hub.intake_approval import service as intake_approval
@@ -34,6 +34,16 @@ async def get_conn(request: Request):
 async def _kind(conn: AsyncConnection, approval_request_id: UUID) -> str | None:
     request = await approval_service.get_request(conn, approval_request_id)
     return request["request_kind_code"] if request else None
+
+
+@router.get("/approvals/awaiting-me", response_model=list[AwaitingApproval])
+async def awaiting_me(
+    conn: AsyncConnection = Depends(get_conn),
+    ctx: AuthContext = Depends(require_action("view")),
+) -> list[AwaitingApproval]:
+    """The caller's MY APPROVALS queue: pending onboarding requests they can act on (declared before
+    the /{approval_request_id} route so 'awaiting-me' isn't parsed as a UUID)."""
+    return await onboarding.awaiting_onboarding_approvals(conn, ctx)
 
 
 @router.get("/approvals/{approval_request_id}", response_model=ApprovalRequest)

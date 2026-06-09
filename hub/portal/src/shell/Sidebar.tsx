@@ -1,7 +1,7 @@
 import { type KeyboardEvent, useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { api } from '@/api/client'
-import type { Application } from '@/api/types'
+import type { Application, AwaitingApproval } from '@/api/types'
 import { useSession } from '@/auth/useSession'
 import { ReviewBadge } from '@/components/ReviewBadge'
 import { NAV, type NavNode, resolveNav } from './nav'
@@ -18,11 +18,13 @@ export function Sidebar() {
   const navigate = useNavigate()
   const { canDo, hasRole, principal } = useSession()
   const [apps, setApps] = useState<Application[]>([])
+  const [approvals, setApprovals] = useState<AwaitingApproval[]>([])
 
-  // Applications drive two nav features: the MY APPLICATIONS object projection (apps I own) and the
-  // live count badge on the Applications page. Fetched once; both derive from it.
+  // Applications drive the MY APPLICATIONS projection + the Applications count badge; the awaiting-me
+  // queue drives MY APPROVALS. Both project (bounded, re-gated) into the Intake sidebar.
   useEffect(() => {
     api.get<Application[]>('/api/applications').then(setApps).catch(() => setApps([]))
+    api.get<AwaitingApproval[]>('/api/approvals/awaiting-me').then(setApprovals).catch(() => setApprovals([]))
   }, [])
 
   const myApps = principal ? apps.filter((a) => a.business_owner_actor_id === principal.actor_id) : []
@@ -34,20 +36,23 @@ export function Sidebar() {
   const active = navApps.find((a) => a.to && a.to !== '/' && pathname.startsWith(a.to) && a.children?.length)
   if (!active?.children?.length) return null
 
-  // Project my applications into the Intake sidebar as a bounded, re-gated "My applications" section.
+  // Project MY APPLICATIONS (apps I own) + MY APPROVALS (requests awaiting me) into the Intake
+  // sidebar — bounded query-result objects, re-gated by resolveNav's postProcess.
   const projectMyApps = (nodes: NavNode[]): NavNode[] => {
-    if (active.key !== 'intake' || myApps.length === 0) return nodes
-    const objs: NavNode[] = myApps.slice(0, MY_APPS_MAX).map((a) => ({
-      key: `obj-app-${a.application_id}`,
-      kind: 'page',
-      label: a.name,
-      icon: 'i-entity-application',
-      to: `/applications/${a.application_id}`,
-      section: 'My applications',
-    }))
+    if (active.key !== 'intake') return nodes
+    const objs: NavNode[] = []
+    objs.push(...myApps.slice(0, MY_APPS_MAX).map((a): NavNode => ({
+      key: `obj-app-${a.application_id}`, kind: 'page', label: a.name,
+      icon: 'i-entity-application', to: `/applications/${a.application_id}`, section: 'My applications',
+    })))
     if (myApps.length > MY_APPS_MAX) {
       objs.push({ key: 'obj-app-more', kind: 'page', label: 'See all', icon: 'i-next', to: '/applications', section: 'My applications' })
     }
+    // MY APPROVALS — only when present (the queue is empty for non-approvers).
+    objs.push(...approvals.slice(0, MY_APPS_MAX).map((r): NavNode => ({
+      key: `obj-appr-${r.approval_request_id}`, kind: 'page', label: r.name,
+      icon: 'i-approve', to: `/applications/${r.application_id}`, section: 'My approvals',
+    })))
     return [...objs, ...nodes]
   }
 

@@ -13,7 +13,7 @@ from psycopg import AsyncConnection
 
 from verity.hub.application.models import Application, ApplicationPropose
 from verity.hub.approval import service as approval_service
-from verity.hub.approval.models import ApprovalRequest
+from verity.hub.approval.models import ApprovalRequest, AwaitingApproval
 from verity.hub.auth.models import AuthContext, AuthError
 from verity.hub.db import queries
 
@@ -242,6 +242,30 @@ async def get_application_approval_view(conn: AsyncConnection, application_id: U
     if row is None:
         return None
     return await get_request_view(conn, row["approval_request_id"])
+
+
+async def awaiting_onboarding_approvals(conn: AsyncConnection, ctx: AuthContext) -> list["AwaitingApproval"]:
+    """The principal's MY APPROVALS queue (onboarding): pending requests where they hold a required
+    role for an unfilled slot and have not yet signed. Mirrors the sign_off eligibility/quorum +
+    self-approval guard (G1)."""
+    actor = str(ctx.principal.actor_id)
+    is_ai_gov = "ai_governance" in ctx.principal.platform_roles
+    out: list[AwaitingApproval] = []
+    async for r in queries.list_pending_onboarding_approvals(conn, actor_id=ctx.principal.actor_id):
+        if r["i_signed"]:
+            continue
+        signed = set(r["signed_roles"])
+        is_owner = actor == str(r["business_owner_actor_id"])
+        is_proposer = actor == str(r["opened_by_actor_id"])
+        owner_needed = str(r["business_owner_actor_id"]) != str(r["created_by_actor_id"])
+        can_ai = is_ai_gov and "ai_governance" not in signed and (not is_proposer or is_owner)
+        can_owner = is_owner and owner_needed and "business_owner" not in signed
+        if can_ai or can_owner:
+            out.append(AwaitingApproval(
+                approval_request_id=r["approval_request_id"], application_id=r["application_id"],
+                code=r["code"], name=r["name"],
+            ))
+    return out
 
 
 async def get_request_view(conn: AsyncConnection, approval_request_id: UUID) -> ApprovalRequest | None:

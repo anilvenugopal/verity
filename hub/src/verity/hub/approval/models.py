@@ -29,6 +29,15 @@ class SignoffRecord(BaseModel):
     created_at: datetime | None = None
 
 
+class AwaitingApproval(BaseModel):
+    """A row in a principal's MY APPROVALS queue — a pending request they can act on, with the app
+    identity to render + link to the workspace."""
+    approval_request_id: UUID
+    application_id: UUID
+    code: str
+    name: str
+
+
 class ApprovalRequest(BaseModel):
     approval_request_id: UUID
     request_kind_code: str

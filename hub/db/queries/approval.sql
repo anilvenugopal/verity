@@ -35,6 +35,22 @@ VALUES (%(approval_request_id)s, %(approver_actor_id)s, %(signed_as_role_code)s,
 UPDATE core.approval_request SET status_code = %(status_code)s, updated_at = now()
 WHERE approval_request_id = %(approval_request_id)s;
 
+-- name: list_pending_onboarding_approvals
+-- Pending application-onboarding approvals + the data to compute "awaiting me": the app identity,
+-- its owner + proposer (created_by), which role slots are already signed, and whether THIS actor
+-- has signed. The per-principal eligibility filter (quorum + self-approval guard) is in the service.
+SELECT ar.approval_request_id, ar.opened_by_actor_id,
+       a.application_id, a.code, a.name, a.business_owner_actor_id, a.created_by_actor_id,
+       coalesce(array_agg(s.signed_as_role_code) FILTER (WHERE s.signed_as_role_code IS NOT NULL), '{}') AS signed_roles,
+       bool_or(s.approver_actor_id = %(actor_id)s) AS i_signed
+FROM core.approval_request ar
+JOIN core.application a ON a.application_id = ar.target_application_id
+LEFT JOIN core.approval_signoff s ON s.approval_request_id = ar.approval_request_id
+WHERE ar.request_kind_code = 'application_onboarding' AND ar.status_code = 'pending'
+GROUP BY ar.approval_request_id, ar.opened_by_actor_id, a.application_id, a.code, a.name,
+         a.business_owner_actor_id, a.created_by_actor_id
+ORDER BY ar.created_at DESC;
+
 -- name: cancel_pending_application_approvals!
 -- Supersede any still-open approval for an application (e.g. when re-submitting after an edit) so a
 -- stale review can't be acted on and the latest request is unambiguous.

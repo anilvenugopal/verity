@@ -48,6 +48,13 @@ export interface Application {
   latest_decision: string | null
 }
 
+export interface AwaitingApproval {
+  approval_request_id: string
+  application_id: string
+  code: string
+  name: string
+}
+
 export interface SignoffRecord {
   approver_actor_id: string
   signed_as_role_code: string
