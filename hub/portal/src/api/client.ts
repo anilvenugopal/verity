@@ -46,15 +46,17 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   if (!res.ok) {
     throw new ApiException(res.status, await parseError(res))
   }
-  if (method !== 'GET') emitDataChanged() // a mutation succeeded → let persistent views re-fetch
+  // PATCH is only used for actor-scoped writes (preferences) that don't affect shared views.
+  if (method !== 'GET' && method !== 'PATCH') emitDataChanged()
   if (res.status === 204) return undefined as T
   const text = await res.text()
   return (text ? JSON.parse(text) : undefined) as T
 }
 
 export const api = {
-  get: <T>(path: string) => request<T>('GET', path),
-  post: <T>(path: string, body?: unknown) => request<T>('POST', path, body ?? {}),
-  put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body ?? {}),
-  del: <T>(path: string) => request<T>('DELETE', path),
+  get:   <T>(path: string) => request<T>('GET', path),
+  post:  <T>(path: string, body?: unknown) => request<T>('POST', path, body ?? {}),
+  put:   <T>(path: string, body?: unknown) => request<T>('PUT', path, body ?? {}),
+  patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body ?? {}),
+  del:   <T>(path: string) => request<T>('DELETE', path),
 }

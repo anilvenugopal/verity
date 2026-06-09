@@ -23,6 +23,12 @@ export interface ApiError {
   request_id: string
 }
 
+// Mirrors hub/src/verity/hub/preferences/models.py::UserPreferences
+export interface UserPreferences {
+  theme_mode: 'light' | 'dark' | 'system'
+  theme_palette: 'gray' | 'slate' | 'warm'
+}
+
 // Mirrors hub/src/verity/hub/application/models.py::Application
 export interface Application {
   application_id: string

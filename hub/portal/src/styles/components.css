@@ -263,6 +263,18 @@
 
 .app__sidebar--collapsed .sidebar__header { justify-content: center; padding: var(--space-3) var(--space-2); gap: 0; }
 
+/* Resize handle — 8px hit target centered on the right border; 2px visual stripe on hover/drag */
+.sidebar__resize-handle {
+  position: absolute; top: 0; right: -4px; width: 8px; height: 100%;
+  cursor: col-resize; z-index: 10;
+}
+.sidebar__resize-handle::after {
+  content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 2px; height: 100%; background: transparent; transition: background var(--dur-fast);
+}
+.sidebar__resize-handle:hover::after,
+.app__sidebar.is-resizing .sidebar__resize-handle::after { background: var(--color-brand); }
+
 .nav-item {
   display: flex; align-items: center; gap: var(--space-2);
   padding: 6px var(--space-3); margin: 0 var(--space-2);

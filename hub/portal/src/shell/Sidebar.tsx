@@ -1,4 +1,4 @@
-import { type KeyboardEvent, useEffect, useState } from 'react'
+import { type KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { api } from '@/api/client'
 import { onDataChanged } from '@/api/events'
@@ -13,14 +13,39 @@ import { NAV, type NavNode, resolveNav } from './nav'
 // injected via resolveNav's postProcess hook so they're RE-GATED — the projection can never surface
 // what the affordance gate would hide. Reuses canonical sidebar/nav-item/badge classes — no new CSS.
 const MY_APPS_MAX = 3
+const MIN_W = 140
+const MAX_W = 520
+const DEFAULT_W = 200
 
-export function Sidebar() {
+export function Sidebar({ collapsed, onCollapse }: { collapsed: boolean; onCollapse: () => void }) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const { canDo, hasRole, principal } = useSession()
   const [apps, setApps] = useState<Application[]>([])
   const [approvals, setApprovals] = useState<AwaitingApproval[]>([])
-  const [collapsed, setCollapsed] = useState(false)
+  const [width, setWidth] = useState(DEFAULT_W)
+  const [resizing, setResizing] = useState(false)
+  const widthRef = useRef(DEFAULT_W)
+
+  const onResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startW = widthRef.current
+    setResizing(true)
+
+    const onMove = (ev: MouseEvent) => {
+      const next = Math.min(MAX_W, Math.max(MIN_W, startW + ev.clientX - startX))
+      widthRef.current = next
+      setWidth(next)
+    }
+    const onUp = () => {
+      setResizing(false)
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }, [])
 
   // Applications drive the MY APPLICATIONS projection + the Applications count badge; the awaiting-me
   // queue drives MY APPROVALS. Both project (bounded, re-gated) into the Intake sidebar.
@@ -101,26 +126,31 @@ export function Sidebar() {
   }
 
   return (
-    <nav className={`app__sidebar${collapsed ? ' app__sidebar--collapsed' : ''}`} aria-label={active.label}>
+    <nav
+      className={`app__sidebar${collapsed ? ' app__sidebar--collapsed' : ''}${resizing ? ' is-resizing' : ''}`}
+      style={{ width: collapsed ? 0 : width }}
+      aria-label={active.label}
+    >
+      <div className="sidebar__resize-handle" onMouseDown={onResizeStart} />
       <div className="sidebar__header">
-        {!collapsed && <svg className="icon" aria-hidden="true"><use href={`#${active.icon}`} /></svg>}
-        {!collapsed && <span className="sidebar__app-name">{active.label}</span>}
+        <svg className="icon" aria-hidden="true"><use href={`#${active.icon}`} /></svg>
+        <span className="sidebar__app-name">{active.label}</span>
         <button
           className="sidebar__toggle"
-          onClick={() => setCollapsed(c => !c)}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          title={collapsed ? 'Expand' : 'Collapse'}
+          onClick={onCollapse}
+          aria-label="Collapse sidebar"
+          title="Collapse"
         >
-          <svg className="icon" aria-hidden="true"><use href={collapsed ? '#i-next' : '#i-prev'} /></svg>
+          <svg className="icon" aria-hidden="true"><use href="#i-prev" /></svg>
         </button>
       </div>
-      {!collapsed && sections.map((sec) => (
+      {sections.map((sec) => (
         <div className="sidebar__section" key={sec || 'default'}>
           {sec && <div className="sidebar__section-label">{sec}</div>}
           {pages.filter((p) => (p.section ?? '') === sec).map(item)}
         </div>
       ))}
-      {!collapsed && actions.length > 0 && (
+      {actions.length > 0 && (
         <>
           <span className="l-spacer" />
           <div className="sidebar__section">

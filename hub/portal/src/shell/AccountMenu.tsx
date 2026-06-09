@@ -17,7 +17,7 @@ function roleLabel(code: string): string {
     .join(' ')
 }
 
-export function AccountMenu({ principal }: { principal: Principal }) {
+export function AccountMenu({ principal, onPreferences }: { principal: Principal; onPreferences: () => void }) {
   const [open, setOpen] = useState(false)
   const { refresh } = useSession()
   const navigate = useNavigate()
@@ -102,6 +102,10 @@ export function AccountMenu({ principal }: { principal: Principal }) {
           </div>
 
           <div className="menu__items">
+            <button className="menu__item" onClick={() => { setOpen(false); onPreferences() }}>
+              <svg className="icon" aria-hidden="true"><use href="#i-app-settings" /></svg>
+              Preferences
+            </button>
             <button className="menu__item menu__item--danger" onClick={signOut}>
               <svg className="icon" aria-hidden="true"><use href="#i-open-editor" /></svg>
               Sign out

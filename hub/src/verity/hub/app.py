@@ -27,6 +27,7 @@ from verity.hub.intake.router import router as intake_router
 from verity.hub.intake_approval.router import router as intake_approval_router
 from verity.hub.reference.router import router as reference_router
 from verity.hub.dashboard.router import router as dashboard_router
+from verity.hub.preferences.router import router as preferences_router
 
 # Local-dev fallback so SessionMiddleware has a key when session_secret is unset (mock/local).
 # Prod requires a real per-env secret — enforced in config.validate_startup (FR-013a).
@@ -115,6 +116,7 @@ def create_app() -> FastAPI:
     app.include_router(intake_router)
     app.include_router(assessment_router)
     app.include_router(intake_approval_router)
+    app.include_router(preferences_router)
 
     # Serve the built portal (prod). Mounted LAST so the API routes above take priority; a no-op in
     # local dev where Vite serves the portal. `portal/dist/` is gitignored.
