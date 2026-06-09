@@ -3,7 +3,7 @@
 // - 401 → emits 'session-expired' (the SessionProvider shows the takeover)
 // - 403 → emits 'forbidden' with the parsed ApiError (route-level forbidden takeover)
 // - returns typed JSON or throws ApiError
-import { emitAuth } from './events'
+import { emitAuth, emitDataChanged } from './events'
 import type { ApiError } from './types'
 
 export class ApiException extends Error {
@@ -46,6 +46,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   if (!res.ok) {
     throw new ApiException(res.status, await parseError(res))
   }
+  if (method !== 'GET') emitDataChanged() // a mutation succeeded → let persistent views re-fetch
   if (res.status === 204) return undefined as T
   const text = await res.text()
   return (text ? JSON.parse(text) : undefined) as T

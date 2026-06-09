@@ -13,3 +13,15 @@ export function onAuth(event: AuthEvent, handler: (detail: unknown) => void): ()
   bus.addEventListener(event, listener)
   return () => bus.removeEventListener(event, listener)
 }
+
+// Fired by the API client after any successful mutation (POST/PUT/DELETE) so persistent views — the
+// sidebar's MY APPLICATIONS / MY APPROVALS / counts — re-fetch instead of going stale until reload.
+export function emitDataChanged(): void {
+  bus.dispatchEvent(new CustomEvent('data-changed'))
+}
+
+export function onDataChanged(handler: () => void): () => void {
+  const listener = () => handler()
+  bus.addEventListener('data-changed', listener)
+  return () => bus.removeEventListener('data-changed', listener)
+}
