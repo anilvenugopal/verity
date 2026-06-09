@@ -143,6 +143,25 @@ def down() -> None:
     _stop("hub")
 
 
+def demo() -> None:
+    """Seed demo / test data (testing & demonstrations only — separate from the governed seed).
+    The SQL lives in tools/demo_seed.py; this just picks the mode."""
+    import demo_seed  # sibling module (tools/ is on sys.path when ./dev runs)
+
+    mode = inquirer.select(
+        message="demo data — testing & demonstrations only",
+        choices=[
+            {"name": "idempotent  create any demo apps that are missing", "value": "idempotent"},
+            {"name": "refresh     delete all demo apps, then recreate", "value": "refresh"},
+            {"name": "cancel      do nothing", "value": "cancel"},
+        ],
+    ).execute()
+    if mode == "cancel":
+        return
+    for line in demo_seed.run(DB_URL, mode):
+        console.print(f"[dim]{line}[/]")
+
+
 # ── the menu ─────────────────────────────────────────────────────────────────
 Action = namedtuple("Action", "name desc fn")
 
@@ -150,6 +169,7 @@ ACTIONS = [
     Action("status", "Show what's running (Postgres / hub / portal)", status),
     Action("up", "Start the hub + portal", up),
     Action("down", "Stop the hub + portal", down),
+    Action("demo", "Seed demo / test data (idempotent / refresh)", demo),
 ]
 BY_NAME = {a.name: a for a in ACTIONS}
 
