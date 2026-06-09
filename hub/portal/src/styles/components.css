@@ -247,12 +247,21 @@
 
 /* ═══ SIDEBAR — expanded in-app nav (design-system §7) ═════════════════════ */
 .sidebar__header { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4);
-                   border-bottom: 0.5px solid var(--border-default); }
-.sidebar__app-name { font-size: var(--fs-h3); font-weight: var(--fw-semibold); color: var(--text-primary); }
+                   border-bottom: 0.5px solid var(--border-default); flex-shrink: 0; }
+.sidebar__app-name { font-size: var(--fs-h3); font-weight: var(--fw-semibold); color: var(--text-primary); flex: 1; min-width: 0;
+                     overflow: hidden; white-space: nowrap; }
 .sidebar__section { padding: var(--space-3) var(--space-2) var(--space-1); }
 .sidebar__section-label { padding: 0 var(--space-3); margin-bottom: var(--space-1);
   font-size: var(--fs-eyebrow); font-weight: var(--fw-semibold); letter-spacing: var(--tracking-eyebrow);
   text-transform: uppercase; color: var(--text-tertiary); }
+
+.sidebar__toggle { display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+                   width: 24px; height: 24px; border-radius: var(--radius-md); border: none;
+                   background: transparent; color: var(--text-tertiary); cursor: pointer;
+                   transition: background var(--dur-fast), color var(--dur-fast); }
+.sidebar__toggle:hover { background: var(--surface-hover); color: var(--text-primary); }
+
+.app__sidebar--collapsed .sidebar__header { justify-content: center; padding: var(--space-3) var(--space-2); gap: 0; }
 
 .nav-item {
   display: flex; align-items: center; gap: var(--space-2);

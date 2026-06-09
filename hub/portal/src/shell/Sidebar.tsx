@@ -1,6 +1,7 @@
 import { type KeyboardEvent, useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { api } from '@/api/client'
+import { onDataChanged } from '@/api/events'
 import type { Application, AwaitingApproval } from '@/api/types'
 import { useSession } from '@/auth/useSession'
 import { ReviewBadge } from '@/components/ReviewBadge'
@@ -19,12 +20,17 @@ export function Sidebar() {
   const { canDo, hasRole, principal } = useSession()
   const [apps, setApps] = useState<Application[]>([])
   const [approvals, setApprovals] = useState<AwaitingApproval[]>([])
+  const [collapsed, setCollapsed] = useState(false)
 
   // Applications drive the MY APPLICATIONS projection + the Applications count badge; the awaiting-me
   // queue drives MY APPROVALS. Both project (bounded, re-gated) into the Intake sidebar.
   useEffect(() => {
-    api.get<Application[]>('/api/applications').then(setApps).catch(() => setApps([]))
-    api.get<AwaitingApproval[]>('/api/approvals/awaiting-me').then(setApprovals).catch(() => setApprovals([]))
+    const load = () => {
+      api.get<Application[]>('/api/applications').then(setApps).catch(() => setApps([]))
+      api.get<AwaitingApproval[]>('/api/approvals/awaiting-me').then(setApprovals).catch(() => setApprovals([]))
+    }
+    load()
+    return onDataChanged(load) // re-fetch after any create/submit/delete/cancel/edit (returns the unsubscribe)
   }, [])
 
   const myApps = principal ? apps.filter((a) => a.business_owner_actor_id === principal.actor_id) : []
@@ -95,18 +101,26 @@ export function Sidebar() {
   }
 
   return (
-    <nav className="app__sidebar" aria-label={active.label}>
+    <nav className={`app__sidebar${collapsed ? ' app__sidebar--collapsed' : ''}`} aria-label={active.label}>
       <div className="sidebar__header">
-        <svg className="icon" aria-hidden="true"><use href={`#${active.icon}`} /></svg>
-        <span className="sidebar__app-name">{active.label}</span>
+        {!collapsed && <svg className="icon" aria-hidden="true"><use href={`#${active.icon}`} /></svg>}
+        {!collapsed && <span className="sidebar__app-name">{active.label}</span>}
+        <button
+          className="sidebar__toggle"
+          onClick={() => setCollapsed(c => !c)}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? 'Expand' : 'Collapse'}
+        >
+          <svg className="icon" aria-hidden="true"><use href={collapsed ? '#i-next' : '#i-prev'} /></svg>
+        </button>
       </div>
-      {sections.map((sec) => (
+      {!collapsed && sections.map((sec) => (
         <div className="sidebar__section" key={sec || 'default'}>
           {sec && <div className="sidebar__section-label">{sec}</div>}
           {pages.filter((p) => (p.section ?? '') === sec).map(item)}
         </div>
       ))}
-      {actions.length > 0 && (
+      {!collapsed && actions.length > 0 && (
         <>
           <span className="l-spacer" />
           <div className="sidebar__section">

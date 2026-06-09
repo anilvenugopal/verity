@@ -57,7 +57,10 @@
   background: var(--surface-nav);
   border-right: 0.5px solid var(--border-default);
   overflow-y: auto;
+  overflow-x: hidden;
+  transition: width var(--dur-base) ease;
 }
+.app__sidebar--collapsed { width: 40px; overflow-y: hidden; }
 
 .app__canvas {
   flex: 1;
