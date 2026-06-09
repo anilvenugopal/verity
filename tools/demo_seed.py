@@ -17,8 +17,8 @@ import uuid
 
 import psycopg
 
-DEMO_CODE_PREFIX = "Z"          # demo application TLAs start with Z
-DEMO_TEAMMATE = "[Demo] Teammate"
+DEMO_CODE_PREFIX = "Z"          # demo application TLAs start with Z (the teardown marker)
+DEMO_TEAMMATE_NAME = "Devin Shah"   # a synthetic colleague — proposer/owner of the 'awaiting you' app
 
 
 def _app_id(code: str) -> str:
@@ -26,41 +26,47 @@ def _app_id(code: str) -> str:
     already-open tab's links never 404."""
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, f"verity.demo.application.{code}"))
 
+
+def _teammate_id() -> str:
+    """Deterministic actor_id for the synthetic colleague — lets teardown find it by id rather than
+    a visible '[Demo]' tag in the name."""
+    return str(uuid.uuid5(uuid.NAMESPACE_DNS, "verity.demo.teammate"))
+
 # Each demo app: who proposes/owns it, what state, and a self-documenting name + description so the
 # screen explains what it's demonstrating. owner/proposer ∈ {"you", "team"}.
 # state ∈ {"draft", "pending", "rejected"}.
 DEMO_APPS = [
     {
-        "code": "ZAP", "name": "[Demo] Awaiting your approval",
-        "description": "A teammate submitted this and it needs your AI-Governance sign-off — this is "
-                       "how a request appears in MY APPROVALS. Open it and Approve / Request changes / Reject.",
+        "code": "ZAP", "name": "Life New Business Triage",
+        "description": "Screens individual life new-business applications: extracts medical and "
+                       "financial disclosures, scores mortality risk, and refers substandard cases to an underwriter.",
         "owner": "team", "proposer": "team", "state": "pending",
         "classification": "tier4_pii_restricted", "frameworks": ["eu_ai_act", "nydfs"],
         "domains": ["model_risk", "fairness", "privacy"], "jurisdictions": ["ny", "ca"],
         "affects_consumers": True, "processes_pii": True, "consumer_facing": False,
     },
     {
-        "code": "ZMA", "name": "[Demo] My draft application",
-        "description": "Created by you and not yet submitted — this is how a Draft appears in "
-                       "MY APPLICATIONS. Edit it and Submit for approval when ready.",
+        "code": "ZMA", "name": "Personal Auto Underwriting",
+        "description": "Extracts risk attributes from personal-auto submissions, scores appetite, and "
+                       "routes high-materiality cases to a human underwriter for review.",
         "owner": "you", "proposer": "you", "state": "draft",
         "classification": "tier2_internal", "frameworks": ["internal_only"],
         "domains": ["model_risk"], "jurisdictions": ["us_federal"],
         "affects_consumers": False, "processes_pii": False, "consumer_facing": False,
     },
     {
-        "code": "ZMI", "name": "[Demo] My application in review",
-        "description": "Created by you and submitted — this is how an In-review application appears in "
-                       "MY APPLICATIONS while its approval is pending.",
+        "code": "ZMI", "name": "Claims Severity Predictor",
+        "description": "Predicts likely claim severity at first notice of loss to prioritise adjuster "
+                       "assignment and support early reserve setting.",
         "owner": "you", "proposer": "you", "state": "pending",
         "classification": "tier3_confidential", "frameworks": ["nist_ai_rmf"],
         "domains": ["fairness", "robustness"], "jurisdictions": ["ny"],
         "affects_consumers": True, "processes_pii": False, "consumer_facing": True,
     },
     {
-        "code": "ZMR", "name": "[Demo] My rejected application",
-        "description": "Created by you, submitted, and a teammate rejected it — this is how a Rejected "
-                       "application appears in MY APPLICATIONS. Use Edit & re-submit to remediate.",
+        "code": "ZMR", "name": "Commercial Property Risk Scoring",
+        "description": "Scores commercial-property submissions for catastrophe and occupancy risk to "
+                       "support quote and decline decisions.",
         "owner": "you", "proposer": "you", "state": "rejected",
         "classification": "tier3_confidential", "frameworks": ["colorado_sb21_169"],
         "domains": ["fairness", "transparency"], "jurisdictions": ["co"],
@@ -85,14 +91,13 @@ def _resolve_you(conn) -> tuple[str, str] | None:
 
 
 def _ensure_teammate(conn) -> str:
-    row = conn.execute("SELECT actor_id FROM core.actor WHERE display_name = %s", (DEMO_TEAMMATE,)).fetchone()
-    if row:
-        return str(row[0])
-    row = conn.execute(
-        "INSERT INTO core.actor (actor_type_code, display_name) VALUES ('human', %s) RETURNING actor_id",
-        (DEMO_TEAMMATE,),
-    ).fetchone()
-    return str(row[0])
+    tid = _teammate_id()
+    if not conn.execute("SELECT 1 FROM core.actor WHERE actor_id = %s", (tid,)).fetchone():
+        conn.execute(
+            "INSERT INTO core.actor (actor_id, actor_type_code, display_name) VALUES (%s,'human',%s)",
+            (tid, DEMO_TEAMMATE_NAME),
+        )
+    return tid
 
 
 def teardown(conn) -> int:
@@ -109,7 +114,8 @@ def teardown(conn) -> int:
         conn.execute("DELETE FROM core.application_jurisdiction WHERE application_id = ANY(%s)", (ids,))
         conn.execute("DELETE FROM core.actor_app_role_grant WHERE application_id = ANY(%s)", (ids,))
         conn.execute("DELETE FROM core.application WHERE application_id = ANY(%s)", (ids,))
-    conn.execute("DELETE FROM core.actor WHERE display_name LIKE %s", ("[Demo]%",))
+    # the synthetic colleague (by deterministic id) + any legacy '[Demo]' actors from older runs
+    conn.execute("DELETE FROM core.actor WHERE actor_id = %s OR display_name LIKE %s", (_teammate_id(), "[Demo]%"))
     return len(ids)
 
 
@@ -149,7 +155,7 @@ def _create(conn, spec: dict, you: str, team: str) -> None:
         conn.execute(
             "INSERT INTO core.approval_signoff (approval_request_id, approver_actor_id, signed_as_role_code, decision_code, comment) "
             "VALUES (%s,%s,'ai_governance','rejected',%s)",
-            (appr_id, team, "[demo] Rejected — the stated purpose is too broad; narrow the scope and resubmit."),
+            (appr_id, team, "Rejected — the stated purpose is too broad; please narrow the scope and resubmit."),
         )
         conn.execute("UPDATE core.approval_request SET status_code = 'rejected' WHERE approval_request_id = %s", (appr_id,))
     # state == "pending": leave the approval open (In review / Awaiting your approval)
