@@ -109,6 +109,16 @@ paths:
         "400": { $ref: '#/components/responses/BadInput' }
         "403": { $ref: '#/components/responses/Denied' }
 
+  /approvals/awaiting-me:
+    get:
+      summary: >
+        The caller's MY APPROVALS queue: pending onboarding requests they can act on (hold a required
+        role for an unfilled slot, have not signed; mirrors the sign-off quorum + self-approval guard).
+        Declared before /approvals/{approval_request_id} so the literal path is not parsed as a UUID.
+      x-action: view
+      responses:
+        "200": { description: ok, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/AwaitingApproval' } } } } }
+
   /approvals/{approval_request_id}:
     get:
       summary: Get an approval request and its sign-offs
@@ -218,6 +228,15 @@ components:
               decision_code: { type: string }
               comment: { type: string, nullable: true }
               created_at: { type: string, format: date-time, nullable: true }
+
+    AwaitingApproval:
+      type: object
+      description: A row in the caller's MY APPROVALS queue — a pending request they can act on.
+      properties:
+        approval_request_id: { type: string, format: uuid }
+        application_id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
 
     Signoff:
       type: object

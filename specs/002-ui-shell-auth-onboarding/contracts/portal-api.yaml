@@ -326,6 +326,22 @@ paths:
 # APPROVALS (M3)
 # ─────────────────────────────────────────────
 
+  /approvals/awaiting-me:
+    get:
+      summary: >
+        The caller's MY APPROVALS queue — pending onboarding requests they can act on (powers the
+        bounded MY APPROVALS sidebar group). Empty for non-approvers. Declared before /{id}.
+      tags: [approvals]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/AwaitingApproval" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /approvals/{approval_request_id}:
     get:
       summary: Get an approval request (requires view action)
@@ -674,6 +690,16 @@ components:
         processes_pii:              { type: boolean }
         consumer_facing:            { type: boolean }
         justification:              { type: string, minLength: 1 }
+
+    AwaitingApproval:
+      type: object
+      description: A row in the caller's MY APPROVALS queue — a pending request they can act on.
+      required: [approval_request_id, application_id, code, name]
+      properties:
+        approval_request_id: { type: string, format: uuid }
+        application_id:      { type: string, format: uuid }
+        code:                { type: string }
+        name:                { type: string }
 
     ApprovalRequest:
       type: object
