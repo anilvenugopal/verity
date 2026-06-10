@@ -100,6 +100,11 @@ async def capture(conn: AsyncConnection, intake_id: UUID, body: AssessmentInput,
                 IntakeStatusChange(to_status_code="rejected", reason=UNACCEPTABLE_NOTE), ctx,
             )
             status_code, auto_rejected = "rejected", True
+        else:
+            # 003 US1 (FR-001/FR-021): the assessment is the mapping layer — saving it (re-)resolves
+            # the obligation set from the metamodel (tier × app domains × frameworks). Runs in this txn.
+            from verity.hub.obligation import service as obligation_service
+            await obligation_service.resolve(conn, intake_id, ctx)
     computed = Computed(
         ai_risk_tier_code=tier, naic_materiality_code=materiality,
         data_classification_code=classification,
