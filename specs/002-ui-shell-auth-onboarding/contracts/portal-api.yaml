@@ -634,6 +634,27 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /intakes/{intake_id}/approval:
+    get:
+      summary: >
+        The intake's latest kind=intake approval view (mirrors GET /applications/{id}/approval).
+        Powers the intake detail Governance & Approval panel + the Cancel-request affordance. 404 when
+        the intake was never submitted — the detail page treats that as "not submitted".
+      tags: [intakes]
+      parameters:
+        - name: intake_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApprovalRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /intakes/{intake_id}/submit:
     post:
       summary: >

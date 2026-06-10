@@ -23,6 +23,20 @@ async def get_conn(request: Request):
         yield conn
 
 
+@router.get("/intakes/{intake_id}/approval", response_model=ApprovalRequest)
+async def get_intake_approval(
+    intake_id: UUID,
+    conn: AsyncConnection = Depends(get_conn),
+    ctx: AuthContext = Depends(require_action("view")),
+) -> ApprovalRequest:
+    """The intake's latest kind=intake approval view (mirrors GET /applications/{id}/approval).
+    404 when the intake was never submitted — the detail page treats that as 'not submitted'."""
+    view = await service.get_intake_approval_view(conn, intake_id)
+    if view is None:
+        raise HTTPException(404, "no approval for this intake")
+    return view
+
+
 @router.post("/intakes/{intake_id}/submit", status_code=201, response_model=ApprovalRequest)
 async def submit_intake(
     intake_id: UUID,

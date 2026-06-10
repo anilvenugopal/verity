@@ -68,6 +68,15 @@ async def submit_for_approval(conn: AsyncConnection, intake_id: UUID, ctx: AuthC
     return approval_service.build_view(row, [], required)
 
 
+async def get_intake_approval_view(conn: AsyncConnection, intake_id: UUID) -> ApprovalRequest | None:
+    """The latest approval for an intake, as the read view. None => never submitted. Mirrors
+    application.service.get_application_approval_view; powers the intake detail governance panel."""
+    row = await queries.get_latest_intake_approval(conn, intake_id=intake_id)
+    if row is None:
+        return None
+    return await get_request_view(conn, row["approval_request_id"])
+
+
 async def get_request_view(conn: AsyncConnection, approval_request_id: UUID) -> ApprovalRequest | None:
     request = await approval_service.get_request(conn, approval_request_id)
     if request is None:

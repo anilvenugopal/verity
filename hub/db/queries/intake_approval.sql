@@ -13,6 +13,14 @@ SELECT EXISTS (
     WHERE target_intake_id = %(intake_id)s AND request_kind_code = 'intake' AND status_code = 'pending'
 ) AS present;
 
+-- name: get_latest_intake_approval^
+-- The intake's most recent kind=intake approval request id (any status), if any — powers the
+-- intake detail Governance & Approval panel + the Cancel-request affordance. Mirrors
+-- get_latest_application_approval. Null => the intake was never submitted.
+SELECT approval_request_id FROM core.approval_request
+WHERE target_intake_id = %(intake_id)s AND request_kind_code = 'intake'
+ORDER BY created_at DESC LIMIT 1;
+
 -- name: cancel_pending_intake_approvals!
 -- Supersede any still-open kind=intake approval for an intake — the requester withdrawing their
 -- submission (mirrors cancel_pending_application_approvals). The intake's own status is left

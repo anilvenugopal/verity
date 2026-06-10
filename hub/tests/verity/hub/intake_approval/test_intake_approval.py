@@ -150,6 +150,21 @@ def test_guards_rejection_duplicate_double_sign_terminal_emptyquorum(pg_url):
         assert c.post(f"/approvals/{req_dbl}/signoff", json={"decision_code": "approved"}).status_code == 409  # same slot
 
 
+def test_get_intake_approval_view(pg_url):
+    # Mirrors GET /applications/{id}/approval: 404 before submit; after submit returns the view with
+    # the tier quorum so the intake detail can render the Governance panel + Cancel affordance.
+    intake = _seed_intake(pg_url, "GAV", tier="minimal")
+    with TestClient(_submitter(pg_url)) as c:
+        assert c.get(f"/intakes/{intake}/approval").status_code == 404  # never submitted
+        request_id = c.post(f"/intakes/{intake}/submit", json={}).json()["approval_request_id"]
+        view = c.get(f"/intakes/{intake}/approval")
+        assert view.status_code == 200, view.text
+        body = view.json()
+        assert body["approval_request_id"] == request_id
+        assert body["request_kind_code"] == "intake"
+        assert body["required_roles"] == ["business_owner"]
+
+
 def test_requested_changes_closes_request_and_leaves_intake_revisable(pg_url):
     # Parity with application onboarding: a 'requested_changes' sign-off closes the request (no
     # deadlock); the intake stays at in_review so the author can edit & re-submit.
