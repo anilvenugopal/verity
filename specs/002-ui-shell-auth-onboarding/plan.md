@@ -4,7 +4,7 @@
 
 ## Summary
 
-Build the first usable React + TypeScript product surface for Verity v2 — a portal over **everything the governance backend already supports**: sign-in (local-dev mock first; Entra OIDC scaffolded), the persistent app shell, a landing page, the application-onboarding workflow (M3), and the **intake lifecycle** (M4: create → assess → submit → tier-quorum sign-off). The CSS/icon kit in `specs/ui/kit/` is the approved visual source; the five-layer CSS files are copied verbatim into the React project. The backend auth session endpoints (`/auth/login`, `/auth/callback`, `/auth/mock`, `/auth/logout`) are added alongside M1 frontend work. **M4 adds no new backend** — it is pure frontend over the already-shipped intake/assessment/approval routes, with the same `GET /me`-style read wiring as M1–M3.
+Build the first usable React + TypeScript product surface for Verity v2 — a portal over **everything the governance backend already supports**: sign-in (local-dev mock first; Entra OIDC scaffolded), the persistent app shell, a landing page, the application-onboarding workflow (M3), and the **intake lifecycle** (M4: create → assess → submit → tier-quorum sign-off). The CSS/icon kit in `specs/ui/kit/` is the approved visual source; the five-layer CSS files are copied verbatim into the React project. The backend auth session endpoints (`/auth/login`, `/auth/callback`, `/auth/mock`, `/auth/logout`) are added alongside M1 frontend work. **M4 is mostly frontend** over the already-shipped intake/assessment/approval routes (same `GET /me`-style read wiring as M1–M3), plus **one bounded backend slice** — the pre-approval edit/withdraw/delete endpoints added for lifecycle parity with application onboarding (2026-06-09 scope exception; see API Gap Analysis — Milestone 4).
 
 ---
 
@@ -54,7 +54,7 @@ Build the first usable React + TypeScript product surface for Verity v2 — a po
 
 **No violations. Cleared for Phase 0.**
 
-**M4 post-design re-check (2026-06-05)**: still clean. M4 introduces **no new DB schema** (reads/writes the already-shipped intake/assessment/approval tables via existing routes — Principle II holds), **no backend additions** (API-only boundary IV holds — the portal calls existing HTTP routes), and all TypeScript types mirror backend snake_case field names verbatim (naming gate holds; see data-model.md §8–13). No legacy import (III). No agent/binding/deployment surface (V/VII N/A).
+**M4 post-design re-check (2026-06-05; amended 2026-06-09)**: still clean. M4 introduces **no new DB schema** (reads/writes the already-shipped intake/assessment/approval tables — Principle II holds). It adds a **bounded backend slice** (intake edit/withdraw/delete + `requested_changes`-closes parity) under the 2026-06-09 scope exception — raw SQL via aiosql + thin repo (ADR-0012 holds), action-gated and fail-closed (FR-008/029 hold), mirroring the existing application lifecycle; covered by 14 new tests. All TypeScript types mirror backend snake_case field names verbatim (naming gate holds; see data-model.md §8–13). No legacy import (III). No agent/binding/deployment surface (V/VII N/A).
 
 ---
 
@@ -173,11 +173,14 @@ The spec's auth endpoints are not yet in the running hub. These must be added be
 
 ## API Gap Analysis — Milestone 4 (Intake lifecycle)
 
-**No backend additions.** Every endpoint M4 consumes already exists in the hub (verified against the routers). M4 is frontend-only.
+**Mostly frontend, plus one bounded backend slice.** Every read/assessment/approval endpoint M4 consumes already existed in the hub. Per the **2026-06-09 scope exception** (lifecycle parity with application onboarding), M4 **adds** the pre-approval edit/withdraw/delete endpoints below (mirrored from the application lifecycle, fully tested) so the requester/app-team UX is identical.
 
 | Endpoint | Status | Action gate | Notes |
 |---|---|---|---|
 | `POST /applications/{application_id}/intakes` | **EXISTS** | `create_intake` | Create an intake under an application → returns `Intake` (status `proposed`) |
+| `PUT /intakes/{intake_id}` | **ADDED (M4)** | `edit_intake` | Edit a revisable intake's title/description (Edit & re-submit); 409 if locked — mirrors `PUT /applications/{id}` |
+| `POST /intakes/{intake_id}/withdraw` | **ADDED (M4)** | `edit_intake` | Requester cancels the open kind=intake approval (Cancel request); 409 if none open — mirrors `POST /applications/{id}/withdraw` |
+| `DELETE /intakes/{intake_id}` | **ADDED (M4)** | `delete_intake` | App-team hard-delete of a revisable intake + cascade; 409 if locked — mirrors `DELETE /applications/{id}` |
 | `GET /applications/{application_id}/intakes` | **EXISTS** | `view` | List an application's intakes (Use Cases tab) |
 | `GET /intakes/{intake_id}` | **EXISTS** | `view` | Intake detail |
 | `POST /intakes/{intake_id}/requirements` | **EXISTS** | (intake author) | Add a requirement |
@@ -189,8 +192,9 @@ The spec's auth endpoints are not yet in the running hub. These must be added be
 | `GET /approvals/{approval_request_id}` | **EXISTS** | `view` | Read the intake approval (kind-dispatched) — REUSED from M3 |
 | `POST /approvals/{approval_request_id}/signoff` | **EXISTS** | `signoff` | Sign off; separation of duty enforced backend-side (submitter→403); REUSED from M3 |
 
-**Clarification-driven behaviors (Session 2026-06-05):**
-- **Reject-only**: the reused **shared sign-off gate** (extracted from `ApplicationWorkspace`) omits the "Request changes" button when `kind=intake` (no withdraw route exists for intake). `decision_code` ∈ {`approved`, `rejected`}.
+**Clarification-driven behaviors:**
+- **Approve / Request changes / Reject (2026-06-09 parity — supersedes the 2026-06-05 reject-only)**: the reused **shared sign-off gate** (extracted from `ApplicationWorkspace`) offers all three decisions for `kind=intake`, identical to onboarding. `decision_code` ∈ {`approved`, `requested_changes`, `rejected`}; both `requested_changes` and `rejected` close the request (→ rejected) and the intake stays at `in_review` (revisable) for Edit & re-submit.
+- **Lifecycle footer (2026-06-09 parity)**: `IntakeDetail` carries an "Intake actions" footer — Edit & re-submit (`PUT`), Cancel request (`POST …/withdraw`), Delete (`DELETE`, `delete_intake`-gated) — shown only for a revisable intake, exactly mirroring the application workspace footer.
 - **Per-tab save**: each assessment tab save issues `PUT …/assessment` with the **full** assessment snapshot → one revision per save; the response's computed tier re-renders.
 - **Allow-but-warn**: edits stay enabled in `in_review` (backend blocks only terminal status); the detail/assessment surfaces show a banner that re-saving may change the tier/quorum.
 - **New-intake CTA**: gated on `create_intake` (matches the backend route gate).
