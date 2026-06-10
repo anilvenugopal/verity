@@ -37,6 +37,7 @@ ACTION_ROLES: dict[str, frozenset[str]] = {
     "edit_requirement": _AUTHORS,
     "record_evidence": _GOVERNANCE,  # record evidence satisfying an intake obligation (003 US1)
     "approve_exception": frozenset({"compliance", "security"}),  # sign off a compliance exception / waiver (003 US1, separation of duty)
+    "link_asset": frozenset({"engineer", "ai_governance"}),  # link a registry asset to an intake requirement (003 US2)
     "edit_impact_assessment": _GOVERNANCE,
     "generate_plan": _AUTHORS,
     "edit_plan": _AUTHORS,
