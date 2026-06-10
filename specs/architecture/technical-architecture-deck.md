@@ -861,49 +861,82 @@ stateDiagram-v2
     failed --> [*]
 ```
 
-### 10b. Internal dispatch pipeline states
+### 10b. Internal dispatch pipeline — two tables, one pipeline
+
+> **Why two tables?** `run_dispatch_outbox` (OB) is a short-lived delivery guarantee:
+> it only exists to survive a relay crash and get the message to NATS. Once NATS has the
+> message, OB's job is done. `harness_dispatch` (HD) is the long-lived execution state
+> tracker: it follows the run from creation all the way to completion or failure. They are
+> written together in one transaction but serve different purposes and have different lifespans.
 
 ```mermaid
-stateDiagram-v2
-    state "run_dispatch_outbox" as OB {
-        [*] --> ob_pending : written by Governance API
-        ob_pending --> ob_published : verity-relay drains to NATS
-    }
+graph TD
+    subgraph STEP1 ["① Governance API — single Postgres transaction on POST /runs"]
+        OBP["run_dispatch_outbox\nstate: PENDING\nDelivery guarantee: survives relay crash"]
+        HDQ["harness_dispatch\nstate: QUEUED\nExecution tracker: follows the full run"]
+    end
 
-    state "harness_dispatch" as HD {
-        [*] --> hd_queued : written by Governance API
-        hd_queued --> hd_claimed : coordinator claims via Gateway API
-        hd_claimed --> hd_executing : worker starts
-        hd_executing --> hd_released : worker completes (success or graceful fail)
-        hd_executing --> hd_failed : worker_lost or coordinator_timeout
-    }
+    subgraph STEP2 ["② verity-relay — drains OB, delivers to NATS  (OB lifecycle ends here)"]
+        OBPUB["run_dispatch_outbox\nstate: PUBLISHED\nOB role complete — no further updates"]
+        NM["NATS: verity.runs.pending\nmessage in broker"]
+    end
 
-    ob_published --> hd_claimed : NATS delivery → coordinator claim
+    subgraph STEP3 ["③ Coordinator → Gateway API POST /claim  (HD transitions: QUEUED → CLAIMED)"]
+        HDC["harness_dispatch\nstate: CLAIMED\nGateway API updates the HD row created in ①"]
+    end
+
+    subgraph STEP4 ["④ Coordinator dispatches to worker  (HD transitions: CLAIMED → EXECUTING)"]
+        HDE["harness_dispatch\nstate: EXECUTING\nWorker holds claim locally — hub not in hot path"]
+    end
+
+    subgraph STEP5 ["⑤ Terminal  (Gateway API /release or hub heartbeat/lease detection)"]
+        HDR["harness_dispatch: RELEASED\nWorker calls Gateway API POST /release\n(success or graceful failure)"]
+        HDF["harness_dispatch: FAILED\nworker_lost — coordinator missed heartbeat\ncoordinator_timeout — hub lease expired"]
+    end
+
+    OBP -->|"relay drains PENDING rows"| OBPUB
+    OBPUB -->|"relay publishes to NATS"| NM
+    NM -->|"coordinator consumes message\ncalls Gateway API POST /claim"| HDC
+    HDQ -.->|"same HD row from ①\nGateway API updates state in-place"| HDC
+    HDC -->|"coordinator dispatches job\nto worker via cluster-local NATS"| HDE
+    HDE -->|"worker calls POST /release\nwith output + log_path"| HDR
+    HDE -->|"coordinator or hub\ndetects hard failure"| HDF
 ```
 
 ### Explanation
 
-The run state is tracked across two state machines that serve different purposes.
+**Why there are two tables and not one** — the two tables answer different questions at
+different points in time. `run_dispatch_outbox` answers a single question: *has this run
+been successfully handed off to NATS?* It has two states (`PENDING`, `PUBLISHED`) and is
+done the moment `verity-relay` delivers the message. Its only purpose is to make NATS
+delivery durable: if the relay process crashes between the Governance API commit and the
+NATS publish, the row stays `PENDING` and the relay republishes it on its next sweep.
+Without this table a relay crash would silently drop runs. `harness_dispatch` answers a
+different question: *what is the current state of this run's execution?* It starts at
+`QUEUED` (same transaction as OB) and is updated at every execution milestone —
+`CLAIMED`, `EXECUTING`, `RELEASED`, `FAILED` — all the way to the terminal state. It is
+the live record that the application's poll reads through `execution_run_current`.
 
-**Application-visible states** are the four states the polling API can return. The
-application needs to know: is the run queued (waiting for dispatch), executing (agent
-loop running), completed (result available inline), or failed (with or without a log
-URL). The state `failed` covers three distinct internal causes: a graceful worker failure
-(Python exception caught, `error.json` written), a hard worker failure detected by the
-coordinator via missed heartbeat (`worker_lost`), and a hard cluster failure detected by
-the hub via expired lease (`coordinator_timeout`). All three appear as `failed` to the
-application; the `error_code` field distinguishes them for operational diagnosis.
+**They are born together** — step ① writes both rows in a single Postgres transaction.
+No run can exist in `harness_dispatch` without a corresponding `run_dispatch_outbox` row,
+and vice versa. This atomicity means there is no window where a run is "in HD but not in
+OB" or "in OB but not in HD."
 
-**Internal dispatch pipeline states** reflect the two-table design in Postgres. The
-`run_dispatch_outbox` has only two states: `pending` (the run is committed, waiting for
-relay) and `published` (the relay has delivered it to NATS). The `harness_dispatch`
-table is the mutable current state: `queued → claimed → executing → released` (or `→
-failed`). The `harness_dispatch` and `execution_run_status` audit record are written in
-the same transaction at every state transition — they cannot drift.
+**OB exits the picture at step ②** — once `verity-relay` marks the row `PUBLISHED` and
+NATS has the message, the outbox row is effectively inert. HD is now the only table
+tracking the run.
 
-The **idempotency key** provided by the application at submission guards against
-duplicate runs if the application retries a timed-out `POST /runs` call. The Governance
-API returns the existing `run_id` for a duplicate key rather than creating a second run.
+**HD transitions are driven by different actors** — this is the key operational
+distinction: the Governance API creates the HD row (`QUEUED`); the Harness Gateway API
+updates it on every milestone (`CLAIMED`, `EXECUTING`, `RELEASED`, `FAILED`). The
+Governance API never touches HD again after creation. The coordinator drives the claim
+and release transitions (by calling the Gateway API); the hub's lease-expiry job drives
+the `coordinator_timeout` failure transition autonomously.
+
+**The `harness_dispatch` and `execution_run_status` audit record are always written in
+the same transaction** at every state transition — they cannot drift. The idempotency key
+the application provides at `POST /runs` guards against duplicate HD rows if the
+application retries a timed-out submission.
 
 ---
 
