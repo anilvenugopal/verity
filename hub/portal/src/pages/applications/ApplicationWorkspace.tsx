@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, ApiException } from '@/api/client'
 import { useSession } from '@/auth/useSession'
-import type { Application, ApprovalRequest } from '@/api/types'
+import type { Application, ApprovalRequest, Intake } from '@/api/types'
+import { Badge } from '@/components/Badge'
 import { ReviewBadge } from '@/components/ReviewBadge'
 import './ApplicationWorkspace.css'
 
@@ -35,7 +36,10 @@ const fmt = (iso?: string | null) =>
 const TABS = [
   { key: 'compliance', label: 'Compliance' },
   { key: 'ownership', label: 'Ownership & team' },
+  { key: 'usecases', label: 'Use cases' },
 ]
+// the sign-off tab-gate covers only the review tabs (Use cases is navigational, not part of review)
+const REVIEW_TABS = ['compliance', 'ownership']
 
 // Application workspace — the shared view/approve shell (Issue 1 + 2). Identity band on top; the
 // segments are tabs; Risk Profile + Governance & Approval live in an always-visible right rail so you
@@ -48,6 +52,7 @@ export function ApplicationWorkspace() {
   const [app, setApp] = useState<Application | null>(null)
   const [ref, setRef] = useState<Ref | null>(null)
   const [appr, setAppr] = useState<ApprovalRequest | null>(null)
+  const [intakes, setIntakes] = useState<Intake[]>([])
   const [notFound, setNotFound] = useState(false)
   const [tab, setTab] = useState('compliance')
   const [visited, setVisited] = useState<Set<string>>(new Set(['compliance']))
@@ -62,6 +67,7 @@ export function ApplicationWorkspace() {
     })
     api.get<Ref>('/api/reference/onboarding').then(setRef).catch(() => undefined)
     api.get<ApprovalRequest>(`/api/applications/${id}/approval`).then(setAppr).catch(() => setAppr(null)) // 404 = no approval
+    api.get<Intake[]>(`/api/applications/${id}/intakes`).then(setIntakes).catch(() => undefined)
   }, [id])
 
   function openTab(k: string) {
@@ -104,7 +110,7 @@ export function ApplicationWorkspace() {
   const myRoles = principal?.platform_roles ?? []
   const iSigned = !!principal && !!appr?.signoffs.some((s) => s.approver_actor_id === principal.actor_id)
   const myRequiredRole = appr?.required_roles.find((r) => myRoles.includes(r))
-  const allReviewed = TABS.every((t) => visited.has(t.key))
+  const allReviewed = REVIEW_TABS.every((k) => visited.has(k))
   const canSign = pending && !iSigned && !!myRequiredRole
 
   // remediation: a closed (rejected/changes-requested) approval, and whether this user may edit.
@@ -217,6 +223,42 @@ export function ApplicationWorkspace() {
                 <span className="kv__k">Business owner</span><span className="kv__v">{app.business_owner_name ?? '—'}{owned ? ' · you' : ''}</span>
                 <span className="kv__k">App team</span><span className="kv__v u-text-tertiary">No additional members yet (people directory coming later).</span>
               </div>
+            </div>
+          )}
+
+          {tab === 'usecases' && (
+            <div className="aw-tabpanel card">
+              <div className="l-cluster">
+                <div className="rail-panel__title">Use cases</div>
+                <span className="l-spacer" />
+                {app.application_status_code === 'active' && canDo('create_intake') && (
+                  <button className="btn btn--secondary btn--md" onClick={() => navigate(`/applications/${app.application_id}/intakes/new`)}>New intake</button>
+                )}
+              </div>
+              {intakes.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-state__title">No use cases yet</div>
+                  <div className="empty-state__body">
+                    {app.application_status_code === 'active'
+                      ? 'Intakes are the AI use cases governed under this application.'
+                      : 'Use cases can be added once this application is active (onboarding approved).'}
+                  </div>
+                  {app.application_status_code === 'active' && canDo('create_intake') && (
+                    <div className="empty-state__actions">
+                      <button className="btn btn--primary btn--md" onClick={() => navigate(`/applications/${app.application_id}/intakes/new`)}>New intake</button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="kv">
+                  {intakes.map((i) => (
+                    <Fragment key={i.intake_id}>
+                      <span className="kv__k"><Badge table="intake_status" code={i.intake_status_code} /></span>
+                      <span className="kv__v"><span className="breadcrumb__item" onClick={() => navigate(`/intakes/${i.intake_id}`)}>{i.title}</span></span>
+                    </Fragment>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
