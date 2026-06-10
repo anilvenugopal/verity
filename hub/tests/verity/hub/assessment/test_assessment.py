@@ -1,5 +1,6 @@
-"""Mirrors verity/hub/assessment/* — US1 capture on PG18: submit the four-tab questionnaire as
-SCD-2 revisions, read the current revision + history, with the edit gate denying a viewer."""
+"""Mirrors verity/hub/assessment/* — US1 capture on PG18: submit the comprehensive sectioned
+assessment as SCD-2 revisions, read the current revision + history, with the edit gate denying a
+viewer. Tier + derived classification/PII come from the full assessment (data-model §10)."""
 from __future__ import annotations
 
 import os
@@ -58,31 +59,43 @@ def _seed_active_application(pg_url, code, name, ceiling="tier4_pii_restricted")
 
 
 def _assessment_body():
+    """An underwriting decision affecting policyholders with a severe (coverage) effect → high."""
     return {
-        "ai_decision_impact": {
-            "decision_role": "recommends_with_signoff", "decision_domain": "underwriting",
-            "affected_population": "policyholders_consumers", "adverse_impact": "coverage_or_claim_denial",
-            "human_oversight": {"strategy": "in_the_loop", "threshold": "all decisions"},
-            "reversibility": "reversible_with_effort", "gdpr_art22": False, "deployment_scale": "limited",
+        "decision_context": {
+            "decision_type": "underwriting", "consumer_effect": "coverage_or_eligibility",
+            "annex_iii_high_risk": False, "solely_automated": False,
+            "affected_populations": ["policyholders_consumers"], "deployment_scale": "limited",
         },
-        "data": {
-            "description": "Submission documents and prior claims history.", "sources": ["policy_admin"],
-            "data_classification_code": "tier3_confidential", "pii_presence": "direct",
-            "lawful_basis": "established", "residency": "in_region", "retention": "7y", "use": "inference",
+        "data_inventory": [
+            {
+                "name": "Submission documents", "direction": "input", "data_type": "document",
+                "source": "internal", "classification": "tier3_confidential", "pii_presence": "direct",
+                "lawful_basis": "contract", "retention": "7y",
+            },
+        ],
+        "human_oversight": {
+            "autonomy_level": "recommends_signoff", "stop_mechanism": True,
+            "controls": [
+                {"name": "Underwriter review", "stage": "pre_decision", "responsible_role": "underwriter",
+                 "trigger": "all decisions", "can_override": True},
+            ],
         },
+        "risks": [
+            {"description": "Potential disparate impact on protected classes.", "category": "fairness",
+             "likelihood": "possible", "severity": "moderate", "mitigation": "Quarterly bias testing", "residual": "low"},
+        ],
+        "fairness": {"disparate_impact_tested": True, "protected_classes_tested": ["race"], "metrics": []},
         "rationale": "Underwriting recommendation affecting policyholders.",
     }
 
 
 def _unacceptable_body():
-    """An autonomous decision with no oversight that discriminates against a vulnerable population."""
+    """Fully autonomous, no effective oversight, severe effect on a vulnerable population."""
     body = _assessment_body()
-    body["ai_decision_impact"].update({
-        "decision_role": "autonomous",
-        "affected_population": "vulnerable",
-        "adverse_impact": "unfair_discriminatory",
-        "human_oversight": {"strategy": "none"},
+    body["decision_context"].update({
+        "decision_type": "claims", "consumer_effect": "claim_denial", "affected_populations": ["vulnerable"],
     })
+    body["human_oversight"] = {"autonomy_level": "fully_auto", "stop_mechanism": False, "controls": []}
     return body
 
 
@@ -95,7 +108,7 @@ def test_capture_revisions_and_gate(pg_url):
         r1 = c.put(f"/intakes/{intake_id}/assessment", json=_assessment_body())
         assert r1.status_code == 200, r1.text
         assert r1.json()["revision"] == 1
-        assert r1.json()["assessment"]["data"]["pii_presence"] == "direct"
+        assert r1.json()["assessment"]["data_inventory"][0]["pii_presence"] == "direct"
 
         r2 = c.put(f"/intakes/{intake_id}/assessment", json=_assessment_body())
         assert r2.json()["revision"] == 2  # new SCD-2 revision; revision 1 closed
@@ -122,9 +135,9 @@ def test_bad_body_is_422(pg_url):
     application_id = _seed_active_application(pg_url, "BAD", "BadBodyApp")
     with TestClient(app) as c:
         intake_id = c.post(f"/applications/{application_id}/intakes", json={"title": "x"}).json()["intake_id"]
-        # missing the required `data` tab -> 422
+        # missing the required data inventory -> 422
         body = _assessment_body()
-        del body["data"]
+        del body["data_inventory"]
         assert c.put(f"/intakes/{intake_id}/assessment", json=body).status_code == 422
 
 
@@ -201,8 +214,8 @@ def test_pii_requires_confidential_is_400(pg_url):
     with TestClient(app) as c:
         intake_id = c.post(f"/applications/{application_id}/intakes", json={"title": "c"}).json()["intake_id"]
         body = _assessment_body()
-        body["data"]["data_classification_code"] = "tier2_internal"  # below confidential
-        body["data"]["pii_presence"] = "direct"  # but PII is present
+        body["data_inventory"][0]["classification"] = "tier2_internal"  # below confidential
+        body["data_inventory"][0]["pii_presence"] = "direct"  # but PII is present
         r = c.put(f"/intakes/{intake_id}/assessment", json=body)
         assert r.status_code == 400
 
@@ -214,7 +227,7 @@ def test_invalid_enum_value_is_422(pg_url):
     with TestClient(app) as c:
         intake_id = c.post(f"/applications/{application_id}/intakes", json={"title": "e"}).json()["intake_id"]
         body = _assessment_body()
-        body["ai_decision_impact"]["decision_role"] = "autonmous"  # typo — not a valid enum
+        body["decision_context"]["decision_type"] = "underwritng"  # typo — not a valid enum
         assert c.put(f"/intakes/{intake_id}/assessment", json=body).status_code == 422
 
 

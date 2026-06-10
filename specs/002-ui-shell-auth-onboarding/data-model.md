@@ -259,41 +259,87 @@ interface RequirementCreate {
 }
 ```
 
-## 10. Assessment (the two shipped tabs only)
+## 10. Assessment (comprehensive sectioned model — A+B+C+D redesign)
+
+Grounded in EU AI Act (Art 9/10/14/27, Annex III), NIST AI RMF (MAP/MEASURE), the NAIC Model
+Bulletin's five risk dimensions, NY DFS CL-7, Colorado SB21-169, and GDPR Art 22; structured per the
+prevailing reference-implementation pattern (Microsoft RAIIA, ICO DPIA, OECD classification): **one
+sectioned assessment**, with **data**, **human-oversight controls**, **risks**, and **fairness
+metrics** as multi-entry inventories. Stored as a single jsonb snapshot (SCD-2 revisions) — no DB
+migration. Enums are model-level `Literal`s (frontend mirrors them); only `classification` is a
+`reference.data_classification` code. `★` marks a tier-driving field.
 
 ```typescript
-// PUT /intakes/{intake_id}/assessment body — mirrors AssessmentInput.
-// NOTE: both shipped tabs are REQUIRED in one payload — there is no partial PUT.
-// security_access stays null in M4 (that tab's backend is unbuilt → feature 003).
+// PUT /intakes/{intake_id}/assessment body — mirrors AssessmentInput. ONE snapshot, no partial PUT.
 interface AssessmentInput {
-  ai_decision_impact: AIDecisionImpact;   // tab 1 (required)
-  data: DataTab;                          // tab 2 (required)
-  security_access?: null;                 // M4: always null
+  decision_context: DecisionContext;       // required
+  data_inventory: DataItem[];              // required, ≥1 — multi-entry (EU Art 10 / OECD)
+  human_oversight: HumanOversight;         // required (EU Art 14)
+  risks?: RiskItem[];                      // multi-entry (EU Art 9 / ICO register)
+  fairness?: Fairness | null;              // disparate-impact + metrics (NY DFS / CO SB21-169)
+  data_governance_narrative?: string | null;
   rationale?: string | null;
 }
 
-interface AIDecisionImpact {
-  decision_role: "assists" | "recommends_with_signoff" | "autonomous";
-  decision_domain: "underwriting" | "pricing" | "claims" | "fraud" | "marketing" | "servicing" | "internal_ops";
-  affected_population: "internal_only" | "brokers_agents" | "policyholders_consumers" | "vulnerable";
-  adverse_impact: "negligible" | "financial" | "coverage_or_claim_denial" | "unfair_discriminatory" | "safety";
-  human_oversight: { strategy: "none" | "on_the_loop" | "in_the_loop"; threshold?: string | null };
-  reversibility: "easily_reversible" | "reversible_with_effort" | "irreversible";
-  gdpr_art22: boolean;
-  deployment_scale: "pilot" | "limited" | "production_wide";
+interface DecisionContext {
+  decision_type: "underwriting"|"pricing"|"claims"|"fraud"|"marketing"|"servicing"|"eligibility"|"internal_ops"; // ★
+  consumer_effect: "none"|"marketing_only"|"rate_or_premium"|"coverage_or_eligibility"|"claim_denial";           // ★
+  annex_iii_high_risk: boolean;            // ★ EU Annex III high-risk category match (floors tier at high)
+  solely_automated: boolean;               // ★ GDPR Art 22
+  affected_populations: ("internal_only"|"brokers_agents"|"policyholders_consumers"|"vulnerable")[]; // ★ ≥1
+  deployment_scale: "pilot"|"limited"|"production_wide";
 }
 
-interface DataTab {
-  description: string;                    // min length 1
-  sources: string[];
-  data_classification_code: string;       // tier1_public | tier2_internal | tier3_confidential | tier4_pii_restricted
-  pii_presence: "none" | "direct" | "indirect" | "special_category";
-  sensitive_categories: string[];
-  lawful_basis?: string | null;
-  residency?: string | null;
+interface DataItem {                       // EU Art 10 / OECD Data&Input + Task&Output
+  name: string;                            // min length 1
+  direction: "input"|"output";
+  data_type: "tabular"|"text"|"image"|"audio"|"document"|"derived";
+  source: "internal"|"third_party"|"consumer_provided"|"public"|"synthetic"|"system_generated";
+  classification: string;                  // ★ reference.data_classification code (intake-level = MAX across items)
+  pii_presence: "none"|"indirect"|"direct"|"special_category"; // ★ (intake-level = strongest across items)
+  lawful_basis?: string | null;            // GDPR Art 6/9
   retention?: string | null;
-  use?: string | null;
+  notes?: string | null;
 }
+
+interface HumanOversight {                 // EU Art 14 — autonomy classifier + a list of measures
+  autonomy_level: "assists"|"recommends_review"|"recommends_signoff"|"conditional_auto"|"fully_auto"; // ★
+  stop_mechanism: boolean;                 // ★ Art 14(4)(e) safe-halt
+  controls: OversightControl[];            // multi-entry "measures"
+}
+interface OversightControl {
+  name: string;                            // min length 1
+  stage: "pre_decision"|"real_time"|"post_hoc"|"exception"|"troubleshooting";
+  responsible_role: string;                // min length 1
+  trigger?: string | null;
+  can_override: boolean;                   // ★ Art 14(4)(d) — override/reverse lowers tier
+  what_inspected?: string | null;
+}
+
+interface RiskItem {                       // EU Art 9 likelihood × magnitude / ICO register
+  description: string;                     // min length 1
+  category: "fairness"|"privacy"|"safety"|"transparency"|"robustness"|"security"|"financial";
+  likelihood: "rare"|"possible"|"likely"|"almost_certain";
+  severity: "minor"|"moderate"|"major"|"severe";
+  mitigation?: string | null;
+  residual?: "low"|"medium"|"high" | null;
+}
+
+interface Fairness {
+  disparate_impact_tested: boolean;        // ★ NY DFS / CO SB21-169
+  protected_classes_tested: string[];
+  metrics: FairnessMetric[];               // multi-entry (NY DFS quantitative metrics)
+  less_discriminatory_alternative?: string | null;
+}
+interface FairnessMetric { name: string; group?: string | null; value?: string | null; }
+
+// Inherent-tier rule (assessment/rules.py::compute_tier — conservative, ordered, first-match):
+//  unacceptable  fully_auto + no oversight (no stop & no override) + affects consumers/vulnerable
+//                + (severe consumer_effect OR special-category data)            → auto-reject (FR-IN-004)
+//  high          annex_iii_high_risk  OR (insurance decision_type + affects people + severe effect)
+//                OR (special-category data + affects people)
+//  limited       affects anyone outside the org, OR autonomous, OR solely_automated
+//  minimal       otherwise.   materiality = material when high/unacceptable, affects consumers, or production-wide.
 
 // GET /intakes/{intake_id}/assessment — mirrors AssessmentView
 interface AssessmentView {
