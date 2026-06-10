@@ -3,22 +3,26 @@ import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { api } from '@/api/client'
 import type { ApprovalRequest } from '@/api/types'
 
-// /approvals/:id is now a thin redirect into the application workspace, where the governance rail
-// lives. Application-kind approvals resolve to /applications/{target}. (Intake-kind lands with M4.)
+// /approvals/:id is a thin redirect to wherever the governance rail lives: an application-kind
+// approval resolves to /applications/{target}, an intake-kind approval to /intakes/{target}.
 export function ApprovalRedirect() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [appId, setAppId] = useState<string | null>(null)
+  const [to, setTo] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
     if (!id) return
     api.get<ApprovalRequest>(`/api/approvals/${id}`)
-      .then((a) => (a.target_application_id ? setAppId(a.target_application_id) : setFailed(true)))
+      .then((a) => {
+        if (a.target_application_id) setTo(`/applications/${a.target_application_id}`)
+        else if (a.target_intake_id) setTo(`/intakes/${a.target_intake_id}`)
+        else setFailed(true)
+      })
       .catch(() => setFailed(true))
   }, [id])
 
-  if (appId) return <Navigate to={`/applications/${appId}`} replace />
+  if (to) return <Navigate to={to} replace />
   if (failed) {
     return (
       <div className="canvas-pad"><div className="card"><div className="empty-state">

@@ -126,6 +126,7 @@ export interface ApprovalRequest {
   status_code: string
   target_intake_id: string | null
   target_application_id: string | null
+  opened_by_actor_id: string // the submitter (separation of duty — disable their own sign-off)
   required_roles: string[]
   signoffs: SignoffRecord[]
   created_at: string

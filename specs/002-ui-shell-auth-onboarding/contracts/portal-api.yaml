@@ -861,13 +861,14 @@ components:
         (hub/src/verity/hub/approval/models.py::ApprovalRequest). `required_roles` is the computed
         quorum (FR-IN-005 for intake); `signoffs` are the recorded decisions. Exactly one of
         target_intake_id / target_application_id is set per `request_kind_code`.
-      required: [approval_request_id, request_kind_code, status_code, required_roles, signoffs, created_at]
+      required: [approval_request_id, request_kind_code, status_code, opened_by_actor_id, required_roles, signoffs, created_at]
       properties:
         approval_request_id:   { type: string, format: uuid }
         request_kind_code:     { type: string, enum: [intake, application_onboarding] }
         status_code:           { type: string, enum: [pending, approved, rejected, cancelled] }
         target_intake_id:      { type: string, format: uuid, nullable: true }
         target_application_id: { type: string, format: uuid, nullable: true }
+        opened_by_actor_id:    { type: string, format: uuid, description: the submitter — the portal disables their own sign-off (separation of duty) }
         required_roles:        { type: array, items: { type: string } }
         signoffs:
           type: array

@@ -5,6 +5,7 @@ import { useSession } from '@/auth/useSession'
 import type { ApprovalRequest, Intake, Requirement } from '@/api/types'
 import { isIntakeRevisable } from '@/api/types'
 import { Badge } from '@/components/Badge'
+import { SignOffGate } from '@/components/SignOffGate'
 import { AssessmentTabs } from './AssessmentTabs'
 import '../applications/ApplicationWorkspace.css' // shared workspace layout (band/tabs/rail/footer)
 
@@ -53,6 +54,13 @@ export function IntakeDetail() {
   // one form drives both add (id === null) and edit (id === a requirement id); null = closed
   const [reqForm, setReqForm] = useState<{ id: string | null; kind: string; title: string; body: string } | null>(null)
   const [tab, setTab] = useState('requirements')
+  const [visited, setVisited] = useState<Set<string>>(new Set(['requirements'])) // assessment tab-gate
+  const [submitError, setSubmitError] = useState('')
+
+  function openTab(k: string) {
+    setTab(k)
+    setVisited((v) => new Set(v).add(k))
+  }
 
   function loadApproval(intakeId: string) {
     api.get<ApprovalRequest>(`/api/intakes/${intakeId}/approval`).then(setAppr).catch(() => setAppr(null)) // 404 = not submitted
@@ -62,6 +70,27 @@ export function IntakeDetail() {
   // the intake so the band/rail reflect it.
   function refreshIntake() {
     if (id) api.get<Intake>(`/api/intakes/${id}`).then(setIntake).catch(() => undefined)
+  }
+
+  // submit for approval (FR-028): opens a kind=intake approval with the tier quorum. Re-pull the
+  // intake (status advances proposed→in_review).
+  async function submit() {
+    if (busy) return
+    setBusy(true); setSubmitError('')
+    try {
+      const a = await api.post<ApprovalRequest>(`/api/intakes/${intake!.intake_id}/submit`, {})
+      setAppr(a); refreshIntake()
+    } catch (err) {
+      setSubmitError(err instanceof ApiException ? err.body.detail : 'Submit failed.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // sign-off resolution is owned by SignOffGate; after a decision re-pull the intake (a full quorum
+  // rolls the status up to approved).
+  function onSignoff(updated: ApprovalRequest) {
+    setAppr(updated); refreshIntake()
   }
 
   useEffect(() => {
@@ -105,6 +134,11 @@ export function IntakeDetail() {
   const canEdit = revisable && canDo('edit_intake')
   const tierKnown = !!intake.ai_risk_tier_code
   const progress = tierKnown ? 'Tier computed' : 'Not started'
+  // submit/sign-off: submit is available once a tier is computed, the intake is revisable, and there
+  // is no open approval (covers first submit + re-submit after a rejection). The gate is tab-gated on
+  // the two assessment tabs (the approver reviews the assessment before deciding).
+  const canSubmit = revisable && tierKnown && !pending && canDo('edit_intake')
+  const assessmentReviewed = visited.has('impact') && visited.has('data')
 
   async function saveReq(e: FormEvent) {
     e.preventDefault()
@@ -218,10 +252,18 @@ export function IntakeDetail() {
         </div>
       </div>
 
+      {/* allow-but-warn (FR-032): editing stays enabled while an approval is open, but re-saving the
+          assessment may change the computed tier and the required quorum. */}
+      {intake.intake_status_code === 'in_review' && pending && (
+        <div className="card">
+          <p className="input-hint"><svg className="icon icon--sm" aria-hidden="true"><use href="#i-triage-challenger-lag" /></svg> An approval is open. You can still edit, but re-saving the assessment may change the computed tier and the required approver quorum.</p>
+        </div>
+      )}
+
       <div className="aw-body">
         <div className="tabs aw-tabs" role="tablist">
           {TABS.map((t) => (
-            <button key={t.key} role="tab" aria-selected={tab === t.key} className={`tab${tab === t.key ? ' is-active' : ''}`} onClick={() => setTab(t.key)}>
+            <button key={t.key} role="tab" aria-selected={tab === t.key} className={`tab${tab === t.key ? ' is-active' : ''}`} onClick={() => openTab(t.key)}>
               {t.label}
             </button>
           ))}
@@ -289,27 +331,23 @@ export function IntakeDetail() {
           <div className="card">
             <div className="rail-panel__title">Governance &amp; approval</div>
             {appr ? (
-              <>
-                <div className="appr">
-                  {appr.required_roles.map((role) => {
-                    const s = appr.signoffs.find((x) => x.signed_as_role_code === role)
-                    const mod = !s ? 'wait' : s.decision_code === 'approved' ? 'done' : s.decision_code === 'rejected' ? 'rejected' : 'wait'
-                    return (
-                      <div className="appr__row" key={role}>
-                        <span className="appr__role">{roleLabel(role)}</span>
-                        <span className={`appr__state appr__state--${mod}`}>
-                          <svg className="icon icon--sm" aria-hidden="true"><use href={`#${s ? (s.decision_code === 'approved' ? 'i-metric-pass' : 'i-block-code') : 'i-triage-challenger-lag'}`} /></svg>
-                          {s ? DECISION_LABEL[s.decision_code] ?? s.decision_code : 'Awaiting'}
-                        </span>
-                      </div>
-                    )
-                  })}
-                </div>
-                <p className="input-hint">{pending ? 'Awaiting the required sign-off(s).' : `This request is ${appr.status_code}.`}</p>
-              </>
+              <SignOffGate
+                approval={appr}
+                reviewed={pending ? assessmentReviewed : undefined}
+                reviewHint="Open the AI Decision Impact and Data tabs to review the assessment before deciding."
+                onChange={onSignoff}
+              />
             ) : (
               <p className="input-hint">Not submitted for approval. Complete the assessment, then submit.</p>
             )}
+            {/* submit / re-submit — available once a tier is computed and there is no open approval */}
+            {canSubmit && (
+              <div className="rail-actions">
+                <button className="btn btn--primary btn--md" disabled={busy} onClick={submit}>{appr ? 'Re-submit for approval' : 'Submit for approval'}</button>
+                {submitError && <span className="input-error-text">{submitError}</span>}
+              </div>
+            )}
+            {!tierKnown && !appr && <p className="input-hint">Complete the assessment to compute a risk tier, then submit for approval.</p>}
           </div>
         </aside>
       </div>

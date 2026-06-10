@@ -44,6 +44,7 @@ class ApprovalRequest(BaseModel):
     status_code: str
     target_intake_id: UUID | None = None
     target_application_id: UUID | None = None
+    opened_by_actor_id: UUID  # the submitter — the portal disables their own sign-off (separation of duty, FR-030)
     required_roles: list[str]
     signoffs: list[SignoffRecord]
     created_at: datetime

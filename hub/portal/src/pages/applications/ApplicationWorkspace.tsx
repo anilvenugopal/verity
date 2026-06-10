@@ -5,6 +5,7 @@ import { useSession } from '@/auth/useSession'
 import type { Application, ApprovalRequest, Intake } from '@/api/types'
 import { Badge } from '@/components/Badge'
 import { ReviewBadge } from '@/components/ReviewBadge'
+import { SignOffGate } from '@/components/SignOffGate'
 import './ApplicationWorkspace.css'
 
 interface Code { code: string; label: string }
@@ -56,7 +57,6 @@ export function ApplicationWorkspace() {
   const [notFound, setNotFound] = useState(false)
   const [tab, setTab] = useState('compliance')
   const [visited, setVisited] = useState<Set<string>>(new Set(['compliance']))
-  const [comment, setComment] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -105,21 +105,11 @@ export function ApplicationWorkspace() {
   const owned = principal && app.business_owner_actor_id === principal.actor_id
   const onboarded = new Date(app.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
 
-  // sign-off eligibility (tab-gated: must have opened every tab first)
+  // sign-off eligibility: the gate is tab-gated (must have opened every review tab first). The gate
+  // component (SignOffGate) owns the per-role rows + decision actions + separation of duty.
   const pending = appr?.status_code === 'pending'
-  const myRoles = principal?.platform_roles ?? []
-  const iSigned = !!principal && !!appr?.signoffs.some((s) => s.approver_actor_id === principal.actor_id)
-  const myRequiredRole = appr?.required_roles.find((r) => myRoles.includes(r))
   const allReviewed = REVIEW_TABS.every((k) => visited.has(k))
-  const canSign = pending && !iSigned && !!myRequiredRole
 
-  // remediation: a closed (rejected/changes-requested) approval, and whether this user may edit.
-  // The backend allows the proposer OR owner; the workspace only knows the owner, so non-owner
-  // proposers reach edit via the URL. canEdit also covers a never-submitted draft (no approval).
-  const last = appr?.signoffs.length ? appr.signoffs[appr.signoffs.length - 1] : undefined
-  const outcome = appr?.status_code === 'rejected'
-    ? { label: last?.decision_code === 'requested_changes' ? 'Changes requested' : 'Rejected', comment: last?.comment }
-    : null
   // edit is available for any still-pending application (draft / in review / rejected) to anyone who
   // can onboard — the app team remediates, identity isn't required to match the (mock) owner.
   // Re-submitting supersedes a prior pending approval server-side.
@@ -163,19 +153,11 @@ export function ApplicationWorkspace() {
     }
   }
 
-  async function decide(decision_code: string) {
-    if (!appr || busy) return
-    setBusy(true); setError('')
-    try {
-      const updated = await api.post<ApprovalRequest>(`/api/approvals/${appr.approval_request_id}/signoff`, { decision_code, comment: comment || null })
-      setAppr(updated); setComment('')
-      const fresh = await api.get<Application>(`/api/applications/${app!.application_id}`) // status may have rolled up
-      setApp(fresh)
-    } catch (e) {
-      setError(e instanceof ApiException ? e.body.detail : 'Sign-off failed.')
-    } finally {
-      setBusy(false)
-    }
+  // sign-off resolution is owned by SignOffGate; after a decision we re-pull the application because
+  // a full approve rolls the status up to active.
+  function onSignoff(updated: ApprovalRequest) {
+    setAppr(updated)
+    api.get<Application>(`/api/applications/${app!.application_id}`).then(setApp).catch(() => undefined)
   }
 
   // derived risk profile (declared perimeter — not a governed AI risk tier)
@@ -278,46 +260,7 @@ export function ApplicationWorkspace() {
           <div className="card">
             <div className="rail-panel__title">Governance &amp; approval</div>
             {appr ? (
-              <>
-                <div className="appr">
-                  {appr.required_roles.map((role) => {
-                    const s = appr.signoffs.find((x) => x.signed_as_role_code === role)
-                    const mod = !s ? 'wait' : s.decision_code === 'approved' ? 'done' : s.decision_code === 'rejected' ? 'rejected' : 'wait'
-                    return (
-                      <div className="appr__row" key={role}>
-                        <span className="appr__role">{roleLabel(role)}</span>
-                        <span className={`appr__state appr__state--${mod}`}>
-                          <svg className="icon icon--sm" aria-hidden="true"><use href={`#${s ? (s.decision_code === 'approved' ? 'i-metric-pass' : 'i-block-code') : 'i-triage-challenger-lag'}`} /></svg>
-                          {s ? DECISION_LABEL[s.decision_code] ?? s.decision_code : 'Awaiting'}
-                        </span>
-                      </div>
-                    )
-                  })}
-                </div>
-                {canSign ? (
-                  <div className="rail-actions">
-                    <div className="form-field">
-                      <label className="form-label" htmlFor="appr-comment">Comment <span className="input-hint">(required to reject / request changes)</span></label>
-                      <textarea className="input" id="appr-comment" placeholder="Recorded with your decision." value={comment} onChange={(e) => setComment(e.target.value)} />
-                    </div>
-                    {!allReviewed && <span className="input-hint">Open every tab to review before deciding.</span>}
-                    {error && <span className="input-error-text">{error}</span>}
-                    <button className="btn btn--positive btn--md" disabled={!allReviewed || busy} onClick={() => decide('approved')}>
-                      <svg className="icon icon--sm" aria-hidden="true"><use href="#i-approve" /></svg>{busy ? 'Submitting…' : 'Approve'}
-                    </button>
-                    <button className="btn btn--secondary btn--md" disabled={!allReviewed || busy || !comment.trim()} onClick={() => decide('requested_changes')}>Request changes</button>
-                    <button className="btn btn--danger btn--md" disabled={!allReviewed || busy || !comment.trim()} onClick={() => decide('rejected')}>Reject</button>
-                  </div>
-                ) : (
-                  <div className="rail-actions">
-                    {outcome ? (
-                      <p className="input-error-text"><b>{outcome.label}.</b>{outcome.comment ? ` ${outcome.comment}` : ''}</p>
-                    ) : (
-                      <p className="input-hint">{pending ? (iSigned ? 'You have recorded your decision.' : 'Awaiting the required sign-off(s).') : `This request is ${appr.status_code}.`}</p>
-                    )}
-                  </div>
-                )}
-              </>
+              <SignOffGate approval={appr} reviewed={allReviewed} reviewHint="Open every tab to review before deciding." onChange={onSignoff} />
             ) : (
               <p className="input-hint">Not submitted for approval.</p>
             )}
