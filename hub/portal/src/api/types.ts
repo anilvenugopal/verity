@@ -131,6 +131,60 @@ export interface ApprovalRequest {
   created_at: string
 }
 
+// ── Intake assessment (M4 Phase 8) — mirrors hub/src/verity/hub/assessment/models.py ──
+export interface HumanOversight {
+  strategy: 'none' | 'on_the_loop' | 'in_the_loop'
+  threshold?: string | null
+}
+export interface AIDecisionImpact {
+  decision_role: 'assists' | 'recommends_with_signoff' | 'autonomous'
+  decision_domain: 'underwriting' | 'pricing' | 'claims' | 'fraud' | 'marketing' | 'servicing' | 'internal_ops'
+  affected_population: 'internal_only' | 'brokers_agents' | 'policyholders_consumers' | 'vulnerable'
+  adverse_impact: 'negligible' | 'financial' | 'coverage_or_claim_denial' | 'unfair_discriminatory' | 'safety'
+  human_oversight: HumanOversight
+  reversibility: 'easily_reversible' | 'reversible_with_effort' | 'irreversible'
+  gdpr_art22: boolean
+  deployment_scale: 'pilot' | 'limited' | 'production_wide'
+}
+export interface DataTab {
+  description: string
+  sources: string[]
+  data_classification_code: string
+  pii_presence: 'none' | 'direct' | 'indirect' | 'special_category'
+  sensitive_categories: string[]
+  lawful_basis?: string | null
+  residency?: string | null
+  retention?: string | null
+  use?: string | null
+}
+// PUT /intakes/{id}/assessment body (security_access is out of M4 scope → null)
+export interface AssessmentInput {
+  ai_decision_impact: AIDecisionImpact
+  data: DataTab
+  security_access?: unknown | null
+  rationale?: string | null
+}
+export interface Computed {
+  ai_risk_tier_code: string | null
+  naic_materiality_code: string | null
+  data_classification_code: string | null
+  intake_status_code: string | null
+  auto_rejected: boolean
+}
+export interface AssessmentView {
+  intake_id: string
+  revision: number
+  assessment: Record<string, unknown>
+  computed: Computed | null
+  created_at: string
+}
+export interface RevisionMeta {
+  revision: number
+  valid_from: string
+  valid_to: string
+  created_by_actor_id: string
+}
+
 export type AuthState =
   | 'loading'
   | 'authenticated'

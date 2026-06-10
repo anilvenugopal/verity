@@ -5,7 +5,14 @@ import { useSession } from '@/auth/useSession'
 import type { ApprovalRequest, Intake, Requirement } from '@/api/types'
 import { isIntakeRevisable } from '@/api/types'
 import { Badge } from '@/components/Badge'
+import { AssessmentTabs } from './AssessmentTabs'
 import '../applications/ApplicationWorkspace.css' // shared workspace layout (band/tabs/rail/footer)
+
+const TABS = [
+  { key: 'requirements', label: 'Requirements' },
+  { key: 'impact', label: 'AI Decision Impact' },
+  { key: 'data', label: 'Data' },
+]
 
 // The fixed requirement-kind vocabulary (reference.requirement_kind; not a badge table, rendered as a
 // chip). Kept client-side as a labelled list for the add-requirement selector.
@@ -45,9 +52,16 @@ export function IntakeDetail() {
   const [error, setError] = useState('')
   // one form drives both add (id === null) and edit (id === a requirement id); null = closed
   const [reqForm, setReqForm] = useState<{ id: string | null; kind: string; title: string; body: string } | null>(null)
+  const [tab, setTab] = useState('requirements')
 
   function loadApproval(intakeId: string) {
     api.get<ApprovalRequest>(`/api/intakes/${intakeId}/approval`).then(setAppr).catch(() => setAppr(null)) // 404 = not submitted
+  }
+
+  // after an assessment save the tier (and possibly the status, on auto-reject) changes — re-pull
+  // the intake so the band/rail reflect it.
+  function refreshIntake() {
+    if (id) api.get<Intake>(`/api/intakes/${id}`).then(setIntake).catch(() => undefined)
   }
 
   useEffect(() => {
@@ -205,7 +219,16 @@ export function IntakeDetail() {
       </div>
 
       <div className="aw-body">
+        <div className="tabs aw-tabs" role="tablist">
+          {TABS.map((t) => (
+            <button key={t.key} role="tab" aria-selected={tab === t.key} className={`tab${tab === t.key ? ' is-active' : ''}`} onClick={() => setTab(t.key)}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
         <div className="aw-main">
+          {tab === 'requirements' && (
           <div className="aw-tabpanel card">
             <div className="rail-panel__title">Requirements</div>
             {reqs.length === 0 && reqForm?.id == null ? (
@@ -242,6 +265,16 @@ export function IntakeDetail() {
             )}
             {canEdit && reqForm?.id == null && reqFormBody()}
           </div>
+          )}
+
+          {/* assessment — kept mounted across tab switches so an in-progress draft survives; it
+              renders only when its section tab is active (FR-026/027) */}
+          <AssessmentTabs
+            intakeId={intake.intake_id}
+            section={tab === 'impact' ? 'impact' : tab === 'data' ? 'data' : null}
+            canEdit={revisable && canDo('edit_impact_assessment')}
+            onComputed={refreshIntake}
+          />
         </div>
 
         {/* Right rail — always visible */}

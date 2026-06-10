@@ -9,6 +9,7 @@ const ROLE_ACTIONS: Record<string, string[]> = {
   create_intake: ['engineer', 'ai_governance', 'business_owner'],
   edit_intake: ['engineer', 'ai_governance', 'business_owner'], // also gates intake edit-in-place + withdraw
   delete_intake: ['business_owner', 'ai_governance', 'security'], // app-team delete of a revisable intake
+  edit_impact_assessment: ['business_owner', 'compliance', 'legal', 'model_risk', 'ai_governance', 'security', 'privacy'], // governance roles capture/edit the assessment
   signoff: ['business_owner', 'compliance', 'legal', 'model_risk', 'ai_governance', 'security', 'privacy'],
 }
 
