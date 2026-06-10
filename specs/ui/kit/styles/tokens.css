@@ -211,7 +211,7 @@
 
   --text-primary:          #E8EBF0;   /* near-white, slight blue cast */
   --text-secondary:        #AEB6C8;   /* lifted for contrast */
-  --text-tertiary:         #828BA0;   /* lifted — the old #636B80 failed WCAG */
+  --text-tertiary:         #8A93A7;   /* lifted to clear AA (4.5:1) on cards — #828BA0 was 4.44 on --surface-panel */
   --text-disabled:         #4A5163;
 
   /* Interactive accent — default dark theme is GRAY */
@@ -282,7 +282,7 @@
 .dark[data-theme="warm"] {
   --surface-page:#1C1A17; --surface-panel:#26231F; --surface-nav:#161412; --surface-recessed:#1A1815; --surface-hover:#2E2A25;
   --border-default:#3A352F; --border-strong:#544E45;
-  --text-primary:#F0EBE4; --text-secondary:#BCB3A6; --text-tertiary:#8E8579; --text-disabled:#544E45;
+  --text-primary:#F0EBE4; --text-secondary:#BCB3A6; --text-tertiary:#968C7F; --text-disabled:#544E45;
   --color-brand:#B0A89C; --color-brand-hover:#C6BFB4; --color-brand-faint:rgba(176,168,156,0.14); --color-brand-wash:rgba(176,168,156,0.18); --color-brand-border:rgba(176,168,156,0.32);
   --btn-primary-bg:#5C544B; --ring-focus: 0 0 0 3px rgba(176,168,156,0.30);
   --color-positive:#93B27A; --color-positive-bg:rgba(147,178,122,0.12); --color-positive-wash:rgba(147,178,122,0.18); --color-positive-border:rgba(147,178,122,0.30);
