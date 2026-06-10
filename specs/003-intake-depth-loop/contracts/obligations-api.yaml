@@ -1,0 +1,204 @@
+openapi: 3.1.0
+info:
+  title: Verity hub — Intake Depth Loop (obligations, asset promotion, change proposals)
+  version: 0.1.0
+  description: >
+    New hub endpoints for feature 003. The metamodel is the source of truth (Principle VIII):
+    obligations are resolved by querying the canonical metamodel; satisfaction is tier-cumulative.
+    All actions are role-gated (auth matrix) and audited. Errors use the shared ApiError envelope.
+servers:
+  - url: /api
+
+paths:
+  /intakes/{intake_id}/obligations:
+    get:
+      summary: The intake's resolved obligation set (+ derived status + rollup)
+      parameters: [{ $ref: '#/components/parameters/IntakeId' }]
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/ObligationSet' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /obligations/{obligation_id}/evidence:
+    post:
+      summary: Record evidence against an obligation (→ satisfied when all tier≤target controls are evidenced)
+      x-action: record_evidence
+      parameters: [{ name: obligation_id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/EvidenceInput' } } }
+      responses:
+        '201': { description: recorded, content: { application/json: { schema: { $ref: '#/components/schemas/Obligation' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /intakes/{intake_id}/exceptions:
+    post:
+      summary: Raise a compliance exception (waiver) for a requirement+tier
+      x-action: edit_impact_assessment
+      parameters: [{ $ref: '#/components/parameters/IntakeId' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ExceptionInput' } } }
+      responses:
+        '201': { description: requested, content: { application/json: { schema: { $ref: '#/components/schemas/Exception' } } } }
+
+  /exceptions/{exception_id}/signoff:
+    post:
+      summary: Approve/reject a compliance exception (separation of duty — raiser ≠ approver)
+      x-action: approve_exception
+      parameters: [{ name: exception_id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [decision], properties: { decision: { type: string, enum: [approved, rejected] }, comment: { type: string, nullable: true } } } } }
+      responses:
+        '200': { description: resolved, content: { application/json: { schema: { $ref: '#/components/schemas/Exception' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /requirements/{requirement_code}/status:
+    get:
+      summary: 'Acid test — is requirement R at tier N met for an intake? (metamodel query, no bespoke flag)'
+      parameters:
+        - { name: requirement_code, in: path, required: true, schema: { type: string } }
+        - { name: intake, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: tier, in: query, required: true, schema: { type: integer, minimum: 1 } }
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/RequirementStatus' } } } }
+
+  /executables:
+    post:
+      summary: Create a registry asset (minimal primitive)
+      x-action: author_registry
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [name, kind_code], properties: { name: { type: string }, kind_code: { type: string, enum: [agent, task] } } } } }
+      responses:
+        '201': { description: created, content: { application/json: { schema: { $ref: '#/components/schemas/Executable' } } } }
+
+  /executables/{executable_id}/versions:
+    post:
+      summary: Create an immutable version of an asset
+      x-action: author_registry
+      parameters: [{ name: executable_id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        '201': { description: created, content: { application/json: { schema: { $ref: '#/components/schemas/ExecutableVersion' } } } }
+
+  /versions/{version_id}/lifecycle:
+    post:
+      summary: Advance a version's lifecycle stage — the PROMOTION GATE enforces here
+      x-action: promote_registry
+      parameters: [{ name: version_id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [to_stage], properties: { to_stage: { type: string, enum: [candidate, staging, challenger, champion, deprecated] } } } } }
+      responses:
+        '200': { description: advanced, content: { application/json: { schema: { $ref: '#/components/schemas/ExecutableVersion' } } } }
+        '409':
+          description: 'gate blocked — production-reaching stage requires an approved intake + resolved obligations'
+          content: { application/json: { schema: { $ref: '#/components/schemas/GateBlock' } } }
+
+  /intakes/{intake_id}/links:
+    post:
+      summary: Link a registry asset to an intake requirement (≤1 intake per asset; early-stage only)
+      x-action: link_asset
+      parameters: [{ $ref: '#/components/parameters/IntakeId' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [executable_id], properties: { executable_id: { type: string, format: uuid }, intake_requirement_id: { type: string, format: uuid, nullable: true } } } } }
+      responses:
+        '201': { description: linked }
+        '409': { description: 'already linked / not early-stage', content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+
+  /links/{link_id}:
+    delete:
+      summary: Remove an asset link
+      x-action: link_asset
+      parameters: [{ name: link_id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { '204': { description: removed } }
+
+  /intakes/{intake_id}/change-proposals:
+    post:
+      summary: Raise a change proposal (risk reclassification / business change) selecting impacted assets
+      x-action: reclassify_risk
+      parameters: [{ $ref: '#/components/parameters/IntakeId' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [kind, impacted_executable_ids], properties: { kind: { type: string, enum: [risk_reclassification, business_change] }, impacted_executable_ids: { type: array, items: { type: string, format: uuid } }, rationale: { type: string } } } } }
+      responses:
+        '201': { description: 'opened (approval_request) — sign off via /approvals/{id}/signoff', content: { application/json: { schema: { type: object, properties: { approval_request_id: { type: string, format: uuid } } } } } }
+
+components:
+  parameters:
+    IntakeId: { name: intake_id, in: path, required: true, schema: { type: string, format: uuid } }
+  responses:
+    NotFound: { description: not found, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+    Forbidden: { description: forbidden, content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } } }
+  schemas:
+    ApiError:
+      type: object
+      required: [code, detail, request_id]
+      properties: { code: { type: string }, detail: { type: string }, request_id: { type: string } }
+    ObligationSet:
+      type: object
+      required: [intake_id, obligations, rollup]
+      properties:
+        intake_id: { type: string, format: uuid }
+        derivation_method: { type: string }
+        ontology_version: { type: string, nullable: true }
+        obligations: { type: array, items: { $ref: '#/components/schemas/Obligation' } }
+        rollup: { type: object, properties: { total: { type: integer }, satisfied: { type: integer }, excepted: { type: integer }, outstanding: { type: integer }, all_resolved: { type: boolean } } }
+    Obligation:
+      type: object
+      required: [obligation_id, requirement_code, title, governance_domain_code, target_tier_level, status]
+      properties:
+        obligation_id: { type: string, format: uuid }
+        requirement_code: { type: string }
+        title: { type: string }
+        governance_domain_code: { type: string }
+        target_tier_level: { type: integer }
+        source_provisions: { type: array, items: { type: object, properties: { framework_code: { type: string }, citation: { type: string } } } }
+        controls: { type: array, items: { type: object, properties: { control_code: { type: string }, title: { type: string }, phase: { type: string }, evidence_specification: { type: string }, evidenced: { type: boolean } } } }
+        status: { type: string, enum: [outstanding, satisfied, excepted] }
+    EvidenceInput:
+      type: object
+      required: [control_code, artifact_type]
+      properties: { control_code: { type: string }, artifact_type: { type: string }, citation: { type: string }, note: { type: string, nullable: true } }
+    ExceptionInput:
+      type: object
+      required: [requirement_code, waived_tier_level, compensating_controls, rationale, expires_at]
+      properties:
+        requirement_code: { type: string }
+        waived_tier_level: { type: integer, minimum: 1 }
+        compensating_controls: { type: string }
+        rationale: { type: string }
+        expires_at: { type: string, format: date-time }
+    Exception:
+      type: object
+      properties:
+        compliance_exception_id: { type: string, format: uuid }
+        requirement_code: { type: string }
+        waived_tier_level: { type: integer }
+        exception_status_code: { type: string, enum: [requested, approved, rejected] }
+        expires_at: { type: string, format: date-time }
+        approver_actor_id: { type: string, format: uuid, nullable: true }
+    RequirementStatus:
+      type: object
+      required: [requirement_code, tier, status]
+      properties:
+        requirement_code: { type: string }
+        tier: { type: integer }
+        status: { type: string, enum: [met, outstanding, excepted, not_applicable] }
+        unmet_controls: { type: array, items: { type: string } }
+    Executable:
+      type: object
+      properties: { executable_id: { type: string, format: uuid }, name: { type: string }, kind_code: { type: string } }
+    ExecutableVersion:
+      type: object
+      properties: { executable_version_id: { type: string, format: uuid }, executable_id: { type: string, format: uuid }, lifecycle_stage: { type: string } }
+    GateBlock:
+      type: object
+      required: [code, detail, reason]
+      properties:
+        code: { type: string, const: promotion_blocked }
+        detail: { type: string }
+        reason: { type: string, enum: [not_linked, intake_not_approved, outstanding_obligation] }
+        requirement_code: { type: string, nullable: true }
