@@ -510,13 +510,27 @@ graph LR
 
 ```mermaid
 stateDiagram-v2
-    [*] --> draft : package authored
-    draft --> staging : submit for non-prod testing
+    [*] --> draft : package created
+
+    draft --> candidate : author submits (editing locked)
+
+    candidate --> staging : LOW materiality\n(auto-approve — system action)
+    candidate --> staging : HIGH materiality\n(governance reviewer approves)
+    candidate --> draft : reviewer rejects\n(editing re-enabled, comment required)
+
     staging --> challenger : promote to prod shadow/ab
-    challenger --> champion : promote (portal, govenance approval)
+    challenger --> champion : promote (governance approval)
     champion --> deprecated : superseded by new champion
     deprecated --> champion : rollback (restorable)
     deprecated --> [*] : cleanup_deprecated
+
+    note right of candidate
+        Materiality from intake assessment.
+        LOW = materiality_tier low AND naic non_material → auto.
+        Any other combination → manual reviewer.
+        Author cannot approve own package.
+        No deployment allowed at this state.
+    end note
 
     note right of challenger
         run_mode: shadow (writes suppressed)
@@ -532,9 +546,8 @@ stateDiagram-v2
 
     note right of deprecated
         run_mode: locked (audit/replay only)
-        writes disabled
-        reproducible replay on original
-        image digest still possible
+        writes disabled; reproducible replay
+        on original image digest still possible
     end note
 ```
 
@@ -542,7 +555,8 @@ stateDiagram-v2
 
 | Lifecycle State | Non-Prod Clusters | Prod Clusters | Writes Enabled |
 |---|---|---|---|
-| `draft` / `staging` | `staging` only | ✗ | Non-prod only |
+| `draft` / `candidate` | ✗ | ✗ | — |
+| `staging` | ✓ | ✗ | Non-prod only |
 | `challenger` | ✓ | ✓ (shadow or A/B) | Suppressed (shadow) / scoped (A/B) |
 | `champion` | ✓ | ✓ | ✓ |
 | `deprecated` | ✓ (replay) | ✓ (replay) | ✗ (audit/replay only) |
