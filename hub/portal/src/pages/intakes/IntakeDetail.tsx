@@ -6,13 +6,12 @@ import type { ApprovalRequest, Intake, Requirement } from '@/api/types'
 import { isIntakeRevisable } from '@/api/types'
 import { Badge } from '@/components/Badge'
 import { SignOffGate } from '@/components/SignOffGate'
-import { AssessmentTabs } from './AssessmentTabs'
+import { AssessmentForm } from './AssessmentForm'
 import '../applications/ApplicationWorkspace.css' // shared workspace layout (band/tabs/rail/footer)
 
 const TABS = [
   { key: 'requirements', label: 'Requirements' },
-  { key: 'impact', label: 'AI Decision Impact' },
-  { key: 'data', label: 'Data' },
+  { key: 'assessment', label: 'Assessment' },
 ]
 
 // The fixed requirement-kind vocabulary (reference.requirement_kind; not a badge table, rendered as a
@@ -138,7 +137,7 @@ export function IntakeDetail() {
   // is no open approval (covers first submit + re-submit after a rejection). The gate is tab-gated on
   // the two assessment tabs (the approver reviews the assessment before deciding).
   const canSubmit = revisable && tierKnown && !pending && canDo('edit_intake')
-  const assessmentReviewed = visited.has('impact') && visited.has('data')
+  const assessmentReviewed = visited.has('assessment')
 
   async function saveReq(e: FormEvent) {
     e.preventDefault()
@@ -309,14 +308,15 @@ export function IntakeDetail() {
           </div>
           )}
 
-          {/* assessment — kept mounted across tab switches so an in-progress draft survives; it
-              renders only when its section tab is active (FR-026/027) */}
-          <AssessmentTabs
-            intakeId={intake.intake_id}
-            section={tab === 'impact' ? 'impact' : tab === 'data' ? 'data' : null}
-            canEdit={revisable && canDo('edit_impact_assessment')}
-            onComputed={refreshIntake}
-          />
+          {/* assessment — kept mounted (hidden when inactive) so an in-progress draft survives a tab
+              switch (FR-026/027) */}
+          <div hidden={tab !== 'assessment'}>
+            <AssessmentForm
+              intakeId={intake.intake_id}
+              canEdit={revisable && canDo('edit_impact_assessment')}
+              onComputed={refreshIntake}
+            />
+          </div>
         </div>
 
         {/* Right rail — always visible */}

@@ -132,37 +132,66 @@ export interface ApprovalRequest {
   created_at: string
 }
 
-// ── Intake assessment (M4 Phase 8) — mirrors hub/src/verity/hub/assessment/models.py ──
-export interface HumanOversight {
-  strategy: 'none' | 'on_the_loop' | 'in_the_loop'
-  threshold?: string | null
+// ── Intake assessment (comprehensive sectioned model) — mirrors assessment/models.py + data-model §10 ──
+export interface DecisionContext {
+  decision_type: string
+  consumer_effect: string
+  annex_iii_high_risk: boolean
+  solely_automated: boolean
+  affected_populations: string[]
+  deployment_scale: string
 }
-export interface AIDecisionImpact {
-  decision_role: 'assists' | 'recommends_with_signoff' | 'autonomous'
-  decision_domain: 'underwriting' | 'pricing' | 'claims' | 'fraud' | 'marketing' | 'servicing' | 'internal_ops'
-  affected_population: 'internal_only' | 'brokers_agents' | 'policyholders_consumers' | 'vulnerable'
-  adverse_impact: 'negligible' | 'financial' | 'coverage_or_claim_denial' | 'unfair_discriminatory' | 'safety'
-  human_oversight: HumanOversight
-  reversibility: 'easily_reversible' | 'reversible_with_effort' | 'irreversible'
-  gdpr_art22: boolean
-  deployment_scale: 'pilot' | 'limited' | 'production_wide'
-}
-export interface DataTab {
-  description: string
-  sources: string[]
-  data_classification_code: string
-  pii_presence: 'none' | 'direct' | 'indirect' | 'special_category'
-  sensitive_categories: string[]
+export interface DataItem {
+  name: string
+  direction: string
+  data_type: string
+  source: string
+  classification: string
+  pii_presence: string
   lawful_basis?: string | null
-  residency?: string | null
   retention?: string | null
-  use?: string | null
+  notes?: string | null
 }
-// PUT /intakes/{id}/assessment body (security_access is out of M4 scope → null)
+export interface OversightControl {
+  name: string
+  stage: string
+  responsible_role: string
+  trigger?: string | null
+  can_override: boolean
+  what_inspected?: string | null
+}
+export interface HumanOversight {
+  autonomy_level: string
+  stop_mechanism: boolean
+  controls: OversightControl[]
+}
+export interface RiskItem {
+  description: string
+  category: string
+  likelihood: string
+  severity: string
+  mitigation?: string | null
+  residual?: string | null
+}
+export interface FairnessMetric {
+  name: string
+  group?: string | null
+  value?: string | null
+}
+export interface Fairness {
+  disparate_impact_tested: boolean
+  protected_classes_tested: string[]
+  metrics: FairnessMetric[]
+  less_discriminatory_alternative?: string | null
+}
+// PUT /intakes/{id}/assessment body — one full snapshot
 export interface AssessmentInput {
-  ai_decision_impact: AIDecisionImpact
-  data: DataTab
-  security_access?: unknown | null
+  decision_context: DecisionContext
+  data_inventory: DataItem[]
+  human_oversight: HumanOversight
+  risks?: RiskItem[]
+  fairness?: Fairness | null
+  data_governance_narrative?: string | null
   rationale?: string | null
 }
 export interface Computed {

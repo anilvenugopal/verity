@@ -1,0 +1,80 @@
+/* Page-local assessment styles (reviewed 2026-06-10) — the comprehensive sectioned assessment.
+   Only the three approved blocks: section nav, multi-entry InventoryEditor, FieldHelp + help modal.
+   Everything else reuses canonical primitives (.card/.field-grid/.form-field/.input/.kv/.btn/.modal). */
+
+/* ── 1. Section nav (sticky) + the sectioned layout ── */
+.asec {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: var(--space-5);
+  align-items: start;
+}
+.asec__nav {
+  position: sticky;
+  top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.asec__nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-label);
+  color: var(--text-secondary);
+  cursor: pointer;
+  border: none;
+  background: none;
+  text-align: left;
+  width: 100%;
+}
+.asec__nav-item:hover { background: var(--surface-hover); }
+.asec__nav-item.is-active { background: var(--color-brand-faint); color: var(--color-brand); font-weight: var(--fw-medium); }
+.asec__nav-item__mark { margin-left: auto; font-size: var(--fs-caption); }
+.asec__nav-item.is-done .asec__nav-item__mark { color: var(--color-positive); }
+.asec__nav-item.is-error .asec__nav-item__mark { color: var(--color-negative); }
+.asec__sections { display: flex; flex-direction: column; gap: var(--space-5); min-width: 0; }
+
+/* ── 2. InventoryEditor — multi-entry card list ── */
+.inv { display: flex; flex-direction: column; gap: var(--space-3); }
+.inv__item {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  background: var(--surface-panel);
+}
+.inv__item-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.inv__item-head__title { font-weight: var(--fw-medium); font-size: var(--fs-label); }
+.inv__empty { color: var(--text-tertiary); font-size: var(--fs-label); }
+.inv__add { margin-top: var(--space-1); }
+
+/* ── 3. FieldHelp — (?) trigger + Learn-more modal ── */
+.fhelp { display: inline-flex; align-items: center; gap: var(--space-1); }
+.fhelp__q {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-default);
+  background: none;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+.fhelp__q:hover { color: var(--color-brand); border-color: var(--color-brand); }
+.modal--help { max-width: 540px; }
+.fhelp__why { color: var(--text-secondary); font-size: var(--fs-label); margin-bottom: var(--space-3); }
+.fhelp__opt { padding: var(--space-2) 0; border-top: 1px solid var(--border-faint); }
+.fhelp__opt__label { font-weight: var(--fw-medium); font-size: var(--fs-label); }
+.fhelp__opt__note { color: var(--text-tertiary); font-size: var(--fs-caption); }

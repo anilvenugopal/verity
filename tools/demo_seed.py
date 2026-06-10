@@ -216,10 +216,9 @@ DEMO_INTAKES = [
                        "fix gaps up front. Assessed (limited) — ready to submit.",
         "owner": "you", "status": "impact_assessment",
         "tier": "limited", "naic": "non_material", "mtier": "medium", "classification": "tier2_internal",
-        "assess": dict(decision_role="recommends_with_signoff", domain="underwriting", population="brokers_agents",
-                       adverse="financial", oversight="on_the_loop", threshold="Underwriter reviews every flagged quote",
-                       reversibility="reversible_with_effort", gdpr=False, scale="limited",
-                       desc="Quote line items, coverage selections, and prior-policy references.", pii="none"),
+        "assess": dict(decision_type="underwriting", consumer_effect="rate_or_premium", populations=["brokers_agents"],
+                       scale="limited", autonomy="recommends_signoff", stop=True,
+                       data_name="Quote line items", data_type="tabular", source="internal", pii="none"),
         "approval": None,
         "reqs": [
             ("business", "Fewer bind-time corrections", "Reduce post-bind endorsements caused by missing quote data."),
@@ -233,10 +232,14 @@ DEMO_INTAKES = [
                        "assignment. Submitted (high tier) — awaiting the approval quorum.",
         "owner": "you", "status": "in_review",
         "tier": "high", "naic": "material", "mtier": "high", "classification": "tier3_confidential",
-        "assess": dict(decision_role="autonomous", domain="claims", population="policyholders_consumers",
-                       adverse="coverage_or_claim_denial", oversight="in_the_loop", threshold="Adjuster reviews every high-severity prediction",
-                       reversibility="reversible_with_effort", gdpr=True, scale="production_wide",
-                       desc="First-notice-of-loss reports, policy data, and prior claims history (incl. claimant identifiers).", pii="direct"),
+        "assess": dict(decision_type="claims", consumer_effect="claim_denial", annex_iii=True,
+                       populations=["policyholders_consumers"], scale="production_wide",
+                       autonomy="recommends_signoff", stop=True,
+                       controls=[{"name": "Adjuster review", "stage": "pre_decision", "responsible_role": "adjuster",
+                                  "trigger": "high-severity prediction", "can_override": True, "what_inspected": "severity band + drivers"}],
+                       data_name="First-notice-of-loss reports", data_type="document", source="internal", pii="direct",
+                       risks=[{"description": "Under-reserving on atypical claims.", "category": "robustness",
+                               "likelihood": "possible", "severity": "moderate", "mitigation": "Human review of outliers", "residual": "low"}]),
         "approval": "pending_you",  # you submitted → you cannot sign (separation-of-duty demo)
         "reqs": [
             ("business", "Faster severe-claim response", "Route likely high-severity claims to senior adjusters within the hour."),
@@ -250,10 +253,9 @@ DEMO_INTAKES = [
                        "Submitted by a teammate (limited tier) — awaiting YOUR sign-off.",
         "owner": "team", "status": "in_review",
         "tier": "limited", "naic": "non_material", "mtier": "medium", "classification": "tier2_internal",
-        "assess": dict(decision_role="recommends_with_signoff", domain="servicing", population="policyholders_consumers",
-                       adverse="financial", oversight="on_the_loop", threshold="Servicing reviews low-retention scores",
-                       reversibility="reversible_with_effort", gdpr=False, scale="limited",
-                       desc="Renewal history, payment behaviour, and engagement signals.", pii="indirect"),
+        "assess": dict(decision_type="servicing", consumer_effect="marketing_only", populations=["policyholders_consumers"],
+                       scale="limited", autonomy="recommends_review", stop=True,
+                       data_name="Renewal & engagement history", data_type="tabular", source="internal", pii="indirect"),
         "approval": "pending_team",  # teammate submitted → you (AI Governance) can approve it
         "reqs": [
             ("business", "Improve retention", "Surface at-risk renewals in time for a servicing outreach."),
@@ -266,10 +268,9 @@ DEMO_INTAKES = [
                        "tier) — a completed, locked use case.",
         "owner": "you", "status": "approved",
         "tier": "minimal", "naic": "non_material", "mtier": "low", "classification": "tier2_internal",
-        "assess": dict(decision_role="assists", domain="internal_ops", population="internal_only",
-                       adverse="negligible", oversight="none", threshold="",
-                       reversibility="easily_reversible", gdpr=False, scale="pilot",
-                       desc="Scanned policy documents and their metadata.", pii="none"),
+        "assess": dict(decision_type="internal_ops", consumer_effect="none", populations=["internal_only"],
+                       scale="pilot", autonomy="assists", stop=True,
+                       data_name="Scanned policy documents", data_type="document", source="internal", pii="none"),
         "approval": "approved",  # opened by you, signed off by the teammate as business_owner
         "reqs": [
             ("business", "Faster document routing", "Cut manual sorting of inbound policy documents."),
@@ -279,22 +280,26 @@ DEMO_INTAKES = [
 ]
 
 
-def _assess_json(a: dict) -> str:
-    """Build a full assessment snapshot (the AssessmentInput shape the portal reads) from compact
-    params, so an assessed demo intake shows filled AI Decision Impact + Data tabs."""
+def _assess_json(a: dict, classification: str) -> str:
+    """Build a full assessment snapshot (the comprehensive AssessmentInput shape the portal reads) from
+    compact params, so an assessed demo intake shows a filled sectioned assessment."""
     return json.dumps({
-        "ai_decision_impact": {
-            "decision_role": a["decision_role"], "decision_domain": a["domain"],
-            "affected_population": a["population"], "adverse_impact": a["adverse"],
-            "human_oversight": {"strategy": a["oversight"], "threshold": a["threshold"] or None},
-            "reversibility": a["reversibility"], "gdpr_art22": a["gdpr"], "deployment_scale": a["scale"],
+        "decision_context": {
+            "decision_type": a["decision_type"], "consumer_effect": a["consumer_effect"],
+            "annex_iii_high_risk": a.get("annex_iii", False), "solely_automated": a.get("solely", False),
+            "affected_populations": a["populations"], "deployment_scale": a["scale"],
         },
-        "data": {
-            "description": a["desc"], "sources": [], "data_classification_code": a["classification"],
-            "pii_presence": a["pii"], "sensitive_categories": [],
-            "lawful_basis": None, "residency": None, "retention": None, "use": None,
+        "data_inventory": [
+            {"name": a["data_name"], "direction": "input", "data_type": a.get("data_type", "document"),
+             "source": a.get("source", "internal"), "classification": classification, "pii_presence": a["pii"],
+             "lawful_basis": a.get("lawful_basis"), "retention": a.get("retention")},
+        ],
+        "human_oversight": {
+            "autonomy_level": a["autonomy"], "stop_mechanism": a.get("stop", True),
+            "controls": a.get("controls", []),
         },
-        "security_access": None, "rationale": None,
+        "risks": a.get("risks", []),
+        "fairness": a.get("fairness", {"disparate_impact_tested": False, "protected_classes_tested": [], "metrics": []}),
     })
 
 
@@ -320,7 +325,7 @@ def _create_intake(conn, app_id: str, spec: dict, you: str, team: str) -> None:
         conn.execute(
             "INSERT INTO core.intake_impact_assessment (intake_id, revision, assessment, created_by_actor_id, created_role_code) "
             "VALUES (%s, 1, %s, %s, %s)",
-            (iid, _assess_json({**spec["assess"], "classification": spec["classification"]}), creator, role),
+            (iid, _assess_json(spec["assess"], spec["classification"]), creator, role),
         )
     appr = spec["approval"]
     if appr:
