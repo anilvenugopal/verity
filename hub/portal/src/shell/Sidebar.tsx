@@ -67,7 +67,10 @@ export function Sidebar({ collapsed, onCollapse }: { collapsed: boolean; onColla
 
   const gate = (req: string) => canDo(req) || hasRole(req)
   const navApps = resolveNav(NAV, gate).filter((n) => n.kind === 'app')
-  const active = navApps.find((a) => a.to && a.to !== '/' && pathname.startsWith(a.to) && a.children?.length)
+  const active = navApps.find((a) => {
+    if (!a.to || a.to === '/' || !a.children?.length) return false
+    return pathname.startsWith(a.to) || a.children.some((c) => c.to && pathname.startsWith(c.to))
+  })
   if (!active?.children?.length) return null
 
   // Project MY APPLICATIONS (apps I own) + MY APPROVALS (requests awaiting me) into the Intake
