@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain — 3 remain (FR-017 metamodel seed breadth; FR-018 registry-asset prerequisite; FR-021 reconciliation of 002's bespoke assessment to the metamodel), all genuine scope decisions surfaced for the user
+- [x] No [NEEDS CLARIFICATION] markers remain — all 3 resolved in the Clarifications session (2026-06-10): curated starter metamodel; minimal registry primitive + thin UI; mapping-layer reconciliation of the 002 assessment
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
