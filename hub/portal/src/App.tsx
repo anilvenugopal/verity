@@ -9,6 +9,7 @@ import { ApplicationWorkspace } from './pages/applications/ApplicationWorkspace'
 import { ApprovalRedirect } from './pages/applications/ApprovalRedirect'
 import { IntakeCreate } from './pages/intakes/IntakeCreate'
 import { IntakeDetail } from './pages/intakes/IntakeDetail'
+import { UseCasesList } from './pages/intakes/UseCasesList'
 import { SignIn } from './pages/SignIn'
 import { AuthCallback } from './pages/AuthCallback'
 import { SessionExpiredPage, ForbiddenPage, DisabledPage } from './pages/AuthStatePage'
@@ -34,6 +35,8 @@ function AppRoutes() {
           <Route path="/applications/:id/edit" element={<OnboardForm />} />
           <Route path="/applications/:id" element={<ApplicationWorkspace />} />
           <Route path="/applications/:appId/intakes/new" element={<IntakeCreate />} />
+          <Route path="/usecases" element={<UseCasesList />} />
+          <Route path="/intakes/new" element={<IntakeCreate />} />
           <Route path="/intakes/:id/edit" element={<IntakeCreate />} />
           <Route path="/intakes/:id" element={<IntakeDetail />} />
           <Route path="/approvals/:id" element={<ApprovalRedirect />} />

@@ -2,7 +2,7 @@ import { type KeyboardEvent, useCallback, useEffect, useRef, useState } from 're
 import { useLocation, useNavigate } from 'react-router-dom'
 import { api } from '@/api/client'
 import { onDataChanged } from '@/api/events'
-import type { Application, AwaitingApproval } from '@/api/types'
+import type { Application, AwaitingApproval, IntakeListItem } from '@/api/types'
 import { useSession } from '@/auth/useSession'
 import { ReviewBadge } from '@/components/ReviewBadge'
 import { NAV, type NavNode, resolveNav } from './nav'
@@ -23,6 +23,7 @@ export function Sidebar({ collapsed, onCollapse }: { collapsed: boolean; onColla
   const { canDo, hasRole, principal } = useSession()
   const [apps, setApps] = useState<Application[]>([])
   const [approvals, setApprovals] = useState<AwaitingApproval[]>([])
+  const [intakes, setIntakes] = useState<IntakeListItem[]>([])
   const [width, setWidth] = useState(DEFAULT_W)
   const [resizing, setResizing] = useState(false)
   const widthRef = useRef(DEFAULT_W)
@@ -53,12 +54,14 @@ export function Sidebar({ collapsed, onCollapse }: { collapsed: boolean; onColla
     const load = () => {
       api.get<Application[]>('/api/applications').then(setApps).catch(() => setApps([]))
       api.get<AwaitingApproval[]>('/api/approvals/awaiting-me').then(setApprovals).catch(() => setApprovals([]))
+      api.get<IntakeListItem[]>('/api/intakes').then(setIntakes).catch(() => setIntakes([]))
     }
     load()
     return onDataChanged(load) // re-fetch after any create/submit/delete/cancel/edit (returns the unsubscribe)
   }, [])
 
   const myApps = principal ? apps.filter((a) => a.business_owner_actor_id === principal.actor_id) : []
+  const myIntakes = principal ? intakes.filter((i) => i.created_by_actor_id === principal.actor_id) : []
   // provider → live count for nav `count` badges (grow as pages gain counts; absent = no badge).
   const counts: Record<string, number> = { applications: apps.length }
 
@@ -72,6 +75,7 @@ export function Sidebar({ collapsed, onCollapse }: { collapsed: boolean; onColla
   const projectMyApps = (nodes: NavNode[]): NavNode[] => {
     if (active.key !== 'intake') return nodes
     const objs: NavNode[] = []
+    // MY APPLICATIONS — apps I own
     objs.push(...myApps.slice(0, MY_APPS_MAX).map((a): NavNode => ({
       key: `obj-app-${a.application_id}`, kind: 'page', label: a.name,
       icon: 'i-entity-application', to: `/applications/${a.application_id}`, section: 'My applications',
@@ -79,12 +83,21 @@ export function Sidebar({ collapsed, onCollapse }: { collapsed: boolean; onColla
     if (myApps.length > MY_APPS_MAX) {
       objs.push({ key: 'obj-app-more', kind: 'page', label: 'See all', icon: 'i-next', to: '/applications', section: 'My applications' })
     }
-    // MY APPROVALS — only when present (the queue is empty for non-approvers).
+    // MY USE CASES — intakes I created
+    objs.push(...myIntakes.slice(0, MY_APPS_MAX).map((i): NavNode => ({
+      key: `obj-uc-${i.intake_id}`, kind: 'page', label: i.title,
+      icon: 'i-entity-task', to: `/intakes/${i.intake_id}`, section: 'My use cases',
+    })))
+    if (myIntakes.length > MY_APPS_MAX) {
+      objs.push({ key: 'obj-uc-more', kind: 'page', label: 'See all', icon: 'i-next', to: '/usecases', section: 'My use cases' })
+    }
+    // MY APPROVALS — requests awaiting my sign-off (empty for non-approvers)
     objs.push(...approvals.slice(0, MY_APPS_MAX).map((r): NavNode => ({
       key: `obj-appr-${r.approval_request_id}`, kind: 'page', label: r.name,
       icon: 'i-approve', to: `/applications/${r.application_id}`, section: 'My approvals',
     })))
-    return [...objs, ...nodes]
+    // primary object links first (ungrouped), then the MY * projections below
+    return [...nodes, ...objs]
   }
 
   const children = resolveNav(active.children, gate, projectMyApps)

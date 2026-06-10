@@ -1,0 +1,7 @@
+/* Use-cases registry — page-local composition, mirrors ApplicationsList.css's .reg-grid pattern.
+   Reuses canonical .log-table/.log-row/.search-field/.btn/.eyebrow/.badge + shared page.css. */
+
+.uc-grid { display: grid; grid-template-columns: 1fr 180px 130px 110px; gap: var(--space-4);
+           align-items: center; padding: 11px 16px; }
+.uc-name { font-size: var(--fs-label); font-weight: var(--fw-medium); }
+.uc-sub  { font-size: var(--fs-caption); color: var(--text-tertiary); }

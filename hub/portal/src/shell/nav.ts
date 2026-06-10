@@ -33,12 +33,14 @@ export const NAV: NavNode[] = [
   {
     key: 'intake', kind: 'app', label: 'Intake', desc: 'Onboard applications', icon: 'i-app-intake', to: '/applications',
     children: [
-      { key: 'applications', kind: 'page', label: 'Applications', icon: 'i-entity-application', to: '/applications', section: 'Intake', count: { provider: 'applications', cap: 99 } },
-      { key: 'usecases', kind: 'page', label: 'Use cases', icon: 'i-entity-task', section: 'Intake' },
-      { key: 'obligations', kind: 'page', label: 'Obligations', icon: 'i-app-compliance', section: 'Intake' },
+      // Primary object links — ungrouped (no eyebrow) so they sit directly under the panel header
+      // (the header already reads "Intake"; a second "INTAKE" label was redundant).
+      { key: 'applications', kind: 'page', label: 'Applications', icon: 'i-entity-application', to: '/applications', count: { provider: 'applications', cap: 99 } },
+      { key: 'usecases', kind: 'page', label: 'Use cases', icon: 'i-entity-task', to: '/usecases' },
+      { key: 'obligations', kind: 'page', label: 'Obligations', icon: 'i-app-compliance' }, // deferred to feature 003 — shown but inert
       // actions — bottom-stacked under an ACTIONS header (the recorded design)
       { key: 'onboard-app', kind: 'action', label: 'Onboard app.', icon: 'i-add', to: '/applications/new', requires: 'onboard_application' },
-      { key: 'intake-uc', kind: 'action', label: 'Intake use case', icon: 'i-add' },
+      { key: 'intake-uc', kind: 'action', label: 'New use case', icon: 'i-add', to: '/intakes/new', requires: 'create_intake' },
     ],
   },
   { key: 'studio', kind: 'app', label: 'Studio', desc: 'Author agents & tasks', icon: 'i-app-studio' },

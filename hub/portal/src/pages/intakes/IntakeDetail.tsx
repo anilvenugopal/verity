@@ -43,11 +43,8 @@ export function IntakeDetail() {
   const [notFound, setNotFound] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  // add-requirement form
-  const [adding, setAdding] = useState(false)
-  const [kind, setKind] = useState('functional')
-  const [rTitle, setRTitle] = useState('')
-  const [rBody, setRBody] = useState('')
+  // one form drives both add (id === null) and edit (id === a requirement id); null = closed
+  const [reqForm, setReqForm] = useState<{ id: string | null; kind: string; title: string; body: string } | null>(null)
 
   function loadApproval(intakeId: string) {
     api.get<ApprovalRequest>(`/api/intakes/${intakeId}/approval`).then(setAppr).catch(() => setAppr(null)) // 404 = not submitted
@@ -95,18 +92,32 @@ export function IntakeDetail() {
   const tierKnown = !!intake.ai_risk_tier_code
   const progress = tierKnown ? 'Tier computed' : 'Not started'
 
-  async function addRequirement(e: FormEvent) {
+  async function saveReq(e: FormEvent) {
     e.preventDefault()
-    if (busy || !rTitle.trim() || !rBody.trim()) return
+    if (busy || !reqForm || !reqForm.title.trim() || !reqForm.body.trim()) return
+    setBusy(true); setError('')
+    const body = { requirement_kind_code: reqForm.kind, title: reqForm.title.trim(), body: reqForm.body.trim() }
+    try {
+      if (reqForm.id) await api.put<Requirement>(`/api/intakes/${intake!.intake_id}/requirements/${reqForm.id}`, body)
+      else await api.post<Requirement>(`/api/intakes/${intake!.intake_id}/requirements`, body)
+      setReqs(await api.get<Requirement[]>(`/api/intakes/${intake!.intake_id}/requirements`))
+      setReqForm(null)
+    } catch (err) {
+      setError(err instanceof ApiException ? err.body.detail : 'Could not save requirement.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function removeReq(r: Requirement) {
+    if (busy) return
+    if (!window.confirm(`Remove requirement "${r.title}"?`)) return
     setBusy(true); setError('')
     try {
-      await api.post<Requirement>(`/api/intakes/${intake!.intake_id}/requirements`, {
-        requirement_kind_code: kind, title: rTitle.trim(), body: rBody.trim(),
-      })
+      await api.del(`/api/intakes/${intake!.intake_id}/requirements/${r.intake_requirement_id}`)
       setReqs(await api.get<Requirement[]>(`/api/intakes/${intake!.intake_id}/requirements`))
-      setRTitle(''); setRBody(''); setAdding(false)
     } catch (err) {
-      setError(err instanceof ApiException ? err.body.detail : 'Could not add requirement.')
+      setError(err instanceof ApiException ? err.body.detail : 'Could not remove requirement.')
     } finally {
       setBusy(false)
     }
@@ -148,6 +159,32 @@ export function IntakeDetail() {
     <button className="btn btn--danger btn--md" disabled={busy} onClick={del}>Delete</button>
   )
 
+  // the shared add/edit requirement form (driven by reqForm; same markup for both)
+  const reqFormBody = () =>
+    reqForm && (
+      <form className="rail-actions" onSubmit={saveReq}>
+        <div className="form-field">
+          <label className="form-label" htmlFor="req-kind">Kind</label>
+          <select className="input" id="req-kind" value={reqForm.kind} onChange={(e) => setReqForm({ ...reqForm, kind: e.target.value })}>
+            {REQUIREMENT_KINDS.map((k) => <option key={k.code} value={k.code}>{k.label}</option>)}
+          </select>
+        </div>
+        <div className="form-field">
+          <label className="form-label is-required" htmlFor="req-title">Title</label>
+          <input className="input" id="req-title" placeholder="Short requirement name" value={reqForm.title} onChange={(e) => setReqForm({ ...reqForm, title: e.target.value })} />
+        </div>
+        <div className="form-field">
+          <label className="form-label is-required" htmlFor="req-body">Detail</label>
+          <textarea className="input" id="req-body" placeholder="What the requirement entails." value={reqForm.body} onChange={(e) => setReqForm({ ...reqForm, body: e.target.value })} />
+        </div>
+        {error && <span className="input-error-text">{error}</span>}
+        <div className="l-cluster">
+          <button type="submit" className="btn btn--primary btn--md" disabled={busy || !reqForm.title.trim() || !reqForm.body.trim()}>{busy ? 'Saving…' : reqForm.id ? 'Save' : 'Add requirement'}</button>
+          <button type="button" className="btn btn--ghost btn--md" disabled={busy} onClick={() => { setReqForm(null); setError('') }}>Cancel</button>
+        </div>
+      </form>
+    )
+
   return (
     <div className="canvas-pad">
       {/* Identity band */}
@@ -171,48 +208,39 @@ export function IntakeDetail() {
         <div className="aw-main">
           <div className="aw-tabpanel card">
             <div className="rail-panel__title">Requirements</div>
-            {reqs.length === 0 ? (
-              <p className="input-hint">No requirements yet. Capture the business, functional, and compliance requirements for this use case.</p>
+            {reqs.length === 0 && reqForm?.id == null ? (
+              reqForm ? null : <p className="input-hint">No requirements yet. Capture the business, functional, and compliance requirements for this use case.</p>
             ) : (
               <div className="kv">
                 {reqs.map((r) => (
                   <Fragment key={r.intake_requirement_id}>
                     <span className="kv__k"><span className="chip chip--static">{kindLabel(r.requirement_kind_code)}</span></span>
-                    <span className="kv__v"><strong>{r.title}</strong><div className="u-text-tertiary">{r.body}</div></span>
+                    <span className="kv__v">
+                      {reqForm?.id === r.intake_requirement_id ? reqFormBody() : (
+                        <>
+                          <strong>{r.title}</strong>
+                          <div className="u-text-tertiary">{r.body}</div>
+                          {canEdit && reqForm == null && (
+                            <div className="l-cluster">
+                              <button className="btn btn--ghost btn--sm" onClick={() => setReqForm({ id: r.intake_requirement_id, kind: r.requirement_kind_code, title: r.title, body: r.body })}>Edit</button>
+                              <button className="btn btn--ghost btn--sm" disabled={busy} onClick={() => removeReq(r)}>Remove</button>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </span>
                   </Fragment>
                 ))}
               </div>
             )}
 
-            {canEdit && (
-              adding ? (
-                <form className="rail-actions" onSubmit={addRequirement}>
-                  <div className="form-field">
-                    <label className="form-label" htmlFor="req-kind">Kind</label>
-                    <select className="input" id="req-kind" value={kind} onChange={(e) => setKind(e.target.value)}>
-                      {REQUIREMENT_KINDS.map((k) => <option key={k.code} value={k.code}>{k.label}</option>)}
-                    </select>
-                  </div>
-                  <div className="form-field">
-                    <label className="form-label is-required" htmlFor="req-title">Title</label>
-                    <input className="input" id="req-title" placeholder="Short requirement name" value={rTitle} onChange={(e) => setRTitle(e.target.value)} />
-                  </div>
-                  <div className="form-field">
-                    <label className="form-label is-required" htmlFor="req-body">Detail</label>
-                    <textarea className="input" id="req-body" placeholder="What the requirement entails." value={rBody} onChange={(e) => setRBody(e.target.value)} />
-                  </div>
-                  {error && <span className="input-error-text">{error}</span>}
-                  <div className="l-cluster">
-                    <button type="submit" className="btn btn--primary btn--md" disabled={busy || !rTitle.trim() || !rBody.trim()}>{busy ? 'Adding…' : 'Add requirement'}</button>
-                    <button type="button" className="btn btn--ghost btn--md" disabled={busy} onClick={() => { setAdding(false); setError('') }}>Cancel</button>
-                  </div>
-                </form>
-              ) : (
-                <div className="l-cluster">
-                  <button className="btn btn--secondary btn--md" onClick={() => setAdding(true)}>Add requirement</button>
-                </div>
-              )
+            {/* add affordance / add form (edit forms render inline in the row above) */}
+            {canEdit && reqForm == null && (
+              <div className="l-cluster">
+                <button className="btn btn--secondary btn--md" onClick={() => setReqForm({ id: null, kind: 'functional', title: '', body: '' })}>Add requirement</button>
+              </div>
             )}
+            {canEdit && reqForm?.id == null && reqFormBody()}
           </div>
         </div>
 

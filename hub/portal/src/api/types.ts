@@ -73,6 +73,12 @@ export interface IntakeCreate {
   description?: string | null
 }
 
+// GET /intakes row — an Intake plus its application name + creator (mirrors IntakeListItem)
+export interface IntakeListItem extends Intake {
+  application_name: string
+  created_by_actor_id: string
+}
+
 // Mirrors hub/src/verity/hub/intake/models.py::Requirement
 export interface Requirement {
   intake_requirement_id: string
