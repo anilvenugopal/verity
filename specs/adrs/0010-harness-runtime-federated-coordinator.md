@@ -229,3 +229,88 @@ The detailed runtime design — lease timings, ten failure scenarios, heartbeat
 specification, circuit-breaker backoff, and the complete DDL — is captured in
 `specs/schema/HARNESS-ARCHITECTURE-PROPOSAL.md`. This ADR fixes the architecture; that
 document and the 001 component spec carry the implementation detail.
+
+---
+
+## Amendment — 2026-06-09 (ADR-0015, ADR-0016, ADR-0017)
+
+### Hard failure path (ADR-0015)
+
+The original ADR covers island mode and coordinator failover but does not specify the
+hub's response to a hard worker or coordinator failure.
+
+**Worker hard failure** (OOM kill, node loss): the worker writes nothing. The coordinator
+detects via missed worker heartbeat, marks the assignment lost, and reports `job_lost` to
+the Hub Gateway. The hub writes `harness_dispatch` and `execution_run_status` as `failed`
+with `error_code = worker_lost` in one transaction (§5 — the two are always written
+together). Application polls return `status: failed, log_url: null`.
+
+**Coordinator hard failure** (process death, node loss): the hub detects via
+`lease_expires_at < now()` — the lease was not renewed. The hub marks all `executing`
+dispatch records for that cluster as `failed` with `error_code = coordinator_timeout`.
+A new coordinator wins the next election and resumes. New-dispatch latency is up to the
+lease duration (~6 min default); in-flight jobs on surviving worker nodes complete and
+report on reconnect.
+
+`error.json` is a **best-effort artifact for graceful failures only** (exception caught,
+process exiting cleanly). It does not exist for hard failures. The application contract
+is `log_url: null` on hard failure; the `decision_log_id` field may reference a partial
+record if events were relayed before failure.
+
+### Log upload as part of the release flow (ADR-0015)
+
+The `release` call to the Hub Gateway carries two additional fields: `log_path` (the
+object store path where the worker uploaded run artifacts) and `decision_log_id` (the
+UUID identifying the decision log record). The hub stores these in `execution_run`. The
+pre-signed download URL is generated on demand when `GET /runs/{run_id}` is called;
+the URL is never stored, only the path. See [[0003-harness-governance-api]] amendment
+and [[0015-message-broker-dispatch-invocation]] §5 for the full upload flow.
+
+### Harness image composition (ADR-0016)
+
+Section §2 (Operator and coordinator are split) and the image description are updated
+to include the full load-bearing component list. The harness image contains:
+
+Anthropic SDK · MCP protocol client · Connector framework (SQL, REST, object store) ·
+Tool authorization enforcer · Write-target suppressor · HITL override detector ·
+Decision log assembler · Quota enforcer · Coordinator process · Worker process ·
+Operator process (k8s; merged into coordinator on Linux).
+
+These components are versioned with the image digest. Package×image compatibility
+([[0006-packages-and-governed-deployment]]) implicitly gates connector and MCP client
+version availability. Adding a new connector type requires a new image version and a
+cluster `patch` (Deployment roll), not a `deploy_package` (bundle swap).
+
+### Technical logs via k8s log aggregator (ADR-0015, ADR-0017)
+
+Harness stdout/stderr — Python log lines, stack traces, library warnings — are not a
+governance platform artifact and are not written to the hub's object store. On Kubernetes
+they go to pod stdout and are collected by the app team's log aggregator (Loki, Fluentd,
+Datadog, or equivalent). On Linux they go to journald or a log file managed by the app
+team's operational tooling. The governance platform stores no reference to operational
+logs and generates no pre-signed URL for them.
+
+### Harness cluster provisioning lifecycle (ADR-0017)
+
+Step-by-step enrollment for clarity. Prerequisites: the application already exists in
+Verity (went through intake and governance approval); environments are defined for the
+application; a champion package is promoted.
+
+1. **App team adds a cluster** to one of the application's environments in the portal
+   (Environments & Deployments → Add cluster). The hub creates a `deployment_cluster`
+   record and generates a one-time enrollment token (1 h TTL, single-use).
+2. **App team installs the operator** on their cluster with the token (`helm install
+   verity-operator … --set enrollmentToken=<token>`). The operator exchanges the token
+   for a unique mTLS cert + app-scoped API key. Token is consumed. All subsequent traffic
+   is outbound-only, port 443, mTLS.
+3. **Operator reconciles** desired state from the Hub Gateway: creates the Coordinator
+   Deployment, Worker Deployment, HPA, NetworkPolicy, and ServiceAccounts. The coordinator
+   starts heartbeating. Cluster status: **Ready**.
+4. **App team deploys a champion package** from the portal (governed deployment,
+   [[0006]]). Hub validates lifecycle→environment gate, creates a `deployment` record,
+   sends a `deploy_package` command. Coordinator pulls the bundle from MinIO, verifies
+   SHA-256, caches it. Status: **Active**.
+5. **All subsequent management is portal-driven**: new champions via `deploy_package`
+   (zero-downtime bundle swap); image updates via `patch` (Deployment roll, graceful or
+   force); cert rotation via `patch_cert` (7-day overlap window); scale via HPA config
+   update. The app team never runs `helm upgrade` after step 2.

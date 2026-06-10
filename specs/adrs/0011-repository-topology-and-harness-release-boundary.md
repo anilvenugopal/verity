@@ -179,3 +179,25 @@ not on a fixed date. Build/test specifics (CI matrices, kind topology, testconta
 and the substrate-requirements spec are implementation concerns for the respective component
 specs. This ADR fixes the *topology, the persona/substrate separation, the release boundary,
 the contract ownership, and the seed/DDL split*.
+
+---
+
+## Amendment — 2026-06-09 (ADR-0016)
+
+**Connector versioning is harness image versioning.** The harness image's connector
+framework ([[0016-tool-invocation-harness-image-composition]] §4) is a load-bearing
+component whose version is tied to the image digest. The `harness/` component therefore
+has a versioning dependency on its connector library set, in addition to the Anthropic
+SDK and the MCP protocol client.
+
+The practical consequence for the build and CI pipeline: the harness image's package×image
+compatibility matrix ([[0006-packages-and-governed-deployment]], [[0011]] §3) must include
+**connector type availability** as a compatibility dimension alongside API surface and
+runtime version. A package that declares a SQL connector requires a harness image version
+that contains the SQL connector implementation. The compatibility check at governed
+deployment time ([[0006]]) enforces this.
+
+Adding a new connector type to `harness/` follows the same release path as any harness
+image change: build → cosign sign → publish to registry → `patch` command to enrolled
+clusters → Deployment roll. This is not a `deploy_package` operation (which is zero-downtime
+bundle swap); it is an image update that requires the operator to roll the Deployment.

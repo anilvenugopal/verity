@@ -66,3 +66,26 @@ The in-process SDK path remains valid for *co-located* callers as a convenience
 (skip the HTTP hop), exactly as v1 documents on the override endpoint. The
 **distributed harness**, however, is API-only — the SDK shortcut is not available to it
 because it does not share a process with governance.
+
+---
+
+## Amendment — 2026-06-09 (ADR-0015)
+
+**Pre-signed URL upload pattern added.** For large artifact uploads (per-run decision
+logs, execution event files, error records), proxying bytes through the hub is wasteful
+and unnecessary. The API-only boundary is satisfied by negotiation, not by data transfer:
+
+The harness requests a **pre-signed PUT URL** from the Harness Gateway API at run start.
+The hub generates the URL scoped to `{tenant_id}/runs/{yyyy}/{mm}/{dd}/{run_id}/` using
+its own object store credential (never shared with the harness) and returns it. The
+harness uploads files **directly to object storage** using the short-lived URL. Bytes do
+not proxy through the hub.
+
+The harness includes `log_path` and `decision_log_id` in the `release` call to the
+Harness Gateway. The hub stores the path in `execution_run` and generates pre-signed
+**download** URLs on demand when `GET /runs/{run_id}` is called.
+
+The harness holds no long-lived object store credential — only the short-lived
+per-run pre-signed URL minted by the gateway. This satisfies the API-only boundary: every
+storage interaction is negotiated through the gateway; the harness never holds the
+credential that authorises the storage account.
