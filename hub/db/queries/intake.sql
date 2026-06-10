@@ -50,3 +50,43 @@ UPDATE core.intake SET
 WHERE intake_id = %(intake_id)s
 RETURNING intake_id, application_id, title, description, intake_status_code,
           ai_risk_tier_code, naic_materiality_code, materiality_tier_code, created_at;
+
+-- ── Pre-approval lifecycle: edit / withdraw / hard-delete ────────────────────────────────────────
+-- Mirrors the application onboarding lifecycle (PUT / withdraw / DELETE). A pre-approval intake is
+-- *revisable* — its status is NOT one of the locked terminals {approved, in_build, live, retired}.
+-- A quorum rejection leaves the status at in_review (the approval *request* is what reads 'rejected'),
+-- so a rejected intake stays revisable, exactly as a rejected application stays 'pending' (remediation).
+
+-- name: update_intake^
+-- Edit a still-revisable intake's title/description in place (pre-activation remediation). The status
+-- guard means an approved/live/retired intake is never edited this way. Returns the row, or nothing
+-- if it was locked / not found (the service distinguishes 404 from 409 via get_intake_status).
+UPDATE core.intake SET
+    title = %(title)s, description = %(description)s, updated_at = now()
+WHERE intake_id = %(intake_id)s
+  AND intake_status_code NOT IN ('approved', 'in_build', 'live', 'retired')
+RETURNING intake_id, application_id, title, description, intake_status_code,
+          ai_risk_tier_code, naic_materiality_code, materiality_tier_code, created_at;
+
+-- name: get_pending_intake_approval^
+-- The intake's open (pending) kind=intake approval, if any — used to confirm there is something to
+-- cancel on withdraw (no open request => 409, nothing to cancel).
+SELECT approval_request_id FROM core.approval_request
+WHERE target_intake_id = %(intake_id)s AND request_kind_code = 'intake' AND status_code = 'pending'
+ORDER BY created_at DESC LIMIT 1;
+
+-- ── Hard delete (delete_intake action; revisable intakes only; API + UI maintenance) ──────────────
+-- Run in FK order inside one transaction: sign-offs → approval requests → the intake row.
+-- intake_requirement is ON DELETE CASCADE (auto-removed); audit.status_transition is a soft ref
+-- (no FK) and is intentionally left intact (audit immutability).
+
+-- name: delete_intake_signoffs!
+DELETE FROM core.approval_signoff
+WHERE approval_request_id IN (SELECT approval_request_id FROM core.approval_request
+                              WHERE target_intake_id = %(intake_id)s);
+
+-- name: delete_intake_approvals!
+DELETE FROM core.approval_request WHERE target_intake_id = %(intake_id)s;
+
+-- name: delete_intake!
+DELETE FROM core.intake WHERE intake_id = %(intake_id)s;

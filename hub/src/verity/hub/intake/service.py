@@ -24,6 +24,18 @@ from verity.hub.intake.models import (
 )
 
 
+class IntakeConflict(Exception):
+    """A 409 — the intake is locked (approved/in_build/live/retired) and no longer revisable, or
+    there is no open approval to withdraw. Mirrors application.service.OnboardingConflict."""
+
+
+# An intake stops being revisable (no edit / withdraw / delete) once it reaches one of these. A
+# quorum rejection does NOT land here (it leaves the status at in_review — the approval *request*
+# reads 'rejected'), so a rejected intake remains revisable, exactly like a rejected application
+# stays 'pending' (the remediation loop).
+_LOCKED_STATUSES = frozenset({"approved", "in_build", "live", "retired"})
+
+
 async def create_application(conn: AsyncConnection, body: ApplicationCreate, ctx: AuthContext) -> Application:
     row = await queries.create_application(
         conn,
@@ -109,6 +121,62 @@ async def change_status(
             reason=body.reason,
         )
     return Intake(**row)
+
+
+async def update_intake(
+    conn: AsyncConnection, intake_id: UUID, body: IntakeCreate, ctx: AuthContext
+) -> Intake | None:
+    """Edit a still-revisable intake's title/description in place (pre-activation remediation, e.g.
+    after a rejection). None => 404; raises IntakeConflict (409) if the intake is locked. Authorization
+    is the route's require_action("edit_intake"); the audit trail records who. Mirrors
+    application.service.update."""
+    current = await queries.get_intake_status(conn, intake_id=intake_id)
+    if current is None:
+        return None
+    if current["intake_status_code"] in _LOCKED_STATUSES:
+        raise IntakeConflict("only a revisable (pre-approval) intake can be edited")
+    async with conn.transaction():
+        row = await queries.update_intake(
+            conn, intake_id=intake_id, title=body.title, description=body.description
+        )
+        if row is None:  # raced into a locked status between the gate read and the guarded UPDATE
+            raise IntakeConflict("only a revisable (pre-approval) intake can be edited")
+    return Intake(**row)
+
+
+async def withdraw_intake(
+    conn: AsyncConnection, intake_id: UUID, ctx: AuthContext
+) -> Intake | None:
+    """Cancel the intake's open approval — the *requester* withdrawing their submission (gated
+    edit_intake). The intake drops back to a revisable draft (status unchanged, as application
+    withdraw leaves the app 'pending'). None => 404; raises IntakeConflict (409) if nothing is open.
+    Mirrors application.service.withdraw."""
+    current = await queries.get_intake_status(conn, intake_id=intake_id)
+    if current is None:
+        return None
+    pending = await queries.get_pending_intake_approval(conn, intake_id=intake_id)
+    if pending is None:
+        raise IntakeConflict("no open approval to cancel")
+    async with conn.transaction():
+        await queries.cancel_pending_intake_approvals(conn, intake_id=intake_id)
+    return await get_intake(conn, intake_id)
+
+
+async def delete_intake(conn: AsyncConnection, intake_id: UUID) -> bool | None:
+    """Hard-delete a still-revisable intake + its dependents (delete_intake action; pre-approval
+    only). None => 404; raises IntakeConflict (409) for a locked intake. Requirements cascade via
+    FK; the audit trail (audit.status_transition, a soft ref) is left intact. Mirrors
+    application.service.delete_application."""
+    current = await queries.get_intake_status(conn, intake_id=intake_id)
+    if current is None:
+        return None
+    if current["intake_status_code"] in _LOCKED_STATUSES:
+        raise IntakeConflict("only a revisable (pre-approval) intake can be deleted")
+    async with conn.transaction():
+        await queries.delete_intake_signoffs(conn, intake_id=intake_id)
+        await queries.delete_intake_approvals(conn, intake_id=intake_id)
+        await queries.delete_intake(conn, intake_id=intake_id)
+    return True
 
 
 async def add_requirement(

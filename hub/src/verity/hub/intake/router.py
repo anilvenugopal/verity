@@ -87,6 +87,57 @@ async def get_intake(
     return intake
 
 
+@router.put("/intakes/{intake_id}", response_model=Intake)
+async def update_intake(
+    intake_id: UUID,
+    body: IntakeCreate,
+    conn: AsyncConnection = Depends(get_conn),
+    ctx: AuthContext = Depends(require_action("edit_intake")),
+) -> Intake:
+    """Edit a revisable intake's title/description (pre-activation remediation, e.g. after a
+    rejection). Mirrors PUT /applications/{id}."""
+    try:
+        updated = await service.update_intake(conn, intake_id, body, ctx)
+    except service.IntakeConflict as exc:
+        raise HTTPException(409, str(exc)) from exc
+    if updated is None:
+        raise HTTPException(404, "intake not found")
+    return updated
+
+
+@router.post("/intakes/{intake_id}/withdraw", response_model=Intake)
+async def withdraw_intake(
+    intake_id: UUID,
+    conn: AsyncConnection = Depends(get_conn),
+    ctx: AuthContext = Depends(require_action("edit_intake")),
+) -> Intake:
+    """Cancel the intake's open approval — the requester withdrawing their submission. Mirrors
+    POST /applications/{id}/withdraw."""
+    try:
+        intake = await service.withdraw_intake(conn, intake_id, ctx)
+    except service.IntakeConflict as exc:
+        raise HTTPException(409, str(exc)) from exc
+    if intake is None:
+        raise HTTPException(404, "intake not found")
+    return intake
+
+
+@router.delete("/intakes/{intake_id}", status_code=204)
+async def delete_intake(
+    intake_id: UUID,
+    conn: AsyncConnection = Depends(get_conn),
+    ctx: AuthContext = Depends(require_action("delete_intake")),
+) -> None:
+    """Hard-delete a revisable (pre-approval) intake + its dependents (app-team gated). Mirrors
+    DELETE /applications/{id}."""
+    try:
+        deleted = await service.delete_intake(conn, intake_id)
+    except service.IntakeConflict as exc:
+        raise HTTPException(409, str(exc)) from exc
+    if deleted is None:
+        raise HTTPException(404, "intake not found")
+
+
 @router.post("/intakes/{intake_id}/classification", response_model=Intake)
 async def classify_intake(
     intake_id: UUID,

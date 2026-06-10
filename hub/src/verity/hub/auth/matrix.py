@@ -30,7 +30,8 @@ ACTION_ROLES: dict[str, frozenset[str]] = {
     "onboard_application": frozenset({"business_owner", "ai_governance", "security"}),
     "delete_application": frozenset({"business_owner", "ai_governance", "security"}),  # the app team may delete a still-pending app (draft/in-review/rejected)
     "create_intake": _AUTHORS,
-    "edit_intake": _AUTHORS,
+    "edit_intake": _AUTHORS,  # also gates the requester's edit-in-place + withdraw of a revisable intake
+    "delete_intake": frozenset({"business_owner", "ai_governance", "security"}),  # the app team may delete a still-revisable intake (pre-approval); mirrors delete_application
     "triage_intake": _GOVERNANCE,
     "reclassify_risk": _GOVERNANCE,
     "edit_requirement": _AUTHORS,

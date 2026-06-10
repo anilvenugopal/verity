@@ -12,3 +12,10 @@ SELECT EXISTS (
     SELECT 1 FROM core.approval_request
     WHERE target_intake_id = %(intake_id)s AND request_kind_code = 'intake' AND status_code = 'pending'
 ) AS present;
+
+-- name: cancel_pending_intake_approvals!
+-- Supersede any still-open kind=intake approval for an intake — the requester withdrawing their
+-- submission (mirrors cancel_pending_application_approvals). The intake's own status is left
+-- unchanged (as application withdraw leaves the app 'pending'); it drops back to a revisable draft.
+UPDATE core.approval_request SET status_code = 'cancelled', updated_at = now()
+WHERE target_intake_id = %(intake_id)s AND request_kind_code = 'intake' AND status_code = 'pending';
