@@ -400,43 +400,42 @@ sequenceDiagram
     participant Portal as Verity Portal
     participant GovAPI as Governance API
     participant GW as Harness Gateway API
-    participant Operator as Operator<br/>(k8s)
-    participant Coord as Coordinator<br/>(k8s)
+    participant Operator as Operator
+    participant Coord as Coordinator
 
-    Note over AppTeam,Coord: Prerequisites: application exists in Verity (intake approved);<br/>champion package promoted; infra team provisioned k8s substrate + ESO
+    Note over AppTeam,Coord: Prerequisites: application approved in Verity, champion package promoted,<br/>infra team has provisioned k8s substrate and ESO
 
-    AppTeam->>Portal: Environments → Add Cluster<br/>(name, environment, app)
+    AppTeam->>Portal: Environments → Add Cluster
     Portal->>GovAPI: POST /clusters
-    GovAPI->>GovAPI: create deployment_cluster record<br/>generate enrollment token (1h TTL, single-use)
-    GovAPI-->>Portal: { cluster_id, enrollment_token }
-    Portal-->>AppTeam: enrollment token
+    GovAPI->>GovAPI: create deployment_cluster record
+    GovAPI-->>Portal: enrollment_token (1h TTL, single-use)
+    Portal-->>AppTeam: enrollment_token
 
-    AppTeam->>Operator: helm install verity-operator<br/>--set enrollmentToken=<token>
+    AppTeam->>Operator: helm install verity-operator --set enrollmentToken=[token]
 
-    Operator->>GW: POST /enroll { enrollment_token }
-    GW->>GW: validate token (1-use, TTL check)<br/>create mTLS cert + app-scoped API key<br/>mark token consumed
-    GW-->>Operator: { mTLS_cert, api_key }
-    Operator->>Operator: store cert + key in k8s Secret<br/>token is now consumed
+    Operator->>GW: POST /enroll (enrollment_token)
+    GW->>GW: validate + consume token, issue mTLS cert + API key
+    GW-->>Operator: mTLS cert + API key
+    Operator->>Operator: store cert + key in k8s Secret
 
-    Operator->>GW: GET /cluster/{id}/desired-state
-    GW-->>Operator: Coordinator Deployment spec<br/>Worker Deployment spec + HPA<br/>NetworkPolicy · ConfigMap · ServiceAccounts
-    Operator->>Operator: reconcile: create all k8s resources<br/>Coordinator + Worker Deployments start
+    Operator->>GW: GET /cluster (desired-state)
+    GW-->>Operator: Coordinator + Worker Deployment specs, HPA, NetworkPolicy
+    Operator->>Operator: reconcile k8s resources, Deployments start
 
-    Coord->>GW: POST /heartbeat (begin lease election)
-    GW-->>Coord: lease_held=true (first heartbeat wins)
-    Note over Coord: Cluster status: Ready<br/>heartbeat loop begins (every 2 min)
+    Coord->>GW: POST /heartbeat (lease election)
+    GW-->>Coord: lease_held = true
+    Note over Coord: Status: Ready. Heartbeat loop begins.
 
-    AppTeam->>Portal: Deployments → Deploy Package<br/>(select champion package)
-    Portal->>GovAPI: POST /deployments<br/>{ cluster_id, package_id }
-    GovAPI->>GovAPI: lifecycle gate check (champion → any env ✓)<br/>write deployment record<br/>write harness_command_outbox: deploy_package
-    Note over GovAPI: verity-relay drains command outbox → NATS<br/>verity.cluster.{id}.commands
+    AppTeam->>Portal: Deployments → Deploy Package (champion)
+    Portal->>GovAPI: POST /deployments (cluster_id, package_id)
+    GovAPI->>GovAPI: lifecycle gate OK, write deployment + command outbox
+    Note over GovAPI: verity-relay drains outbox to NATS:<br/>verity.cluster.{id}.commands
 
-    Coord->>GW: consume deploy_package command
-    Coord->>Coord: pull bundle from MinIO<br/>SHA-256 verify<br/>cache to Artifact PVC
-    Coord->>GW: POST /ack { command_id, status: acknowledged }
+    Coord->>Coord: receive deploy_package, pull + verify bundle from MinIO
+    Coord->>GW: POST /ack (command_id, acknowledged)
     GW-->>Portal: deployment status: Active
 
-    Note over AppTeam,Coord: All subsequent management is portal-driven.<br/>New packages via deploy_package (zero-downtime).<br/>Image updates via patch (Deployment roll).<br/>Cert rotation via patch_cert (7-day overlap).<br/>App team never runs helm upgrade again.
+    Note over AppTeam,Coord: All subsequent management is portal-driven.<br/>New packages: deploy_package (zero-downtime bundle swap).<br/>Image updates: patch (Deployment roll). Cert rotation: patch_cert.
 ```
 
 ### Explanation
@@ -590,28 +589,28 @@ sequenceDiagram
     participant Relay as verity-relay
     participant NATS as NATS JetStream
     participant Coord as Coordinator
-    participant Cache as Artifact Cache<br/>(MinIO + local PVC)
+    participant Cache as Artifact Cache
 
-    AT->>Portal: Deploy Package\n(package_id, cluster_id)
-    Portal->>GovAPI: POST /deployments\n{ package_id, cluster_id }
-    GovAPI->>GovAPI: validate lifecycle→environment gate\n(champion? any env OK; staging? non-prod only)
-    GovAPI->>PG: INSERT deployment record (status: pending)\nINSERT harness_command_outbox\n(command_kind: deploy_package,\npayload: { package_id, bundle_uri, sha256 })
-    GovAPI-->>Portal: { deployment_id, status: pending }
+    AT->>Portal: Deploy Package (package_id, cluster_id)
+    Portal->>GovAPI: POST /deployments
+    GovAPI->>GovAPI: lifecycle gate check (champion: any env OK)
+    GovAPI->>PG: INSERT deployment + harness_command_outbox (deploy_package)
+    GovAPI-->>Portal: deployment_id, status: pending
 
-    Relay->>PG: poll harness_command_outbox (pending)
-    Relay->>NATS: publish to verity.cluster.{cluster_id}.commands\n{ deploy_package payload }
-    Relay->>PG: mark outbox row: published
+    Relay->>PG: drain harness_command_outbox
+    Relay->>NATS: publish to verity.cluster.{cluster_id}.commands
+    Relay->>PG: mark outbox row published
 
-    Coord->>NATS: consume verity.cluster.{cluster_id}.commands
-    Coord->>Cache: GET bundle from MinIO\n(bundle_uri from command payload)
-    Cache-->>Coord: .vtx/.vax bundle bytes
-    Coord->>Coord: SHA-256 verify against manifest\nwrite to local Artifact Cache PVC\nload package manifest into memory
+    Coord->>NATS: consume deploy_package command
+    Coord->>Cache: pull bundle from MinIO (bundle_uri)
+    Cache-->>Coord: .vtx / .vax bundle bytes
+    Coord->>Coord: SHA-256 verify, write to Artifact Cache PVC
 
-    Coord->>GovAPI: POST /harness/v1/ack\n{ command_id, status: acknowledged }
-    GovAPI->>PG: UPDATE deployment status: active\nUPDATE harness_command_outbox: acked
+    Coord->>GovAPI: POST /harness/v1/ack (command_id, acknowledged)
+    GovAPI->>PG: UPDATE deployment active, outbox acked
     GovAPI-->>Portal: deployment status: Active
 
-    Note over AT,Cache: Package is now live. Workers will load<br/>this bundle at the start of their next claimed run.<br/>In-flight jobs on the previous bundle complete normally.
+    Note over AT,Cache: Bundle cached. Workers load it at next claim time.<br/>In-flight jobs on the previous bundle complete normally.
 ```
 
 ### Explanation
@@ -990,7 +989,78 @@ signature. No Verity involvement is required after the replication rule is estab
 
 ---
 
-## Key Cross-Cutting Constraints
+## 12. Technology Stack Matrix
+
+> **What it shows:** every technology choice in the platform, the layer it belongs to,
+> the specific version or variant in use, and the architectural rationale.
+
+### 12a. Hub Platform
+
+| Layer | Technology | Version / Variant | Role & Rationale |
+|---|---|---|---|
+| **Portal** | React | 18+ | Component-based UI; pairs with Vite for fast dev builds |
+| **Portal** | TypeScript | 5+ | Type safety across API boundary; field names mirror Pydantic models |
+| **Portal** | Vite | 5+ | Build tool; fast HMR, ES module output |
+| **Portal CSS** | Custom 5-layer CSS | tokens → base → layout → components → utilities | No UI framework dependency; see `hub/docs/css-architecture.md` |
+| **Governance API** | Python | 3.12 | Stable LTS; required by psycopg v3 and Pydantic v2 |
+| **Governance API** | FastAPI | 0.110+ | Async-native, Pydantic-integrated, OpenAPI auto-generated |
+| **Governance API** | Pydantic v2 | 2.x | Validation + serialisation; models mirror DB shape |
+| **Governance API** | psycopg v3 async | 3.x | Async Postgres driver; raw SQL via aiosql (no ORM) |
+| **Governance API** | aiosql | 7+ | SQL-in-file loader; SQL lives in `.sql` files, not string literals |
+| **Database** | PostgreSQL | 18 (pgvector) | Relational SoR; pgvector for future embedding storage |
+| **Database HA** | CloudNativePG | 1.x | Primary + read replica + PITR; runs in hub k8s cluster |
+| **Message Broker** | NATS JetStream | 2.10+ | Durable pub/sub; run dispatch + command delivery + event relay |
+| **Object Store** | MinIO | AGPL / S3-compat | Log artifact storage (`verity-artifacts` bucket); also Harbor backend (`harbor-registry` bucket) |
+| **Image Registry** | Harbor | 2.10+ | CNCF graduated; OCI images + Helm charts + cosign referrers + Trivy |
+| **Auth** | OIDC (Dex / Keycloak) | — | Portal + Harbor share one IdP; stateless JWT session |
+| **IaC** | Terraform + Helm | — | Hub platform provisioning in `infra/hub-platform/` |
+
+### 12b. Harness Runtime
+
+| Layer | Technology | Version / Variant | Role & Rationale |
+|---|---|---|---|
+| **Base image** | python:3.12-slim-bookworm | Debian Slim | musl-safe psycopg + cryptography; non-root uid=1000 |
+| **Architecture** | Docker buildx multi-arch | linux/amd64 + linux/arm64 | EKS Graviton + Apple Silicon dev laptops |
+| **Image signing** | cosign (Sigstore) | 2.x | Supply-chain attestation; signature stored as OCI referrer in Harbor |
+| **AI SDK** | Anthropic SDK | Latest stable | Claude model invocation; streaming; tool-use |
+| **AI protocol** | MCP (Model Context Protocol) | — | Standard protocol for application-side tool servers (Category A) |
+| **Connectors** | psycopg v3 | 3.x | SQL connector (Category B) |
+| **Connectors** | httpx | 0.27+ | REST connector (Category B); async-native |
+| **Connectors** | boto3-compatible | — | Object store connector (Category B); works against MinIO S3 API |
+| **Local cache** | SQLite | 3.x | Coordinator-local quota cache only (operational cache, not SoR) |
+| **Packaging** | Helm | 3.x | `verity-operator` chart; single `helm install`, no `helm upgrade` after |
+| **Secrets injection** | External Secrets Operator (ESO) | 0.9+ | Customer connector credentials from their secrets manager → k8s Secret |
+| **Secret backends** | AWS Secrets Manager · GCP Secret Manager · Azure Key Vault · HashiCorp Vault | — | Customer choice; Verity ships reference ESO `ClusterSecretStore` configs |
+| **Admission control** | Kyverno (opt-in) | 1.11+ | Cosign signature verification before pod start (harness namespace) |
+| **Network policy** | Standard k8s NetworkPolicy (default) · Cilium FQDN (opt-in) | — | Disabled by default; Cilium opt-in for FQDN egress rules |
+
+### 12c. Kubernetes Targets
+
+| Substrate | Platform | Notes |
+|---|---|---|
+| **Hub platform** | EKS (AWS) | Reference IaC in `infra/hub-platform/`; CloudNativePG, NATS, MinIO, Harbor all run here |
+| **Customer cluster — cloud** | EKS · GKE · AKS | CNCF-conformant; Workload Identity opt-in for registry pull |
+| **Customer cluster — on-prem** | Any CNCF-conformant k8s | Flannel/Cilium CNI; reference substrate IaC modules in `infra/` |
+| **Local dev** | Docker Desktop k8s · kind · k3d | `networkPolicy.enabled: false`; single-arch; local MinIO; mock Gateway |
+| **Linux (bare metal / VM)** | Podman + systemd / quadlets | Operator role merged into coordinator; no k8s API; journald for logs |
+
+### 12d. CI / Supply Chain
+
+| Stage | Technology | Notes |
+|---|---|---|
+| **Source control** | Git (monorepo) | `hub/ harness/ app-alpha/ contract/ infra/ specs/` |
+| **CI platform** | GitHub Actions | Build, scan, sign, promote pipeline per component |
+| **Multi-arch build** | docker buildx | `linux/amd64 + linux/arm64` in one push |
+| **Vulnerability scan** | Trivy (via Harbor adapter) | CRITICAL/HIGH with fix = hard pipeline stop |
+| **Image signing** | cosign + Sigstore | OCI referrer artifact; verifiable by Kyverno at deploy time |
+| **Helm chart publish** | `helm push` (OCI) | `oci://registry.verity.io/verity/charts/` |
+| **Contract tests** | Prism (mock gateway) | Harness client tested against published OpenAPI spec; no live hub needed |
+| **Integration tests** | testcontainers | Postgres + NATS + minimal gateway; exercises dispatch loop |
+| **Deploy-target tests** | kind / k3d (k8s) · podman/systemd (Linux) | Same behavioral suite on both substrates |
+
+---
+
+
 
 | Constraint | Where enforced | ADR |
 |---|---|---|
