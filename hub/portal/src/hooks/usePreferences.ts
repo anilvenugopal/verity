@@ -3,6 +3,18 @@ import { api } from '@/api/client'
 import type { UserPreferences } from '@/api/types'
 
 const DEFAULTS: UserPreferences = { theme_mode: 'system', theme_palette: 'gray' }
+const STORAGE_KEY = 'verity:prefs'
+
+function readCache(): UserPreferences | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    return raw ? (JSON.parse(raw) as UserPreferences) : null
+  } catch { return null }
+}
+
+function writeCache(prefs: UserPreferences): void {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)) } catch { /* storage full/private */ }
+}
 
 export function applyTheme(prefs: UserPreferences): void {
   const root = document.documentElement
@@ -14,12 +26,12 @@ export function applyTheme(prefs: UserPreferences): void {
 }
 
 export function usePreferences() {
-  const [prefs, setPrefs] = useState<UserPreferences>(DEFAULTS)
+  const [prefs, setPrefs] = useState<UserPreferences>(() => readCache() ?? DEFAULTS)
 
   useEffect(() => {
     api.get<UserPreferences>('/api/preferences')
-      .then((p) => { setPrefs(p); applyTheme(p) })
-      .catch(() => { /* non-fatal: use client defaults */ })
+      .then((p) => { setPrefs(p); applyTheme(p); writeCache(p) })
+      .catch(() => { /* non-fatal: cached/default preference stays */ })
   }, [])
 
   // Re-apply when OS dark-mode changes and mode is set to "system"
@@ -39,7 +51,7 @@ export function usePreferences() {
     // If the backend is unreachable the preference holds for this session but won't
     // survive a reload until the migration is applied and the server is reachable.
     api.patch<UserPreferences>('/api/preferences', changes)
-      .then((saved) => { setPrefs(saved); applyTheme(saved) })
+      .then((saved) => { setPrefs(saved); applyTheme(saved); writeCache(saved) })
       .catch(() => { /* non-fatal: session preference stays, just won't be persisted */ })
   }, [prefs])
 

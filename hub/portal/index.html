@@ -9,12 +9,16 @@
       rel="stylesheet"
     />
     <script>
-      // Follow the OS dark/light preference on load, applied before paint so there's no flash.
-      // Re-evaluated on every load/refresh; the topbar toggle overrides it for the session.
+      // Apply saved theme before first paint to avoid a flash of the default light/gray theme.
+      // Reads from localStorage (written by usePreferences on every save/load), falls back to
+      // the OS dark-mode preference when no preference has been saved yet.
       try {
-        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-          document.documentElement.classList.add('dark')
-        }
+        var p = JSON.parse(localStorage.getItem('verity:prefs') || 'null')
+        var mode = p && p.theme_mode
+        var dark = mode === 'dark' || (mode !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        if (dark) document.documentElement.classList.add('dark')
+        var palette = p && p.theme_palette
+        if (palette && palette !== 'gray') document.documentElement.dataset.theme = palette
       } catch (_) {}
     </script>
   </head>

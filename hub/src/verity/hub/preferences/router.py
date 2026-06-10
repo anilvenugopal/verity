@@ -17,7 +17,7 @@ async def get_conn(request: Request):
         yield conn
 
 
-@router.get("/api/preferences", response_model=UserPreferences)
+@router.get("/preferences", response_model=UserPreferences)
 async def get_preferences(
     conn: AsyncConnection = Depends(get_conn),
     principal: Principal = Depends(get_principal),
@@ -25,7 +25,7 @@ async def get_preferences(
     return await service.get(conn, principal.actor_id)
 
 
-@router.patch("/api/preferences", response_model=UserPreferences)
+@router.patch("/preferences", response_model=UserPreferences)
 async def patch_preferences(
     body: PreferencesPatch,
     conn: AsyncConnection = Depends(get_conn),
