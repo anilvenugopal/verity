@@ -17,14 +17,21 @@ export function Rail({ onLauncher, sidebarCollapsed, onToggleSidebar }: {
   const { canDo, hasRole } = useSession()
   const apps = resolveNav(NAV, (req) => canDo(req) || hasRole(req)).filter((n) => n.kind === 'app')
 
-  const isActive = (to?: string) => (!to ? false : to === '/' ? pathname === '/' : pathname.startsWith(to))
+  // An app is "active" if the current path is its own route OR any of its children's routes.
+  // This ensures clicking the rail icon always toggles the sidebar when you're anywhere in the
+  // app's subtree — never navigates away from a child page (e.g. /usecases is inside Intake).
+  const isActive = (app: { to?: string; children?: { to?: string }[] }) => {
+    if (!app.to) return false
+    const owns = (to: string) => to === '/' ? pathname === '/' : pathname.startsWith(to)
+    return owns(app.to) || (app.children?.some((c) => c.to && owns(c.to)) ?? false)
+  }
   const activate = (fn: () => void) => (e: KeyboardEvent) => (e.key === 'Enter' || e.key === ' ') && fn()
 
   return (
     <nav className="app__left-rail" aria-label="Apps">
       <div className="rail-apps">
         {apps.map((app) => {
-          const active = isActive(app.to)
+          const active = isActive(app)
           const hasSidebar = !!app.children?.length
           const go = () => {
             if (active && hasSidebar) onToggleSidebar()
