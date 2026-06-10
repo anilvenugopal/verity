@@ -215,6 +215,55 @@ export interface RevisionMeta {
   created_by_actor_id: string
 }
 
+// ── Compliance Model browser (003 FR-023) — mirrors hub/src/verity/hub/compliance/models.py ──
+export interface ComplianceFramework {
+  framework_code: string
+  name: string
+  authority: string | null
+  provision_count: number
+  requirement_count: number
+}
+export interface RequirementSummary {
+  requirement_code: string
+  governance_domain_code: string
+  title: string
+  frameworks: string[]
+  max_tier: number | null
+  control_count: number
+}
+export interface ProvisionView {
+  framework_code: string
+  citation: string
+  jurisdiction: string | null
+  min_tier_level: number
+}
+export interface EvidenceSpec {
+  evidence_artifact_type_code: string
+  citable_as: string | null
+}
+export interface ControlView {
+  control_code: string
+  title: string
+  control_phase_code: string
+  control_type_code: string
+  enforcement_action_code: string
+  evidence: EvidenceSpec[]
+}
+export interface TierView {
+  tier_level: number
+  title: string
+  criteria: string
+  controls: ControlView[]
+}
+export interface RequirementDetail {
+  requirement_code: string
+  governance_domain_code: string
+  title: string
+  text: string
+  provisions: ProvisionView[]
+  tiers: TierView[]
+}
+
 export type AuthState =
   | 'loading'
   | 'authenticated'

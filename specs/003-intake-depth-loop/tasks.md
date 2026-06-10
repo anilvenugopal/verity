@@ -50,6 +50,15 @@ Built over the existing hardened schema (no metamodel schema design). The **meta
 
 ---
 
+## Phase 3b: Compliance Model browser (FR-023) — validates the metamodel
+
+**Goal**: A read-only surface in the Compliance app to browse/validate the governed metamodel (the seed from T003). Independently testable: open Compliance ▸ Model → frameworks, domains, requirement catalog, requirement detail (provisions + tier ladder + controls + evidence), reverse + coverage views.
+
+- [ ] T034 Metamodel read SQL in `hub/db/queries/compliance.sql` (browse): list frameworks (+ provision/requirement counts), list canonical requirements (code, domain, title, source frameworks, max tier, control count), requirement detail (provisions w/ citation+min_tier; tiers w/ controls phase/type/enforcement + evidence specs)
+- [ ] T035 `hub/src/verity/hub/compliance/` (models + service + router): `GET /compliance/frameworks`, `GET /compliance/requirements`, `GET /compliance/requirements/{code}` (gate `view`); mount in `app.py`
+- [ ] T036 [P] Portal: `hub/portal/src/pages/compliance/ComplianceModel.tsx` — faceted browser (frameworks / domains / requirement catalog) + requirement detail (provisions, cumulative tier ladder, controls phase·type·enforcement, evidence) + coverage view; wire the Compliance app children + `/compliance/model` route in `nav.ts` + `App.tsx`
+- [ ] T037 [P] Portal types in `hub/portal/src/api/types.ts` for the metamodel browse shapes
+
 ## Phase 4: User Story 2 — Gate asset promotion (Priority: P2)
 
 **Goal**: Link registry assets to an intake; block promotion to a production-reaching stage unless the intake is approved and obligations are resolved.

@@ -47,7 +47,12 @@ export const NAV: NavNode[] = [
   { key: 'registry', kind: 'app', label: 'Registry', desc: 'Entities & versions', icon: 'i-app-registry' },
   { key: 'observability', kind: 'app', label: 'Observability', desc: 'Runs & traces', icon: 'i-app-observability' },
   { key: 'governance', kind: 'app', label: 'Governance', desc: 'Lifecycle & approvals', icon: 'i-app-governance' },
-  { key: 'compliance', kind: 'app', label: 'Compliance', desc: 'Audit & evidence', icon: 'i-app-compliance' },
+  {
+    key: 'compliance', kind: 'app', label: 'Compliance', desc: 'Audit & evidence', icon: 'i-app-compliance', to: '/compliance',
+    children: [
+      { key: 'comp-model', kind: 'page', label: 'Compliance model', icon: 'i-app-compliance', to: '/compliance/model', section: 'Compliance' },
+    ],
+  },
   { key: 'harness', kind: 'app', label: 'Harness', desc: 'Runtime cluster', icon: 'i-app-harness' },
 ]
 
