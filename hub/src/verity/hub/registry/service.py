@@ -39,6 +39,12 @@ async def list_executables(conn: AsyncConnection) -> list[Executable]:
     return [Executable(**r) async for r in queries.list_executables(conn)]
 
 
+async def list_versions(conn: AsyncConnection, executable_id: UUID) -> list[ExecutableVersion]:
+    return [ExecutableVersion(executable_version_id=r["executable_version_id"], executable_id=executable_id,
+                              semver=r["semver"], lifecycle_stage=r["lifecycle_state_code"])
+            async for r in queries.list_executable_versions(conn, executable_id=executable_id)]
+
+
 async def create_version(conn: AsyncConnection, executable_id: UUID, ctx: AuthContext) -> ExecutableVersion | None:
     ex = await queries.get_executable(conn, executable_id=executable_id)
     if ex is None:

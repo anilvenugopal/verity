@@ -44,7 +44,12 @@ export const NAV: NavNode[] = [
     ],
   },
   { key: 'studio', kind: 'app', label: 'Studio', desc: 'Author agents & tasks', icon: 'i-app-studio' },
-  { key: 'registry', kind: 'app', label: 'Registry', desc: 'Entities & versions', icon: 'i-app-registry' },
+  {
+    key: 'registry', kind: 'app', label: 'Registry', desc: 'Entities & versions', icon: 'i-app-registry', to: '/registry',
+    children: [
+      { key: 'reg-assets', kind: 'page', label: 'Assets', icon: 'i-app-registry', to: '/registry', section: 'Registry' },
+    ],
+  },
   { key: 'observability', kind: 'app', label: 'Observability', desc: 'Runs & traces', icon: 'i-app-observability' },
   { key: 'governance', kind: 'app', label: 'Governance', desc: 'Lifecycle & approvals', icon: 'i-app-governance' },
   {

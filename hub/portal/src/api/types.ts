@@ -215,6 +215,27 @@ export interface RevisionMeta {
   created_by_actor_id: string
 }
 
+// ── Registry assets + promotion gate (003 US2) — mirrors hub/src/verity/hub/registry/models.py ──
+export interface Executable {
+  executable_id: string
+  kind_code: string
+  name: string
+  version_count: number
+}
+export interface ExecutableVersion {
+  executable_version_id: string
+  executable_id: string
+  semver: string | null
+  lifecycle_stage: string | null
+}
+export interface IntakeAssetLink {
+  intake_entity_link_id: string
+  executable_id: string
+  name: string
+  kind_code: string
+  top_stage: string | null
+}
+
 // ── Intake obligations (003 US1) — mirrors hub/src/verity/hub/obligation/models.py ──
 export interface ObligationControl {
   control_code: string

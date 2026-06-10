@@ -1,7 +1,7 @@
 import { type FormEvent, Fragment, useCallback, useEffect, useState } from 'react'
 import { api } from '@/api/client'
 import { useSession } from '@/auth/useSession'
-import type { ExceptionListItem, ObligationSet } from '@/api/types'
+import type { Executable, ExceptionListItem, IntakeAssetLink, ObligationSet } from '@/api/types'
 import { domainLabel } from '../compliance/ComplianceModel'
 
 // Risk & Obligations tab (003 US1, FR-007). The intake's obligation set resolved from the metamodel,
@@ -11,17 +11,29 @@ export function RiskObligations({ intakeId, revisable }: { intakeId: string; rev
   const { canDo, principal } = useSession()
   const [set, setSet] = useState<ObligationSet | null>(null)
   const [excs, setExcs] = useState<ExceptionListItem[]>([])
+  const [links, setLinks] = useState<IntakeAssetLink[]>([])
+  const [assets, setAssets] = useState<Executable[]>([])
+  const [pick, setPick] = useState('')
   const [busy, setBusy] = useState(false)
   const [form, setForm] = useState<{ code: string; tier: number; comp: string; why: string; expires: string } | null>(null)
 
   const canRecord = revisable && canDo('record_evidence')
   const canExcept = revisable && canDo('edit_impact_assessment')
   const canApprove = canDo('approve_exception')
+  const canLink = canDo('link_asset')
 
   const load = useCallback(() => {
     api.get<ObligationSet>(`/api/intakes/${intakeId}/obligations`).then(setSet).catch(() => setSet(null))
     api.get<ExceptionListItem[]>(`/api/intakes/${intakeId}/exceptions`).then(setExcs).catch(() => setExcs([]))
-  }, [intakeId])
+    api.get<IntakeAssetLink[]>(`/api/intakes/${intakeId}/links`).then(setLinks).catch(() => setLinks([]))
+    if (canLink) api.get<Executable[]>('/api/executables').then(setAssets).catch(() => setAssets([]))
+  }, [intakeId, canLink])
+
+  async function linkAsset() {
+    if (!pick || busy) return
+    setBusy(true)
+    try { await api.post(`/api/intakes/${intakeId}/links`, { executable_id: pick }); setPick(''); load() } finally { setBusy(false) }
+  }
   useEffect(() => load(), [load])
 
   async function record(obId: string, control: string) {
@@ -128,6 +140,29 @@ export function RiskObligations({ intakeId, revisable }: { intakeId: string; rev
             ))}
           </div>
         </>
+      )}
+
+      {/* Linked assets (003 US2) — the registry assets realizing this intake + their stage; promotion
+          to a production stage is gated on this intake being approved + obligations resolved. */}
+      <div className="rail-panel__title">Linked assets</div>
+      {links.length === 0 ? <p className="input-hint">No assets linked yet.</p> : (
+        <div className="kv">
+          {links.map((l) => (
+            <Fragment key={l.intake_entity_link_id}>
+              <span className="kv__k">{l.name}<div className="u-text-tertiary">{l.kind_code}</div></span>
+              <span className="kv__v"><span className="chip chip--static">{l.top_stage ?? 'draft'}</span></span>
+            </Fragment>
+          ))}
+        </div>
+      )}
+      {canLink && (
+        <div className="l-cluster">
+          <select className="input" value={pick} onChange={(e) => setPick(e.target.value)}>
+            <option value="">Link an asset…</option>
+            {assets.filter((a) => !links.some((l) => l.executable_id === a.executable_id)).map((a) => <option key={a.executable_id} value={a.executable_id}>{a.name}</option>)}
+          </select>
+          <button className="btn btn--secondary btn--sm" disabled={busy || !pick} onClick={linkAsset}>Link</button>
+        </div>
       )}
     </div>
   )

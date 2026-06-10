@@ -37,6 +37,11 @@ async def create_executable(body: CreateExecutable, conn: AsyncConnection = Depe
     return await service.create_executable(conn, body.name, body.kind_code, ctx)
 
 
+@router.get("/executables/{executable_id}/versions", response_model=list[ExecutableVersion])
+async def list_versions(executable_id: UUID, conn: AsyncConnection = Depends(get_conn), ctx: AuthContext = Depends(require_action("view"))) -> list[ExecutableVersion]:
+    return await service.list_versions(conn, executable_id)
+
+
 @router.post("/executables/{executable_id}/versions", response_model=ExecutableVersion, status_code=201)
 async def create_version(executable_id: UUID, conn: AsyncConnection = Depends(get_conn), ctx: AuthContext = Depends(require_action("author_registry"))) -> ExecutableVersion:
     v = await service.create_version(conn, executable_id, ctx)
