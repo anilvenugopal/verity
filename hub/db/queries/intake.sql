@@ -52,19 +52,21 @@ RETURNING intake_id, application_id, title, description, intake_status_code,
           ai_risk_tier_code, naic_materiality_code, materiality_tier_code, created_at;
 
 -- ── Pre-approval lifecycle: edit / withdraw / hard-delete ────────────────────────────────────────
--- Mirrors the application onboarding lifecycle (PUT / withdraw / DELETE). A pre-approval intake is
--- *revisable* — its status is NOT one of the locked terminals {approved, in_build, live, retired}.
--- A quorum rejection leaves the status at in_review (the approval *request* is what reads 'rejected'),
--- so a rejected intake stays revisable, exactly as a rejected application stays 'pending' (remediation).
+-- Mirrors the application onboarding lifecycle (PUT / withdraw / DELETE). A *revisable* intake is one
+-- of the three pre-decision authoring states {proposed, in_review, impact_assessment}; everything
+-- else is locked {approved, rejected, retired, in_build, live}. A quorum rejection leaves the status
+-- at in_review (the approval *request* is what reads 'rejected'), so the remediation loop matches a
+-- rejected application staying 'pending'. An explicit rejected/retired is a terminal governance kill.
 
 -- name: update_intake^
 -- Edit a still-revisable intake's title/description in place (pre-activation remediation). The status
--- guard means an approved/live/retired intake is never edited this way. Returns the row, or nothing
--- if it was locked / not found (the service distinguishes 404 from 409 via get_intake_status).
+-- guard means a locked (approved/rejected/retired/in_build/live) intake is never edited this way.
+-- Returns the row, or nothing if it was locked / not found (the service distinguishes 404 from 409
+-- via get_intake_status).
 UPDATE core.intake SET
     title = %(title)s, description = %(description)s, updated_at = now()
 WHERE intake_id = %(intake_id)s
-  AND intake_status_code NOT IN ('approved', 'in_build', 'live', 'retired')
+  AND intake_status_code IN ('proposed', 'in_review', 'impact_assessment')
 RETURNING intake_id, application_id, title, description, intake_status_code,
           ai_risk_tier_code, naic_materiality_code, materiality_tier_code, created_at;
 

@@ -104,8 +104,11 @@ def test_edit_after_rejection_is_allowed(pg_url):
         assert r.json()["intake_status_code"] == "in_review"  # still revisable after rejection
 
 
-def test_edit_locked_intake_is_409(pg_url):
-    intake = _seed_intake(pg_url, "ELK", status="approved")
+@pytest.mark.parametrize("status,sfx", [("approved", "A"), ("rejected", "J"), ("retired", "T")])
+def test_edit_locked_intake_is_409(pg_url, status, sfx):
+    # All terminal/post-decision statuses are locked — an explicit rejected/retired is a governance
+    # kill (kept for audit), approved is post-decision; none is edited via this pre-approval route.
+    intake = _seed_intake(pg_url, "EL" + sfx, status=status)
     with TestClient(_author(pg_url)) as c:
         assert c.put(f"/intakes/{intake}", json={"title": "nope"}).status_code == 409
 
@@ -179,8 +182,9 @@ def test_delete_cascades_open_approval_and_signoffs(pg_url):
         ).fetchone()[0] == 0
 
 
-def test_delete_locked_intake_is_409(pg_url):
-    intake = _seed_intake(pg_url, "DLK", status="approved")
+@pytest.mark.parametrize("status,sfx", [("approved", "A"), ("rejected", "J"), ("retired", "T")])
+def test_delete_locked_intake_is_409(pg_url, status, sfx):
+    intake = _seed_intake(pg_url, "DL" + sfx, status=status)
     with TestClient(_app(pg_url, oid=SEC_OID, roles="security")) as c:
         assert c.delete(f"/intakes/{intake}").status_code == 409
 

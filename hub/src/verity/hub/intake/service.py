@@ -29,11 +29,13 @@ class IntakeConflict(Exception):
     there is no open approval to withdraw. Mirrors application.service.OnboardingConflict."""
 
 
-# An intake stops being revisable (no edit / withdraw / delete) once it reaches one of these. A
-# quorum rejection does NOT land here (it leaves the status at in_review — the approval *request*
-# reads 'rejected'), so a rejected intake remains revisable, exactly like a rejected application
-# stays 'pending' (the remediation loop).
-_LOCKED_STATUSES = frozenset({"approved", "in_build", "live", "retired"})
+# Revisable (editable / withdrawable / deletable) = the three pre-decision authoring states
+# {proposed, in_review, impact_assessment}; everything else is locked. The remediation loop still
+# works because a quorum *rejection* leaves the intake at in_review (the approval *request* reads
+# 'rejected', the intake does not) — exactly like a rejected application stays 'pending'. An explicit
+# `rejected`/`retired` is a terminal governance kill (kept for audit), and `approved`/`in_build`/`live`
+# are post-decision — all locked.
+_LOCKED_STATUSES = frozenset({"approved", "rejected", "retired", "in_build", "live"})
 
 
 async def create_application(conn: AsyncConnection, body: ApplicationCreate, ctx: AuthContext) -> Application:
