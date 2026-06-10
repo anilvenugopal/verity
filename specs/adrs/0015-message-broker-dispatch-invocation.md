@@ -279,6 +279,21 @@ the same result (API-only boundary) without the proxy cost.
 (API-only, no long-lived credentials outside the hub) and the enrollment/credential model
 in [[0010]].
 
+---
+
+## Amendment — 2026-06-10 (ADR-0018)
+
+**MinIO is the object store for log artifacts only; Harbor is the separate OCI registry.**
+§5 names MinIO as the reference object store for per-run log artifacts
+(`decision_log.json`, `model_invocations.jsonl`, `execution_events.jsonl`, `error.json`)
+and the Tier-2 analytics data store. This remains correct and unchanged.
+
+MinIO is **not** the registry for container images or Helm charts. Harbor
+([[0018-artifact-registry-harbor]]) serves that role. The two share the same MinIO
+instance at the infrastructure level (Harbor uses a separate `harbor-registry` bucket for
+image layers), but they are distinct services with distinct purposes. The harness worker
+uploads log artifacts to MinIO via pre-signed URL; it never interacts with Harbor.
+
 ## Notes
 
 The `verity.runs.pending`, `verity.cluster.{id}.commands`, `verity.events.{run_id}`, and

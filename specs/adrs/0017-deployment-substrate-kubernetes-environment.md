@@ -262,6 +262,26 @@ The operator manages exactly one namespace; a `Role` is sufficient and correct.
 team for the hub platform. On-prem is supported via the CNCF-portable chart but not the
 primary reference IaC.
 
+---
+
+## Amendment — 2026-06-10 (ADR-0018)
+
+**Harbor is the named image registry.** §5 states "the harness image lives in Verity's
+image registry" and describes `imagePullSecrets` for pulling from it without naming the
+registry. That registry is **Harbor** ([[0018-artifact-registry-harbor]]).
+
+Concretely:
+- The harness Helm chart exposes `image.registry` as a value; the default is
+  `registry.verity.io` (Harbor's external DNS alias).
+- The enrollment `patch` command delivers updated `imagePullSecrets` referencing the
+  current Harbor credential. App teams do not manage these credentials manually.
+- For air-gapped customers, `image.registry` is set to their local Harbor replica.
+  The cosign signatures replicate alongside the image via Harbor's OCI referrers support
+  ([[0018]] §5).
+- The Workload Identity opt-in (IRSA / GKE Workload Identity / AKS Workload Identity)
+  in §5 applies only when the customer uses a cloud-managed registry mirror (ECR, GCR,
+  ACR) rather than a local Harbor replica. It does not apply to Verity's Harbor directly.
+
 ## Notes
 
 The **substrate-requirements spec** (referenced in [[0011]] §1a) documents the

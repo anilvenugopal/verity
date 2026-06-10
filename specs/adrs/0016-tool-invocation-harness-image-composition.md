@@ -211,6 +211,23 @@ path of every tool call, and endpoint changes mid-run would make run behaviour
 non-deterministic from the governance record's perspective. Claim-time resolution is
 sufficient — MCP server endpoints are stable during a run's lifetime.
 
+---
+
+## Amendment — 2026-06-10 (ADR-0018)
+
+**Harbor is the named publish target for harness images.** §4's connector release path
+("build → cosign sign → publish to registry") and §5's image composition discussion both
+reference "the registry" without naming it. That registry is **Harbor**
+([[0018-artifact-registry-harbor]]).
+
+The full release pipeline for a new harness image version is:
+`build (buildx multi-arch)` → `scan (Harbor/Trivy gate)` → `cosign sign` →
+`promote to verity/harness in Harbor`. The image digest that [[0006]] requires packages
+to pin is the digest Harbor assigns at push time.
+
+Cosign signatures are stored as OCI referrer artifacts in Harbor alongside the image
+manifest; no separate signature storage side-channel is needed.
+
 ## Notes
 
 The governance metamodel additions for MCP server registration — `mcp_server`,

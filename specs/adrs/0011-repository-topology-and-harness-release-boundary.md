@@ -182,6 +182,21 @@ the contract ownership, and the seed/DDL split*.
 
 ---
 
+## Amendment — 2026-06-10 (ADR-0018)
+
+**Harbor is the named artifact registry.** §1's component table lists `infra/` as owning
+the hub platform IaC. The complete hub platform stack is now:
+**CloudNativePG** (Postgres HA), **NATS JetStream** (dispatch broker),
+**MinIO** (log-artifact object store), and **Harbor** (OCI image and Helm chart registry).
+
+The `infra/hub-platform/` directory gains a `harbor/` module alongside the existing
+CloudNativePG, NATS, and MinIO modules
+([[0018-artifact-registry-harbor]] §6).
+
+"Signs images (cosign) → registry" in §1's harness component description refers to Harbor.
+
+---
+
 ## Amendment — 2026-06-09 (ADR-0016)
 
 **Connector versioning is harness image versioning.** The harness image's connector
