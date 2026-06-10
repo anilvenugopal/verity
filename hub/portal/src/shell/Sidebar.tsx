@@ -15,7 +15,7 @@ import { NAV, type NavNode, resolveNav } from './nav'
 const MY_APPS_MAX = 3
 const MIN_W = 140
 const MAX_W = 520
-const DEFAULT_W = 200
+const DEFAULT_W = 280
 
 export function Sidebar({ collapsed, onCollapse }: { collapsed: boolean; onCollapse: () => void }) {
   const { pathname } = useLocation()

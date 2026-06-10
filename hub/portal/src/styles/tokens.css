@@ -186,7 +186,7 @@
   /* ── LAYOUT DIMENSIONS (design-system §7, referenced by layout.css) ─────── */
   --topbar-h:      44px;   /* always-visible topbar */
   --rail-w:        48px;   /* icon-only left app rail */
-  --sidebar-w:     200px;  /* expanded in-app nav, collapsible */
+  --sidebar-w:     280px;  /* expanded in-app nav, collapsible */
   --right-panel-w: 280px;  /* contextual right panel */
   --statusbar-h:   24px;   /* fixed bottom status bar */
 }
