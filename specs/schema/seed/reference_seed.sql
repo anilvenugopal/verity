@@ -9,9 +9,13 @@ INSERT INTO reference.actor_type (code, label, sort_order) VALUES
     ('automation', 'Automation / agent', 2)
     ON CONFLICT (code) DO NOTHING;
 
-INSERT INTO reference.ai_risk_tier (code, label, sort_order) VALUES
-    ('minimal','Minimal',1),('limited','Limited',2),('high','High',3),('unacceptable','Unacceptable',4)
-    ON CONFLICT (code) DO NOTHING;
+INSERT INTO reference.ai_risk_tier (code, label, sort_order, metadata) VALUES
+    ('minimal','Minimal',1,'{"tone":"positive"}'),
+    ('limited','Limited',2,'{"tone":"warning"}'),
+    ('high','High',3,'{"tone":"negative"}'),
+    ('unacceptable','Unacceptable',4,'{"tone":"negative"}')
+    ON CONFLICT (code) DO UPDATE SET
+        label = EXCLUDED.label, sort_order = EXCLUDED.sort_order, metadata = EXCLUDED.metadata;
 
 INSERT INTO reference.api_role (code, label, sort_order) VALUES
     ('system','System',1),('user','User',2),('assistant_prefill','Assistant Prefill',3)
@@ -235,9 +239,17 @@ INSERT INTO reference.incident_severity (code,label,sort_order) VALUES ('critica
 INSERT INTO reference.incident_status (code,label,sort_order) VALUES ('open','Open',1),('investigating','Investigating',2),('mitigated','Mitigated',3),('resolved','Resolved',4),('closed','Closed',5)
     ON CONFLICT (code) DO NOTHING;
 
-INSERT INTO reference.intake_status (code, label, sort_order) VALUES
-    ('proposed','Proposed',1),('in_review','In Review',2),('impact_assessment','Impact Assessment',3),('approved','Approved',4),('in_build','In Build',5),('live','Live',6),('rejected','Rejected',7),('retired','Retired',8)
-    ON CONFLICT (code) DO NOTHING;
+INSERT INTO reference.intake_status (code, label, sort_order, metadata) VALUES
+    ('proposed','Proposed',1,'{"tone":"neutral"}'),
+    ('in_review','In Review',2,'{"tone":"info"}'),
+    ('impact_assessment','Impact Assessment',3,'{"tone":"info"}'),
+    ('approved','Approved',4,'{"tone":"positive"}'),
+    ('in_build','In Build',5,'{"tone":"info"}'),
+    ('live','Live',6,'{"tone":"positive"}'),
+    ('rejected','Rejected',7,'{"tone":"negative"}'),
+    ('retired','Retired',8,'{"tone":"neutral"}')
+    ON CONFLICT (code) DO UPDATE SET
+        label = EXCLUDED.label, sort_order = EXCLUDED.sort_order, metadata = EXCLUDED.metadata;
 
 INSERT INTO reference.lifecycle_state (code, label, sort_order, is_deployable, is_terminal, grouping) VALUES
     ('draft','Draft',1,false,false,'authoring'),

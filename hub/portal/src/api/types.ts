@@ -54,6 +54,51 @@ export interface Application {
   latest_decision: string | null
 }
 
+// Mirrors hub/src/verity/hub/intake/models.py::Intake
+export interface Intake {
+  intake_id: string
+  application_id: string
+  title: string
+  description: string | null
+  intake_status_code: string
+  ai_risk_tier_code: string | null
+  naic_materiality_code: string | null
+  materiality_tier_code: string | null
+  created_at: string
+}
+
+// Request body for POST /applications/{id}/intakes and PUT /intakes/{id} (mirrors IntakeCreate)
+export interface IntakeCreate {
+  title: string
+  description?: string | null
+}
+
+// Mirrors hub/src/verity/hub/intake/models.py::Requirement
+export interface Requirement {
+  intake_requirement_id: string
+  intake_id: string
+  requirement_kind_code: string
+  requirement_status_code: string
+  title: string
+  body: string
+  created_at: string
+}
+
+// Request body for POST /intakes/{id}/requirements (mirrors RequirementCreate)
+export interface RequirementCreate {
+  requirement_kind_code: string
+  title: string
+  body: string
+}
+
+// The pre-decision authoring statuses an intake may be edited/withdrawn/deleted in (FR-031). Mirrors
+// the backend _LOCKED_STATUSES complement (intake/service.py): everything else is locked.
+export const REVISABLE_INTAKE_STATUSES = ['proposed', 'in_review', 'impact_assessment'] as const
+
+export function isIntakeRevisable(statusCode: string): boolean {
+  return (REVISABLE_INTAKE_STATUSES as readonly string[]).includes(statusCode)
+}
+
 export interface AwaitingApproval {
   approval_request_id: string
   application_id: string
