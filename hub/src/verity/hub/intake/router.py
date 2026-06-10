@@ -22,9 +22,11 @@ from verity.hub.intake.models import (
     Intake,
     IntakeClassify,
     IntakeCreate,
+    IntakeListItem,
     IntakeStatusChange,
     Requirement,
     RequirementCreate,
+    RequirementUpdate,
 )
 
 router = APIRouter(tags=["intake"])
@@ -75,6 +77,16 @@ async def list_intakes(
     return await service.list_intakes_by_application(conn, application_id)
 
 
+@router.get("/intakes", response_model=list[IntakeListItem])
+async def list_all_intakes(
+    conn: AsyncConnection = Depends(get_conn),
+    ctx: AuthContext = Depends(require_action("view")),
+) -> list[IntakeListItem]:
+    """Every intake (newest first) with its application name + created_by — the top-level Use Cases
+    list and the MY USE CASES sidebar projection."""
+    return await service.list_all_intakes(conn)
+
+
 @router.get("/intakes/{intake_id}", response_model=Intake)
 async def get_intake(
     intake_id: UUID,
@@ -85,6 +97,57 @@ async def get_intake(
     if intake is None:
         raise HTTPException(404, "intake not found")
     return intake
+
+
+@router.put("/intakes/{intake_id}", response_model=Intake)
+async def update_intake(
+    intake_id: UUID,
+    body: IntakeCreate,
+    conn: AsyncConnection = Depends(get_conn),
+    ctx: AuthContext = Depends(require_action("edit_intake")),
+) -> Intake:
+    """Edit a revisable intake's title/description (pre-activation remediation, e.g. after a
+    rejection). Mirrors PUT /applications/{id}."""
+    try:
+        updated = await service.update_intake(conn, intake_id, body, ctx)
+    except service.IntakeConflict as exc:
+        raise HTTPException(409, str(exc)) from exc
+    if updated is None:
+        raise HTTPException(404, "intake not found")
+    return updated
+
+
+@router.post("/intakes/{intake_id}/withdraw", response_model=Intake)
+async def withdraw_intake(
+    intake_id: UUID,
+    conn: AsyncConnection = Depends(get_conn),
+    ctx: AuthContext = Depends(require_action("edit_intake")),
+) -> Intake:
+    """Cancel the intake's open approval — the requester withdrawing their submission. Mirrors
+    POST /applications/{id}/withdraw."""
+    try:
+        intake = await service.withdraw_intake(conn, intake_id, ctx)
+    except service.IntakeConflict as exc:
+        raise HTTPException(409, str(exc)) from exc
+    if intake is None:
+        raise HTTPException(404, "intake not found")
+    return intake
+
+
+@router.delete("/intakes/{intake_id}", status_code=204)
+async def delete_intake(
+    intake_id: UUID,
+    conn: AsyncConnection = Depends(get_conn),
+    ctx: AuthContext = Depends(require_action("delete_intake")),
+) -> None:
+    """Hard-delete a revisable (pre-approval) intake + its dependents (app-team gated). Mirrors
+    DELETE /applications/{id}."""
+    try:
+        deleted = await service.delete_intake(conn, intake_id)
+    except service.IntakeConflict as exc:
+        raise HTTPException(409, str(exc)) from exc
+    if deleted is None:
+        raise HTTPException(404, "intake not found")
 
 
 @router.post("/intakes/{intake_id}/classification", response_model=Intake)
@@ -141,3 +204,34 @@ async def list_requirements(
     ctx: AuthContext = Depends(require_action("view")),
 ) -> list[Requirement]:
     return await service.list_requirements(conn, intake_id)
+
+
+@router.put("/intakes/{intake_id}/requirements/{intake_requirement_id}", response_model=Requirement)
+async def update_requirement(
+    intake_id: UUID,
+    intake_requirement_id: UUID,
+    req: RequirementUpdate,
+    conn: AsyncConnection = Depends(get_conn),
+    ctx: AuthContext = Depends(require_action("edit_requirement")),
+) -> Requirement:
+    """Edit a requirement (kind / title / body) on an intake."""
+    try:
+        updated = await service.update_requirement(conn, intake_id, intake_requirement_id, req, ctx)
+    except ForeignKeyViolation as exc:
+        raise _bad_code(exc) from exc
+    if updated is None:
+        raise HTTPException(404, "requirement not found")
+    return updated
+
+
+@router.delete("/intakes/{intake_id}/requirements/{intake_requirement_id}", status_code=204)
+async def delete_requirement(
+    intake_id: UUID,
+    intake_requirement_id: UUID,
+    conn: AsyncConnection = Depends(get_conn),
+    ctx: AuthContext = Depends(require_action("edit_requirement")),
+) -> None:
+    """Remove a requirement from an intake."""
+    deleted = await service.delete_requirement(conn, intake_id, intake_requirement_id, ctx)
+    if deleted is None:
+        raise HTTPException(404, "requirement not found")

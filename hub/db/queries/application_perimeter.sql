@@ -26,6 +26,15 @@ WHERE application_id = %(application_id)s ORDER BY governance_domain_code;
 SELECT jurisdiction_code FROM core.application_jurisdiction
 WHERE application_id = %(application_id)s ORDER BY jurisdiction_code;
 
+-- name: clear_application_frameworks!
+DELETE FROM core.application_regulatory_framework WHERE application_id = %(application_id)s;
+
+-- name: clear_application_domains!
+DELETE FROM core.application_governance_domain WHERE application_id = %(application_id)s;
+
+-- name: clear_application_jurisdictions!
+DELETE FROM core.application_jurisdiction WHERE application_id = %(application_id)s;
+
 -- name: add_app_team_grant!
 -- Initial app-team grant (non-owner at propose; the owner's app_owner grant lands on approval).
 INSERT INTO core.actor_app_role_grant

@@ -1,0 +1,35 @@
+/* ── BADGES — reference-table-driven ──────────────────────────────────────────
+   A badge renders one row of a categorical reference list. Three tiers:
+     .badge              base layout + dot/icon/label   (lives in components.css)
+     .badge-{category}   which reference list           (semantic hook; single hyphen)
+     .badge--{display}   placement-local look           (BEM modifier; double hyphen)
+   Value/colour/glyph/text all come from the reference row:
+     code → [data-code]   ·   label → .badge__label   ·   description → [data-tooltip] (always)
+     tone → [data-tone]   ·   icon → .badge__icon (else the .badge__dot)
+   Reference tables carry tone/icon as presentation hints in metadata jsonb. The tone
+   palette below is CLOSED — adding a new reference value never needs new CSS. */
+
+/* ── tone palette — the only colour rules; fixed set, reused by every category ─── */
+.badge[data-tone="positive"]            { background: var(--color-positive-bg); color: var(--color-positive); border-color: var(--color-positive-border); }
+.badge[data-tone="positive"] .badge__dot { background: var(--color-positive); }
+.badge[data-tone="warning"]             { background: var(--color-warning-bg);  color: var(--color-warning);  border-color: var(--color-warning-border); }
+.badge[data-tone="warning"]  .badge__dot { background: var(--color-warning); }
+.badge[data-tone="negative"]            { background: var(--color-negative-bg); color: var(--color-negative); border-color: var(--color-negative-border); }
+.badge[data-tone="negative"] .badge__dot { background: var(--color-negative); }
+.badge[data-tone="info"]                { background: var(--color-brand-faint); color: var(--color-brand);    border-color: var(--color-brand-border); }
+.badge[data-tone="info"]     .badge__dot { background: var(--color-brand); }
+.badge[data-tone="neutral"]             { background: var(--surface-panel);     color: var(--text-tertiary);  border-color: var(--border-default); }
+.badge[data-tone="neutral"]  .badge__dot { background: var(--text-tertiary); }
+/* no [data-tone] → inherits the neutral base .badge look */
+
+/* ── display modifiers — placement-local; a page decides how a badge sits in context.
+   Written `.badge.badge--x` (0,2,0) so they win over the [data-tone] palette (0,1,1). ── */
+.badge.badge--quiet     { background: transparent; border-color: transparent; padding: 0;
+                          text-transform: none; letter-spacing: normal; font-weight: var(--fw-regular);
+                          font-size: var(--fs-caption); color: var(--text-secondary); }
+.badge.badge--sm        { padding: 1px 6px; font-size: var(--fs-eyebrow); }
+.badge.badge--lg        { padding: 5px 11px; font-size: var(--fs-label); }
+.badge.badge--no-icon   .badge__dot,
+.badge.badge--no-icon   .badge__icon  { display: none; }
+.badge.badge--icon-only { padding: 3px; }
+.badge.badge--icon-only .badge__label { display: none; }

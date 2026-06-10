@@ -10,15 +10,28 @@ from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
+
+from verity.hub.paths import component_root
 
 from verity.hub.auth.dependencies import get_principal, require_action
 from verity.hub.auth.models import AuthContext, AuthError, Principal
+from verity.hub.auth.session import router as session_router
 from verity.hub.config import get_settings, validate_startup
 from verity.hub.db import make_pool, queries
 from verity.hub.application.router import router as application_router
 from verity.hub.approval.router import router as approval_router
 from verity.hub.assessment.router import router as assessment_router
 from verity.hub.intake.router import router as intake_router
+from verity.hub.intake_approval.router import router as intake_approval_router
+from verity.hub.reference.router import router as reference_router
+from verity.hub.dashboard.router import router as dashboard_router
+from verity.hub.preferences.router import router as preferences_router
+
+# Local-dev fallback so SessionMiddleware has a key when session_secret is unset (mock/local).
+# Prod requires a real per-env secret — enforced in config.validate_startup (FR-013a).
+_DEV_SESSION_SECRET = "local-dev-insecure-session-secret-change-me"
 
 logger = logging.getLogger("verity.hub")
 
@@ -39,6 +52,13 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(title="Verity Hub", version="0.1.0", lifespan=lifespan)
+    settings = get_settings()
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=settings.session_secret or _DEV_SESSION_SECRET,
+        same_site="lax",
+        https_only=settings.env != "local",
+    )
 
     @app.exception_handler(AuthError)
     async def _auth_error(request: Request, exc: AuthError):  # 401 unauth / 403 denied, non-leaking
@@ -59,11 +79,26 @@ def create_app() -> FastAPI:
         return {"status": "ready", "reference_roles": roles}
 
     @app.get("/me", tags=["auth"])
-    async def me(principal: Principal = Depends(get_principal)) -> dict[str, object]:
+    async def me(request: Request, principal: Principal = Depends(get_principal)) -> dict[str, object]:
+        # logged_out / mock-session resolution lives in get_principal now.
+        s = get_settings()
+        # is_mock reflects THIS session, not the server mode: a real Entra session (actor_id present)
+        # is never mock even when the server runs auth_mode=mock for local dev.
+        session = getattr(request, "session", {})
+        if "actor_id" in session:
+            is_mock = False
+        elif "mock_actor_id" in session:
+            is_mock = True
+        else:
+            is_mock = s.auth_mode == "mock"
         return {
             "actor_id": principal.actor_id,
             "display_name": principal.display_name,
+            "email": principal.email,
             "platform_roles": sorted(principal.platform_roles),
+            # app_team_roles surfaced in a later milestone (account-menu pills); empty for now.
+            "app_team_roles": [],
+            "is_mock": is_mock,
         }
 
     # Example action-gated route: granting a platform role is security-only (FR-023).
@@ -73,10 +108,21 @@ def create_app() -> FastAPI:
     ) -> dict[str, str]:
         return {"status": "authorized", "actor_id": ctx.principal.actor_id, "acting_role": ctx.acting_role}
 
+    app.include_router(session_router)
+    app.include_router(reference_router)
+    app.include_router(dashboard_router)
     app.include_router(application_router)
     app.include_router(approval_router)
     app.include_router(intake_router)
     app.include_router(assessment_router)
+    app.include_router(intake_approval_router)
+    app.include_router(preferences_router)
+
+    # Serve the built portal (prod). Mounted LAST so the API routes above take priority; a no-op in
+    # local dev where Vite serves the portal. `portal/dist/` is gitignored.
+    portal_dist = component_root() / "portal" / "dist"
+    if (portal_dist / "index.html").exists():
+        app.mount("/", StaticFiles(directory=str(portal_dist), html=True), name="portal")
     return app
 
 

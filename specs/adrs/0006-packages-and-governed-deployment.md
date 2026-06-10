@@ -117,3 +117,97 @@ replay-cluster provisioning) are deferred to the runtime/deployment component sp
 ADR fixes the *governed-deployment shape*: packages as targets, digest-pinned
 compatibility, the lifecycle→environment matrix, and governance as the deploy control
 plane.
+
+---
+
+## Amendment — 2026-06-10: `candidate` state defined as a materiality-gated authoring review
+
+### Context
+
+The original ADR grouped `draft` and `candidate` together as "authoring only" with no
+distinction between them. This left `candidate` without a defined purpose and made the
+two states equivalent, which is useless.
+
+In a regulated insurance platform, there is a real workflow gap between "I finished
+authoring this package" and "this package may be deployed to a non-prod cluster for
+testing." A package encodes a prompt, tool authorizations, source bindings, and write
+targets — it is a governance artifact that can cause business-system side effects. Even
+non-prod execution should require a human sanity check before allowing it for high-risk
+use cases. For low-risk use cases, that review is unnecessary overhead.
+
+### Decision
+
+**`candidate` is a materiality-gated authoring-review state.** The `draft → candidate`
+transition locks the package for editing and triggers a materiality check. Low-materiality
+packages auto-advance to `staging`; high-materiality packages require an explicit human
+approval.
+
+#### Transition: `draft → candidate` (`submit_for_review`)
+
+Triggered by the package author. Locks editing on the package. The system immediately
+evaluates the **materiality rule** (§ below) using the materiality scores computed during
+the intake assessment phase ([[0005-schema-hardening]], assessment tables). If scores are
+not yet available the package is blocked at `candidate` until they are.
+
+#### Materiality rule — auto vs. manual path
+
+The materiality source is the **intake** the package is authored under
+(`package.intake_id → core.intake.materiality_tier_code` and `naic_materiality_code`).
+Both fields are set by the intake assessment (M4 assessment spec).
+
+| `materiality_tier_code` | `naic_materiality_code` | Review path |
+|---|---|---|
+| `low` | `non_material` | **Auto-approve** → `staging` immediately (system action, no human required) |
+| `low` | `material` | **Manual** |
+| `medium` | any | **Manual** |
+| `high` | any | **Manual** |
+| `critical` | any | **Manual** |
+| *not yet scored* | *not yet scored* | Blocked at `candidate` until assessment completes |
+
+The rule is conservative: only packages where **both** dimensions indicate low
+materiality are auto-approved. Any ambiguity or missing score defaults to manual.
+
+#### Manual review: `candidate → staging` (`approve_candidate`)
+
+A reviewer with the platform `governance` role (or the application's designated
+`app_governance_reviewer` role) inspects the package — specifically: the prompt version,
+tool authorizations, source bindings, and write targets — and approves. The approval is
+recorded as an insert-only audit record (reviewer actor ID, decision, comment, timestamp).
+
+**Separation of duty:** the package author cannot approve their own package, regardless
+of their roles.
+
+#### Rejection: `candidate → draft` (`reject_candidate`)
+
+The reviewer may reject with a required comment. The package returns to `draft` (editing
+re-enabled) for rework. The rejection is recorded in the same audit record.
+
+#### No `candidate` deployment
+
+`candidate` is still an authoring-only state. No deployment to any cluster
+(prod or non-prod) is permitted until the package reaches `staging`.
+
+### Updated lifecycle table
+
+| Lifecycle state | Deployable to | Run mode | Target Binding writes | Entry condition |
+|---|---|---|---|---|
+| `draft` | — | — | — | Package created |
+| `candidate` | — | — | — | Author submits; editing locked |
+| `staging` | Non-prod only | `live` | Enabled (non-prod) | Low-mat auto OR reviewer approves |
+| `challenger` | Any | `shadow` or `ab` | Suppressed (shadow) / scoped (ab) | Promoted from staging |
+| `champion` | Any | `live` | Enabled | Promoted from challenger |
+| `deprecated` | Any | `locked` | Disabled (audit/replay) | Superseded by new champion |
+
+### Consequences
+
+- Low-materiality packages (internal ops, non-consumer-facing, non-material by NAIC) reach
+  non-prod testing with zero added friction — the submit action is the only gate.
+- High-materiality packages (consumer-facing, NAIC-material, high/critical tier) always
+  have a named human reviewer on record before any execution, satisfying audit requirements
+  in regulated environments.
+- Separation of duty on the review prevents the author self-certifying their own package.
+- The materiality scores come from the intake assessment — no new metadata is required on
+  the package itself.
+- If the intake assessment has not been completed when the author submits the package, the
+  package is blocked at `candidate`. This is the correct behaviour: a package cannot be
+  reviewed for materiality compliance if materiality has not been assessed.

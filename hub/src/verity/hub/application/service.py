@@ -13,7 +13,7 @@ from psycopg import AsyncConnection
 
 from verity.hub.application.models import Application, ApplicationPropose
 from verity.hub.approval import service as approval_service
-from verity.hub.approval.models import ApprovalRequest
+from verity.hub.approval.models import ApprovalRequest, AwaitingApproval
 from verity.hub.auth.models import AuthContext, AuthError
 from verity.hub.db import queries
 
@@ -92,6 +92,82 @@ async def propose(conn: AsyncConnection, body: ApplicationPropose, ctx: AuthCont
     return _to_model(row, frameworks, domains, jurisdictions)
 
 
+async def update(conn: AsyncConnection, application_id: UUID, body: ApplicationPropose, ctx: AuthContext) -> Application | None:
+    """Edit a still-pending application in place (pre-activation remediation, e.g. after a rejection).
+    None => 404. Raises OnboardingConflict (409) if not pending, AuthError (403) if the caller is
+    neither the proposer nor the business owner. Active apps change via change-proposal (deferred)."""
+    gate = await queries.get_application_gate(conn, application_id=application_id)
+    if gate is None:
+        return None
+    if gate["application_status_code"] != "pending":
+        raise OnboardingConflict("only a pending application can be edited")
+    # Authorization is the route's require_action("onboard_application"); a pending application is a
+    # pre-activation draft the app team may revise (the audit trail records who). We deliberately do
+    # NOT require the caller to be the proposer/owner — that blocked legitimate remediation.
+
+    rank = _CLASSIFICATION_RANK.get(body.data_classification_code)
+    if body.processes_pii and rank is not None and rank < _CONFIDENTIAL_RANK:
+        raise ValueError("data_classification_code must be at least tier3_confidential when processes_pii is true")
+
+    actor_id = ctx.principal.actor_id
+    async with conn.transaction():
+        row = await queries.update_application(
+            conn, application_id=application_id,
+            code=body.code, name=body.name, description=body.description,
+            line_of_business_code=body.line_of_business_code,
+            data_classification_code=body.data_classification_code,
+            business_owner_actor_id=body.business_owner_actor_id,
+            affects_consumers=body.affects_consumers, processes_pii=body.processes_pii,
+            consumer_facing=body.consumer_facing,
+        )
+        if row is None:  # raced out of pending between the gate read and the guarded UPDATE
+            raise OnboardingConflict("only a pending application can be edited")
+        await queries.clear_application_frameworks(conn, application_id=application_id)
+        await queries.clear_application_domains(conn, application_id=application_id)
+        await queries.clear_application_jurisdictions(conn, application_id=application_id)
+        for framework_code in body.regulatory_framework_codes:
+            await queries.add_application_framework(conn, application_id=application_id, framework_code=framework_code, created_by_actor_id=actor_id)
+        for governance_domain_code in body.governance_domain_codes:
+            await queries.add_application_domain(conn, application_id=application_id, governance_domain_code=governance_domain_code, created_by_actor_id=actor_id)
+        for jurisdiction_code in body.jurisdiction_codes:
+            await queries.add_application_jurisdiction(conn, application_id=application_id, jurisdiction_code=jurisdiction_code, created_by_actor_id=actor_id)
+        frameworks, domains, jurisdictions = await _perimeter(conn, application_id)
+    return _to_model(row, frameworks, domains, jurisdictions)
+
+
+async def withdraw(conn: AsyncConnection, application_id: UUID, ctx: AuthContext) -> Application | None:
+    """Cancel the application's pending approval — the *requester* withdrawing their submission (gated
+    onboard_application). The application drops back to an editable pending draft. None => 404."""
+    gate = await queries.get_application_gate(conn, application_id=application_id)
+    if gate is None:
+        return None
+    pending = await queries.get_pending_application_approval(conn, application_id=application_id)
+    if pending is None:
+        raise OnboardingConflict("no pending approval to cancel")
+    async with conn.transaction():
+        await queries.cancel_pending_application_approvals(conn, application_id=application_id)
+    return await get_application(conn, application_id)
+
+
+async def delete_application(conn: AsyncConnection, application_id: UUID) -> bool | None:
+    """Hard-delete a PENDING application + its dependents (security-only, API maintenance). None => 404;
+    raises OnboardingConflict (409) for a non-pending app (retire active ones via lifecycle instead)."""
+    gate = await queries.get_application_gate(conn, application_id=application_id)
+    if gate is None:
+        return None
+    if gate["application_status_code"] != "pending":
+        raise OnboardingConflict("only a pending application can be deleted (retire active ones instead)")
+    async with conn.transaction():
+        await queries.delete_application_signoffs(conn, application_id=application_id)
+        await queries.delete_application_approvals(conn, application_id=application_id)
+        await queries.clear_application_frameworks(conn, application_id=application_id)
+        await queries.clear_application_domains(conn, application_id=application_id)
+        await queries.clear_application_jurisdictions(conn, application_id=application_id)
+        await queries.delete_application_grants(conn, application_id=application_id)
+        await queries.delete_application(conn, application_id=application_id)
+    return True
+
+
 async def get_application(conn: AsyncConnection, application_id: UUID) -> Application | None:
     row = await queries.get_application(conn, application_id=application_id)
     if row is None:
@@ -134,6 +210,8 @@ async def submit_for_approval(conn: AsyncConnection, application_id: UUID, ctx: 
         raise OnboardingConflict(f"application is '{gate['application_status_code']}', not pending")
     owner_needed = gate["business_owner_actor_id"] != gate["created_by_actor_id"]
     async with conn.transaction():
+        # supersede any open approval (e.g. re-submit after an edit) so there's one live request
+        await queries.cancel_pending_application_approvals(conn, application_id=application_id)
         row = await approval_service.open_request(
             conn, request_kind_code=_ONBOARDING_KIND, target_application_id=application_id,
             opened_by_actor_id=ctx.principal.actor_id, opened_role_code=ctx.acting_role,
@@ -155,6 +233,39 @@ async def change_status(conn: AsyncConnection, application_id: UUID, to_status_c
     async with conn.transaction():
         await queries.set_application_status(conn, application_id=application_id, status_code=to_status_code)
     return await get_application(conn, application_id)
+
+
+async def get_application_approval_view(conn: AsyncConnection, application_id: UUID) -> ApprovalRequest | None:
+    """The latest approval for an application, as the read view. None => the app has no approval yet
+    (e.g. a saved-but-not-submitted draft). Powers the workspace governance rail."""
+    row = await queries.get_latest_application_approval(conn, application_id=application_id)
+    if row is None:
+        return None
+    return await get_request_view(conn, row["approval_request_id"])
+
+
+async def awaiting_onboarding_approvals(conn: AsyncConnection, ctx: AuthContext) -> list["AwaitingApproval"]:
+    """The principal's MY APPROVALS queue (onboarding): pending requests where they hold a required
+    role for an unfilled slot and have not yet signed. Mirrors the sign_off eligibility/quorum +
+    self-approval guard (G1)."""
+    actor = str(ctx.principal.actor_id)
+    is_ai_gov = "ai_governance" in ctx.principal.platform_roles
+    out: list[AwaitingApproval] = []
+    async for r in queries.list_pending_onboarding_approvals(conn, actor_id=ctx.principal.actor_id):
+        if r["i_signed"]:
+            continue
+        signed = set(r["signed_roles"])
+        is_owner = actor == str(r["business_owner_actor_id"])
+        is_proposer = actor == str(r["opened_by_actor_id"])
+        owner_needed = str(r["business_owner_actor_id"]) != str(r["created_by_actor_id"])
+        can_ai = is_ai_gov and "ai_governance" not in signed and (not is_proposer or is_owner)
+        can_owner = is_owner and owner_needed and "business_owner" not in signed
+        if can_ai or can_owner:
+            out.append(AwaitingApproval(
+                approval_request_id=r["approval_request_id"], application_id=r["application_id"],
+                code=r["code"], name=r["name"],
+            ))
+    return out
 
 
 async def get_request_view(conn: AsyncConnection, approval_request_id: UUID) -> ApprovalRequest | None:
@@ -214,7 +325,10 @@ async def sign_off(conn: AsyncConnection, approval_request_id: UUID, ctx: AuthCo
             signed_as_role_code=signed_as, decision_code=decision_code, comment=comment,
         )
         signoffs = await approval_service.list_signoffs(conn, approval_request_id)
-        if any(s["decision_code"] == "rejected" for s in signoffs):
+        # A rejection OR a changes-requested closes the approval (status `rejected`) so it never
+        # deadlocks with a filled slot — the proposer remediates by editing + re-submitting (which
+        # opens a fresh approval). The signoff's decision_code preserves the rejected/changes nuance.
+        if any(s["decision_code"] in ("rejected", "requested_changes") for s in signoffs):
             await approval_service.set_request_status(conn, approval_request_id, "rejected")
         elif _satisfied(signoffs, owner, owner_needed):
             await approval_service.set_request_status(conn, approval_request_id, "approved")

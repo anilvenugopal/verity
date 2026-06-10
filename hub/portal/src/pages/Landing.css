@@ -1,0 +1,12 @@
+/* Landing-specific composition — copied from specs/ui/kit/pages/sample.html <style>.
+   Shared canvas-page classes (canvas-pad/page-head/section) now live in styles/page.css.
+   Reuses canonical components (.stat/.card/.callout/.badge/.log-table/.empty-state/.l-grid/.eyebrow). */
+
+.app-tile { display: flex; gap: var(--space-3); align-items: flex-start; }
+.app-tile__icon { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px;
+                  border-radius: var(--radius-md); background: var(--color-brand-faint);
+                  color: var(--color-brand); flex-shrink: 0; }
+.app-tile__name { font-size: var(--fs-body); font-weight: var(--fw-semibold); }
+.app-tile__desc { font-size: var(--fs-caption); color: var(--text-tertiary); margin-top: 2px; line-height: 1.45; }
+.log-grid { display: grid; grid-template-columns: 150px 130px 1fr 110px; gap: var(--space-4);
+            align-items: center; padding: 11px 16px; }

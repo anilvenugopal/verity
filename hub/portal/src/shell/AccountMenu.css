@@ -1,0 +1,36 @@
+/* Page-local styles for the account dropdown — faithful to specs/ui/kit/pages/account-menu.html.
+   Component-scoped; layer CSS unchanged. */
+.account { position: relative; }
+.account__menu {
+  position: absolute; top: calc(100% + 6px); right: 0; width: 312px; z-index: 40;
+  background: var(--surface-panel); border: 0.5px solid var(--border-strong);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); overflow: hidden;
+}
+.menu__mock {
+  display: flex; align-items: center; gap: 6px; padding: 7px var(--space-4);
+  font-size: var(--fs-eyebrow); font-weight: var(--fw-semibold);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  background: var(--color-warning-bg); color: var(--color-warning);
+  border-bottom: 1px solid var(--color-warning-border);
+}
+.menu__mock .icon { width: 13px; height: 13px; }
+.menu__head { display: flex; gap: var(--space-3); padding: var(--space-4); border-bottom: 0.5px solid var(--border-default); }
+.menu__head .avatar { width: 36px; height: 36px; font-size: 13px; cursor: default; }
+.menu__name { font-weight: var(--fw-semibold); font-size: var(--fs-label); }
+.menu__email { font-size: var(--fs-caption); color: var(--text-tertiary); margin-top: 1px; }
+.menu__section { padding: var(--space-3) var(--space-4); border-bottom: 0.5px solid var(--border-faint); }
+/* type comes from the master .eyebrow; only the page-specific spacing is local */
+.menu__label { margin-bottom: 7px; }
+.roles { display: flex; flex-wrap: wrap; gap: 6px; }   /* wraps reused .chip--static role pills */
+.menu__empty { font-size: var(--fs-caption); color: var(--text-tertiary); }
+.menu__items { padding: 6px; }
+.menu__item {
+  display: flex; align-items: center; gap: var(--space-2); padding: 8px 10px;
+  border-radius: var(--radius-md); font-size: var(--fs-label); color: var(--text-secondary);
+  cursor: pointer; width: 100%; background: none; border: 0; text-align: left; font-family: inherit;
+}
+.menu__item:hover { background: var(--surface-hover); color: var(--text-primary); }
+.menu__item .icon { width: 15px; height: 15px; }
+.menu__item--danger { color: var(--color-negative); }
+.menu__item--danger:hover { background: var(--color-negative-bg); }
+.avatar.is-open { box-shadow: var(--ring-focus); }

@@ -1,72 +1,53 @@
-# Phase 0 — Research & Decisions: Intake Assessment slice (capture + tier + ceiling)
+# Phase 0 — Research & Decisions: Intake Approval slice
 
-Decisions specific to this slice. The stack/storage are fixed; the compliance metamodel is
-unseeded, so obligation resolution is out of scope (see plan.md Scope).
+Decisions specific to intake approval. Reuses the Slice-2 approval primitive and the Slice-3 tier.
 
-## D-ASM-1 — Reuse `intake_impact_assessment` (jsonb + SCD-2); no new table
-- **Decision**: the four-tab questionnaire is stored in the existing `core.intake_impact_assessment`
-  — `assessment jsonb` holds the structured answers; each submit writes a **new revision** (closes
-  the prior open SCD-2 window: set its `valid_to = now()`, insert `revision = max+1` with
-  `valid_to = '2099-12-31'`). Reads use `core.intake_impact_assessment_current`.
-- **Rationale**: the entity already exists and is designed for exactly this (D4 history-keeping);
-  `(intake_id, revision)` is UNIQUE; no schema growth for the assessment itself.
-- **Alternatives**: a new per-question table (rejected — premature relational modeling before the
-  obligation-resolution slice needs queryable answers; jsonb is the documented shape).
+## D-IAP-1 — Reuse the approval primitive; generalize `open_request` for intakes
+- **Decision**: intake approval is a `kind=intake` row in the existing `core.approval_request`
+  (which already has `target_intake_id` and the seeded `intake` kind) with sign-offs in
+  `core.approval_signoff`. The only change is generalizing `approval.service.open_request` (+ SQL)
+  to bind **`target_intake_id`** as well as `target_application_id` (one is null; the
+  `ck_approval_request_one_target` CHECK enforces exactly one).
+- **Rationale**: the primitive was built general (Slice 2, D-ONB-1) precisely for this; no new tables.
+- **Alternatives**: an intake-specific approval table (rejected — duplicates the primitive).
 
-## D-ASM-2 — Boundary-validated jsonb (Pydantic shape; stored opaque)
-- **Decision**: the API validates the 4-tab answer shape with Pydantic models (enumerated choices
-  per FR-AS-002/003), then stores it as `jsonb`. The DB does not constrain the answer structure.
-- **Rationale**: keeps the answer schema evolvable while still rejecting malformed input at the
-  boundary; the tier rules read named fields off the validated model.
-- **Alternatives**: a JSON-schema CHECK in the DB (rejected — duplicates the Pydantic contract,
-  brittle as questions evolve).
+## D-IAP-2 — Tier-based quorum (FR-IN-005), computed (not stored)
+- **Decision**: the required roles are computed from the intake's `ai_risk_tier_code`:
+  `high → [business_owner, compliance, legal, model_risk, ai_governance]`;
+  `limited → [business_owner, compliance, ai_governance]`; `minimal → [business_owner]`;
+  `unacceptable → []`. Resolution = approved when **every** required role has an `approved` sign-off;
+  any `rejected` blocks. (Same compute-don't-store pattern as onboarding, D-ONB-1.)
+- **Rationale**: FR-IN-005 is policy beside the matrix; the request carries no `required_roles` column.
+- **Alternatives**: store the quorum on the request (rejected — drifts from the tier).
 
-## D-ASM-3 — Inherent tier computed from answers; set via the existing intake classify path
-- **Decision**: the AI-Decision-Impact answers drive a deterministic rules function →
-  `ai_risk_tier` (`minimal`|`limited`|`high`|`unacceptable`) + `naic_materiality`
-  (`material`|`non_material`). The computed values are written to the intake via the **existing**
-  `intake.service.classify_intake` (Slice-1) — gated here by `edit_impact_assessment` rather than
-  `reclassify_risk`. The tier is **inherent** (FR-AS-008) — not lowered by anything in this slice.
-- **Rationale**: one source of truth for the intake's `*_code` columns; reuse, no duplication.
-- **Alternatives**: a separate assessment-owned tier column (rejected — the intake already owns
-  `ai_risk_tier_code`).
-- **⚠️ Policy (R1)**: the actual answer→tier mapping is a **governance policy artifact**, documented
-  in [rules-mapping.md](rules-mapping.md) and authored as a conservative draft — it **requires
-  compliance/domain-expert review before production use**. The tier-driving answers are strict enums
-  (A1) so an unexpected value 422s rather than silently down-tiering. Note the seeded
-  `reference.data_classification` codes are tier-prefixed (`tier1_public`…`tier4_pii_restricted`),
-  not the shorthand used in prose (D1).
+## D-IAP-3 — Submit requires a computed tier; the assessment is the precondition
+- **Decision**: `POST /intakes/{id}/submit` (gated `edit_intake`) opens the approval only if the
+  intake has an `ai_risk_tier_code` (set by the Slice-3 assessment) — else 400 "intake not yet
+  classified". This realizes the FR-AS-010 precondition ("assessment before approval") at the
+  granularity available now (a tier exists). `unacceptable` intakes are already auto-rejected
+  (Slice 3), so they cannot be submitted.
+- **Rationale**: a quorum can't be computed without a tier; the assessment must precede approval.
+- **Alternatives**: allow submit then block resolution (rejected — fails fast is clearer).
 
-## D-ASM-4 — `unacceptable` auto-rejects the intake (audited), reusing change_status
-- **Decision**: a computed `unacceptable` tier triggers the FR-IN-004 safety behavior — the intake
-  is auto-rejected (`intake_status_code = 'rejected'`) with the canonical note, in one transaction
-  that also appends `audit.status_transition`, via the **existing** `intake.service.change_status`.
-- **Rationale**: closes the intake-slice FR-IN-004 auto-reject deferral; the audited one-txn path
-  already exists (D-INT-1).
-- **Alternatives**: leave it to a human (rejected — prohibited use under EU-AI-Act framing is a
-  hard stop, not a discretionary call).
+## D-IAP-4 — Sign-off fills a required-role slot the signer holds
+- **Decision**: a sign-off is gated `signoff` (an approval-capable role); the finer check is that the
+  signer **holds at least one required role for this intake's tier** (else 403), and the sign-off is
+  recorded `signed_as` that role (one slot per role — `uq_approval_signoff_request_role`). Resolution
+  counts distinct approved required-role slots.
+- **Rationale**: mirrors the onboarding finer-gate (D-ONB self-approval/required-approver checks),
+  generalized to a role set.
+- **Alternatives**: let any approval role sign (rejected — FR-IN-005 names specific roles per tier).
 
-## D-ASM-5 — Intake data classification + ceiling (closes T034)
-- **Decision**: add `core.intake.data_classification_code` (FK `reference.data_classification`,
-  NULL until the Data tab is completed). On capture, enforce the **application ceiling**: the
-  intake's classification rank MUST NOT exceed the app's `data_classification_code` (FR-IN-018),
-  and `processes_pii = true` in the Data tab implies a classification ≥ `tier3_confidential`. A
-  violation is a 400.
-- **Rationale**: the Data tab is where the intake's sensitivity is first declared; this is the
-  natural home for the ceiling check deferred from Slice 2 (T034).
-- **Alternatives**: enforce only at intake create (rejected — the classification is set by the
-  assessment, after create).
-
-## D-ASM-6 — Captured-but-not-resolved tabs are still stored
-- **Decision**: the **Security & Access** answers (sources/targets/tools) and any **Data**-tab
-  fields beyond classification are **captured** in the `assessment` jsonb even though their
-  downstream machinery (approvable access records, ITSM export, obligation resolution, mitigations)
-  is deferred. Nothing is dropped — the answers persist for the later slices to consume.
-- **Rationale**: forward-compatibility (Principle VI — never silently drop); the later slices read
-  the captured answers rather than re-asking.
+## D-IAP-5 — Resolve via the audited `change_status`; one open approval per intake
+- **Decision**: on a satisfied quorum the intake moves to `approved` via the Slice-1
+  `intake.service.change_status` (one txn + `audit.status_transition`). An intake may have **one open
+  `kind=intake` approval** at a time (a second submit → 409); a terminal intake (`rejected`/`retired`)
+  cannot be submitted (409).
+- **Rationale**: reuse the audited transition; avoid duplicate concurrent approvals.
+- **Alternatives**: allow multiple open approvals (rejected — ambiguous quorum state).
 
 ## Error model (slice)
-- `401/403` → `AuthError`. `404` → unknown intake / no assessment yet.
-- `400` → classification exceeds the app ceiling; `processes_pii` without ≥ confidential.
-- `422` → Pydantic answer-shape validation.
-- `409` → reserved (e.g. assessing a terminal intake) — minimal in this slice.
+- `401/403` → `AuthError` (incl. "not a required approver for this tier").
+- `404` → unknown intake / approval. `409` → no tier yet is 400 (below); duplicate open approval;
+  terminal intake; already-resolved request. `400` → intake not yet classified (no tier);
+  invalid `decision_code` (FK). `422` → request validation.

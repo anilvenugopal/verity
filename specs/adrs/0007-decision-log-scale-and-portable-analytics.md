@@ -88,3 +88,29 @@ This ADR does not re-decide the Tier-1/Tier-2 split or insert-only model — tho
 reporting-as-jobs read model, and the **customer-portable export** commitment. Engine
 selection is tracked as an open decision and resolved in the component spec; portability
 itself is committed, not deferred.
+
+---
+
+## Amendment — 2026-06-09 (ADR-0015)
+
+**Harness write format clarified; Parquet is an ETL projection.** This ADR previously
+implied the harness might write Parquet directly. It does not.
+
+The harness writes **JSON** (one `decision_log.json` per run) and **JSONL**
+(`model_invocations.jsonl`, `execution_events.jsonl`) to object storage at run
+completion. The Tier-2 Iceberg/Parquet columnar store is built by an asynchronous ETL
+pipeline that reads these files. The harness is unaware of the analytics tier — it writes
+JSON and reports the path to the Hub Gateway.
+
+The decision log is JSON with nested structure (not flat). The V1 `agent_decision_log`
+table is the reference: flat scalars alongside several nested JSONB columns
+(`inference_config_snapshot`, `input_json`, `output_json`, `message_history`,
+`tool_calls_made`, `source_resolutions`, `target_writes`). The V2 file preserves this
+structure. `message_history` is deeply nested (array of messages, each with a content
+array of typed blocks); flattening it would lose semantic structure. JSON is the correct
+format; the ETL pipeline handles the JSON → columnar projection.
+
+The batched/async ingest endpoints on the governance API ([[0003-harness-governance-api]])
+remain the mechanism for the **run state machine** (not the bulk artifact bytes). Bulk
+artifact bytes go directly to object storage via pre-signed URL ([[0003-harness-governance-api]]
+amendment, [[0015-message-broker-dispatch-invocation]] §5).

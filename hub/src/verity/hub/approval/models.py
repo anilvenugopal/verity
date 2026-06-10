@@ -26,13 +26,25 @@ class SignoffRecord(BaseModel):
     signed_as_role_code: str
     decision_code: str
     comment: str | None = None
+    created_at: datetime | None = None
+
+
+class AwaitingApproval(BaseModel):
+    """A row in a principal's MY APPROVALS queue — a pending request they can act on, with the app
+    identity to render + link to the workspace."""
+    approval_request_id: UUID
+    application_id: UUID
+    code: str
+    name: str
 
 
 class ApprovalRequest(BaseModel):
     approval_request_id: UUID
     request_kind_code: str
     status_code: str
+    target_intake_id: UUID | None = None
     target_application_id: UUID | None = None
+    opened_by_actor_id: UUID  # the submitter — the portal disables their own sign-off (separation of duty, FR-030)
     required_roles: list[str]
     signoffs: list[SignoffRecord]
     created_at: datetime

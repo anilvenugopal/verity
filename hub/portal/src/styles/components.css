@@ -1,0 +1,397 @@
+/* ============================================================================
+   components.css — Layer 4 of the five-layer ITCSS architecture (design-system §6)
+   ----------------------------------------------------------------------------
+   Every UI component. BEM naming, single-class selectors, specificity ceiling
+   0,1,0 (0,2,0 for component+modifier). All visual styling lives here.
+   Maps 1:1 to React: .btn--primary → <Button variant="primary">.
+   ============================================================================ */
+
+/* ── Icon helper (pairs with the sprite: <svg class="icon"><use href="#i-…">) ─ */
+.icon { width: 18px; height: 18px; flex-shrink: 0; color: currentColor; }
+.icon--sm { width: 15px; height: 15px; }
+.icon--lg { width: 22px; height: 22px; }
+
+/* ── Eyebrow — every uppercase section/column/category label (design-system §4) */
+.eyebrow {
+  font-size: var(--fs-eyebrow);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+
+/* ═══ BUTTONS (design-system §6) ═══════════════════════════════════════════ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-family: var(--font-ui);
+  font-size: var(--fs-label);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--dur-fast), color var(--dur-fast),
+              border-color var(--dur-fast), box-shadow var(--dur-fast);
+  text-decoration: none;
+}
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.38; cursor: not-allowed; }
+.btn:disabled:active { transform: none; }
+
+/* Sizes */
+.btn--sm { padding: 5px 10px; font-size: 12px; }
+.btn--md { padding: 7px 14px; }                 /* default */
+.btn--lg { padding: 9px 18px; font-size: 14px; }
+
+/* Variants — fills come from button tokens (themeable). Primary is a deep fill;
+   secondary/ghost are light (outline / subtle), so light mode isn't button-heavy. */
+.btn--primary   { background: var(--btn-primary-bg); color: var(--btn-primary-fg); border-color: var(--btn-primary-bg); box-shadow: var(--shadow-sm); }
+.btn--primary:hover { filter: brightness(1.08); box-shadow: var(--shadow-md); }
+
+.btn--secondary { background: transparent; color: var(--color-brand); border-color: var(--color-brand-border); }
+.btn--secondary:hover { background: var(--color-brand-faint); border-color: var(--color-brand); }
+
+.btn--ghost     { background: transparent; color: var(--text-secondary); border-color: transparent; }
+.btn--ghost:hover { background: var(--surface-hover); color: var(--text-primary); }
+
+.btn--positive  { background: var(--btn-positive-bg); color: #FFFFFF; border-color: var(--btn-positive-bg); }
+.btn--positive:hover { filter: brightness(1.06); }
+
+.btn--danger    { background: var(--btn-danger-bg); color: #FFFFFF; border-color: var(--btn-danger-bg); }
+.btn--danger:hover { filter: brightness(1.08); }
+
+/* Icon-only button */
+.btn--icon { padding: 6px; }
+.btn--icon .icon { width: 15px; height: 15px; }
+
+
+/* ═══ BADGES — lifecycle state + materiality tier (design-system §6) ════════ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);   /* rounded rect, not pill */
+  font-size: var(--fs-eyebrow);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.badge__dot   { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+.badge__icon  { width: 12px; height: 12px; flex-shrink: 0; }  /* sprite glyph, when a row carries one */
+.badge__label { display: inline; }                            /* wrapped so .badge--icon-only can hide it */
+
+/* Lifecycle states */
+.badge--draft      { background: var(--surface-panel);     color: var(--text-tertiary);  border-color: var(--border-default); }
+.badge--draft .badge__dot { background: var(--text-disabled); }
+.badge--candidate  { background: var(--color-brand-faint);  color: var(--color-brand);    border-color: var(--color-brand-border); }
+.badge--candidate .badge__dot { background: var(--color-brand); }
+.badge--staging    { background: var(--color-brand-wash);   color: var(--color-brand);    border-color: var(--color-brand-border); }
+.badge--staging .badge__dot { background: var(--color-brand); }
+.badge--shadow     { background: var(--surface-recessed);   color: var(--text-secondary); border-color: var(--border-default); }
+.badge--shadow .badge__dot { background: var(--text-tertiary); }
+.badge--challenger { background: var(--color-warning-bg);   color: var(--color-warning);  border-color: var(--color-warning-border); }
+.badge--challenger .badge__dot { background: var(--color-warning); }
+.badge--champion   { background: var(--color-positive-bg);  color: var(--color-positive); border-color: var(--color-positive-border); }
+.badge--champion .badge__dot { background: var(--color-positive); }
+.badge--deprecated { background: var(--badge-deprecated-bg); color: var(--badge-deprecated-text); border-color: var(--badge-deprecated-border); }
+.badge--deprecated .badge__dot { background: var(--badge-deprecated-dot); }
+
+/* Materiality tiers */
+.badge--high   { background: var(--color-negative-bg); color: var(--color-negative); border-color: var(--color-negative-border); }
+.badge--medium { background: var(--color-warning-bg);  color: var(--color-warning);  border-color: var(--color-warning-border); }
+.badge--low    { background: var(--surface-panel);     color: var(--text-tertiary);  border-color: var(--border-default); }
+
+
+/* ═══ CARDS (design-system §6) ═════════════════════════════════════════════ */
+.card {
+  background: var(--surface-panel);
+  border: 0.5px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--dur-base) var(--ease-out), border-color var(--dur-fast);
+}
+.card:hover { box-shadow: var(--shadow-md); border-color: var(--border-strong); }
+.card--interactive { cursor: pointer; }
+
+.card__header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
+.card__title  { font-size: var(--fs-body); font-weight: var(--fw-semibold); color: var(--text-primary); letter-spacing: -0.01em; }
+.card__sub    { font-size: var(--fs-mono); color: var(--text-tertiary); margin-top: 2px; font-family: var(--font-mono); }
+.card__meta   { display: flex; gap: var(--space-4); font-size: var(--fs-caption); color: var(--text-tertiary);
+                margin-top: var(--space-3); padding-top: var(--space-3); border-top: 0.5px solid var(--border-faint); }
+.card__meta-item { display: flex; align-items: center; gap: 4px; }
+
+
+/* ═══ INPUTS (design-system §6) ════════════════════════════════════════════ */
+.form-field { display: flex; flex-direction: column; gap: 5px; }
+.form-label { font-size: var(--fs-mono); font-weight: var(--fw-medium); color: var(--text-secondary); }
+
+.input {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-family: var(--font-ui);
+  font-size: var(--fs-label);
+  color: var(--text-primary);
+  transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
+}
+.input:focus { border-color: var(--color-brand); box-shadow: var(--ring-focus); outline: none; }
+.input::placeholder { color: var(--text-disabled); }
+.input--mono { font-family: var(--font-mono); font-size: var(--fs-mono); }
+.input--error { border-color: var(--color-negative-border); background: var(--color-negative-bg); }
+
+.input-hint       { font-size: var(--fs-caption); color: var(--text-tertiary); }
+.input-error-text { font-size: var(--fs-caption); color: var(--color-negative); }
+.input--error:focus { border-color: var(--color-negative); box-shadow: 0 0 0 3px var(--color-negative-wash); }
+/* required-field marker — system-wide; put .is-required on the label (replaces ad-hoc asterisks). */
+.form-label.is-required::after, .sublabel.is-required::after { content: " *"; color: var(--color-negative); font-weight: var(--fw-semibold); }
+
+
+/* ═══ CHIPS — selectable tags (design-system §10) ══════════════════════════
+   One visual; single / multi / toggle behavior is set via ARIA on the group. */
+.chip-group { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border-default); background: var(--surface-panel); color: var(--text-secondary);
+  font-size: var(--fs-label); cursor: pointer; user-select: none;
+  transition: background var(--dur-fast), border-color var(--dur-fast), color var(--dur-fast);
+}
+.chip:hover       { border-color: var(--border-strong); color: var(--text-primary); }
+.chip.is-selected { background: var(--color-brand-faint); border-color: var(--color-brand); color: var(--color-brand); }
+.chip .icon       { width: 13px; height: 13px; }
+/* read-only display tag — compact, non-interactive, brand-filled (e.g. perimeter values) */
+.chip--static { cursor: default; white-space: nowrap; padding: 3px 9px; font-size: var(--fs-caption); margin: 0 4px 4px 0;
+                background: var(--color-brand-faint); border-color: var(--color-brand-border); color: var(--color-brand); }
+.chip--static:hover { border-color: var(--color-brand-border); color: var(--color-brand); }
+
+
+/* ═══ CALLOUTS (design-system §6) ══════════════════════════════════════════ */
+.callout {
+  display: flex;
+  gap: var(--space-3);
+  padding: 10px 14px;
+  border-left: 3px solid transparent;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  font-size: var(--fs-label);
+  line-height: 1.5;
+}
+.callout__icon  { flex-shrink: 0; margin-top: 1px; width: 15px; height: 15px; }
+.callout__title { font-weight: var(--fw-semibold); margin-bottom: 2px; }
+.callout__body  { color: var(--text-secondary); }
+
+/* Text stays neutral (--text-primary/--text-secondary remap per theme); the
+   type identity comes from the left border + the icon color. Readable in both modes. */
+.callout--info    { background: var(--color-brand-wash);    border-color: var(--color-brand); }
+.callout--info .callout__icon    { color: var(--color-brand); }
+.callout--success { background: var(--color-positive-wash); border-color: var(--color-positive); }
+.callout--success .callout__icon { color: var(--color-positive); }
+.callout--warning { background: var(--color-warning-wash);  border-color: var(--color-warning); }
+.callout--warning .callout__icon { color: var(--color-warning); }
+.callout--error   { background: var(--color-negative-wash); border-color: var(--color-negative); }
+.callout--error .callout__icon   { color: var(--color-negative); }
+
+
+/* ═══ TABLES — decision log, entity lists (design-system §6) ════════════════ */
+.log-table { border: 0.5px solid var(--border-default); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface-panel); }
+.log-table__header { background: var(--surface-recessed); border-bottom: 0.5px solid var(--border-default); }
+.log-row { border-bottom: 0.5px solid var(--border-faint); transition: background var(--dur-fast); cursor: pointer; }
+.log-row:last-child { border-bottom: none; }
+.log-row:hover { background: var(--surface-recessed); }
+.log-row__id { font-family: var(--font-mono); font-size: var(--fs-caption); color: var(--color-brand); font-weight: var(--fw-medium); }
+
+
+/* ═══ STAT TILE — performance summaries (design-system §12) ═════════════════ */
+.stat { display: flex; flex-direction: column; gap: 3px; padding: var(--space-4); background: var(--surface-panel);
+        border: 0.5px solid var(--border-default); border-radius: var(--radius-lg); }
+.stat__label { font-size: var(--fs-eyebrow); font-weight: var(--fw-semibold); letter-spacing: var(--tracking-eyebrow);
+               text-transform: uppercase; color: var(--text-tertiary); }
+.stat__value { font-size: var(--fs-title); font-weight: var(--fw-semibold); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.stat__delta { font-size: var(--fs-caption); }
+.stat__delta--up   { color: var(--color-positive); }
+.stat__delta--down { color: var(--color-negative); }
+
+
+/* ═══ EMPTY STATE — every app's getting-started screen (design-system §8) ═══ */
+.empty-state { display: flex; flex-direction: column; align-items: center; text-align: center;
+               gap: var(--space-3); max-width: 420px; margin-inline: auto; padding: var(--space-9) var(--space-6); }
+.empty-state__icon  { color: var(--text-tertiary); }
+.empty-state__icon .icon { width: 32px; height: 32px; }
+.empty-state__title { font-size: var(--fs-h3); font-weight: var(--fw-semibold); color: var(--text-primary); }
+.empty-state__body  { font-size: var(--fs-label); color: var(--text-secondary); line-height: 1.55; }
+.empty-state__actions { display: flex; gap: var(--space-2); margin-top: var(--space-2); }
+
+
+/* ═══ LEFT RAIL — icon-only app rail (design-system §7) ═════════════════════ */
+.rail-app-icon {
+  display: flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; margin: 3px auto 0;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--dur-fast), color var(--dur-fast);
+}
+.rail-app-icon:hover { background: var(--surface-hover); color: var(--text-primary); }
+.rail-app-icon.is-active { background: var(--color-brand-faint); color: var(--color-brand); }
+.rail-app-icon--muted { color: var(--text-tertiary); opacity: 0.7; }   /* recent apps */
+.rail-divider { width: 24px; height: 1px; background: var(--border-default); margin: var(--space-2) auto; }
+
+
+/* ═══ SIDEBAR — expanded in-app nav (design-system §7) ═════════════════════ */
+.sidebar__header { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4);
+                   border-bottom: 0.5px solid var(--border-default); flex-shrink: 0; }
+.sidebar__app-name { font-size: var(--fs-h3); font-weight: var(--fw-semibold); color: var(--text-primary); flex: 1; min-width: 0;
+                     overflow: hidden; white-space: nowrap; }
+.sidebar__section { padding: var(--space-3) var(--space-2) var(--space-1); }
+.sidebar__section-label { padding: 0 var(--space-3); margin-bottom: var(--space-1);
+  font-size: var(--fs-eyebrow); font-weight: var(--fw-semibold); letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase; color: var(--text-tertiary); }
+
+.sidebar__toggle { display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+                   width: 24px; height: 24px; border-radius: var(--radius-md); border: none;
+                   background: transparent; color: var(--text-tertiary); cursor: pointer;
+                   transition: background var(--dur-fast), color var(--dur-fast); }
+.sidebar__toggle:hover { background: var(--surface-hover); color: var(--text-primary); }
+
+.app__sidebar--collapsed .sidebar__header { justify-content: center; padding: var(--space-3) var(--space-2); gap: 0; }
+
+/* Resize handle — 8px hit target centered on the right border; 2px visual stripe on hover/drag */
+.sidebar__resize-handle {
+  position: absolute; top: 0; right: -4px; width: 8px; height: 100%;
+  cursor: col-resize; z-index: 10;
+}
+.sidebar__resize-handle::after {
+  content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 2px; height: 100%; background: transparent; transition: background var(--dur-fast);
+}
+.sidebar__resize-handle:hover::after,
+.app__sidebar.is-resizing .sidebar__resize-handle::after { background: var(--color-brand); }
+
+.nav-item {
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: 6px var(--space-3); margin: 0 var(--space-2);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-label); font-weight: var(--fw-medium); color: var(--text-secondary);
+  cursor: pointer; border-right: 2px solid transparent;
+  transition: background var(--dur-fast), color var(--dur-fast);
+}
+.nav-item:hover { background: var(--surface-hover); color: var(--text-primary); }
+.nav-item.is-active { background: var(--color-brand-faint); color: var(--color-brand); border-right-color: var(--color-brand); }
+.nav-item .icon { width: 16px; height: 16px; }
+.nav-item__badge { margin-left: auto; font-size: var(--fs-eyebrow); font-weight: var(--fw-semibold);
+                   padding: 1px 6px; border-radius: var(--radius-pill); background: var(--surface-recessed); color: var(--text-tertiary); }
+
+
+/* ═══ TOP BAR — logo (left) · breadcrumb · app scope · global utils (right) ══
+   Full width; apps live in the rail, so the bar is not an app switcher (§7). */
+.topbar__logo { display: flex; align-items: center; flex-shrink: 0; padding-left: var(--space-4); }
+
+/* Brand wordmark — theme-swapped image (slate on light, white on dark) */
+.wordmark       { display: block; width: auto; height: 22px; }
+.wordmark--lg   { height: 30px; }
+.wordmark--dark { display: none; }                   /* white variant — dark mode only */
+.dark .wordmark--light { display: none; }
+.dark .wordmark--dark  { display: block; }
+.topbar__utils { display: flex; align-items: center; gap: var(--space-2); padding-right: var(--space-4); }
+
+/* Application scope — global data filter; locked on app-scoped screens */
+.topbar__scope { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--radius-md);
+                 background: var(--surface-recessed); border: 1px solid var(--border-default);
+                 font-size: var(--fs-label); color: var(--text-secondary); cursor: pointer; white-space: nowrap;
+                 transition: border-color var(--dur-fast), color var(--dur-fast); }
+.topbar__scope:hover { border-color: var(--border-strong); color: var(--text-primary); }
+.topbar__scope .icon { width: 14px; height: 14px; color: var(--text-tertiary); }
+.topbar__scope__label { font-weight: var(--fw-medium); }
+.topbar__scope.is-locked { cursor: not-allowed; color: var(--text-tertiary); }
+.topbar__scope.is-locked:hover { border-color: var(--border-default); color: var(--text-tertiary); }
+
+.avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--color-brand); color: #fff; flex-shrink: 0;
+          display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: var(--fw-semibold); cursor: pointer; }
+
+
+/* ═══ BREADCRUMB — Context › App › Section › Entity (design-system §7).
+   Overflow collapses the middle to "first › … › last"; the ellipsis opens all. */
+.breadcrumb { display: flex; align-items: center; gap: 6px; font-size: var(--fs-label); min-width: 0; }
+.breadcrumb__item { color: var(--text-tertiary); cursor: pointer; transition: color var(--dur-fast); white-space: nowrap; }
+.breadcrumb__item:hover { color: var(--text-secondary); }
+.breadcrumb__item--current { color: var(--text-primary); font-weight: var(--fw-medium); cursor: default; }
+.breadcrumb__sep { color: var(--text-disabled); }
+.breadcrumb__collapse { color: var(--text-tertiary); cursor: pointer; padding: 0 2px; }
+.breadcrumb__collapse:hover { color: var(--text-secondary); }
+.breadcrumb .icon { width: 14px; height: 14px; }
+
+
+/* ═══ SEARCH FIELD — top-bar / command-palette trigger ═════════════════════ */
+.search-field { display: flex; align-items: center; gap: var(--space-2); padding: 6px 12px;
+                background: var(--surface-recessed); border: 1px solid var(--border-default); border-radius: var(--radius-md); }
+.search-field:focus-within { border-color: var(--color-brand); box-shadow: var(--ring-focus); }
+.search-field .icon { width: 15px; height: 15px; color: var(--text-tertiary); }
+.search-field input { flex: 1; border: none; background: transparent; font-size: var(--fs-label); color: var(--text-primary); }
+.search-field kbd { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary);
+                    border: 1px solid var(--border-default); border-radius: var(--radius-xs); padding: 1px 5px; }
+
+
+/* ═══ TOOLTIP — add data-tooltip="text" to any element; shows on hover/focus ════════════════════
+   Default placement: right (icon rails); override with data-tooltip-pos="top". */
+[data-tooltip] { position: relative; }
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute; z-index: 60;
+  left: calc(100% + 8px); top: 50%; transform: translateY(-50%);
+  white-space: nowrap; pointer-events: none;
+  background: var(--surface-panel); color: var(--text-primary);
+  border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  padding: 4px 8px; font-size: var(--fs-caption);
+  opacity: 0; transition: opacity var(--dur-fast);
+}
+[data-tooltip]:hover::after,
+[data-tooltip]:focus-visible::after { opacity: 1; }
+[data-tooltip-pos="top"]::after {
+  left: 50%; top: auto; bottom: calc(100% + 8px); transform: translateX(-50%);
+}
+
+/* Portal tooltip — rendered at <body> so it escapes overflow:hidden/auto ancestors (sidebar, tables).
+   top/left are set inline from the trigger's rect; this rule is just the bubble's look. Wraps (a
+   description is a sentence), unlike the inline [data-tooltip] which is nowrap. */
+.tooltip {
+  position: fixed; z-index: 200; pointer-events: none;
+  max-width: 280px; white-space: normal; line-height: 1.4;
+  background: var(--surface-panel); color: var(--text-primary);
+  border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  padding: 4px 8px; font-size: var(--fs-caption);
+}
+
+
+/* ═══ TABS (segment navigation) ═════════════════════════════════════════════
+   Manual tabs or a wizard (Prev/Next). .tab__marker shows per-segment state — e.g. a form
+   segment with unmet required fields (--error) or a completed one (--done). */
+.tabs { display: flex; gap: 2px; border-bottom: 0.5px solid var(--border-default); }
+.tab  { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; font-size: var(--fs-label);
+        font-weight: var(--fw-medium); color: var(--text-tertiary); cursor: pointer;
+        border: none; background: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tab:hover { color: var(--text-primary); }
+.tab.is-active { color: var(--color-brand); border-bottom-color: var(--color-brand); }
+.tab__marker { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.tab__marker--error { background: var(--color-negative); }
+.tab__marker--done  { background: var(--color-positive); }
+
+
+/* ═══ DATA-ELEMENT COMPONENTS ═══════════════════════════════════════════════
+   NOT core style primitives — these render a specific *business* data element (vs. layout/controls
+   above). Kept here, separated, until they get a proper home (a data-element layer is a future TODO).
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* Application acronym (TLA) chip — registry, detail header, topbar scope. */
+.tla { font-family: var(--font-mono); font-weight: var(--fw-medium); font-size: 11px; letter-spacing: 0.04em;
+       color: var(--color-brand); background: var(--color-brand-faint); border: 1px solid var(--color-brand-border);
+       border-radius: var(--radius-sm); padding: 1px 6px; }

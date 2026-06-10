@@ -1,0 +1,29 @@
+/* Page-local styles for the full-screen auth takeovers — faithful to
+   specs/ui/kit/pages/auth-states.html. Component-scoped; layer CSS unchanged. */
+.takeover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--surface-recessed);
+  padding: var(--space-6);
+}
+/* Surface comes from the master .card; only the takeover-specific size + padding are local. */
+.takeover__card { width: min(440px, 94vw); padding: var(--space-7) var(--space-6); }
+.state__icon {
+  display: flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; border-radius: var(--radius-md); margin-bottom: var(--space-3);
+}
+.state__icon .icon { width: 22px; height: 22px; }
+.state__icon--warn { background: var(--color-warning-bg); color: var(--color-warning); }
+.state__icon--err { background: var(--color-negative-bg); color: var(--color-negative); }
+.state__icon--neutral { background: var(--surface-recessed); color: var(--text-tertiary); }
+.state__code { font-family: var(--font-mono); font-size: var(--fs-eyebrow); color: var(--text-tertiary); letter-spacing: 0.06em; }
+.state__title { font-size: var(--fs-h3); font-weight: var(--fw-semibold); margin: 4px 0 6px; }
+.state__body { font-size: var(--fs-label); color: var(--text-secondary); line-height: 1.55; }
+.state__body code {
+  font-family: var(--font-mono); font-size: 11px;
+  background: var(--surface-recessed); border: 1px solid var(--border-default);
+  border-radius: 3px; padding: 0 4px;
+}
+.state__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-5); }

@@ -98,39 +98,39 @@ interface AppTeamMember {
 
 ---
 
-## 4. Approval request
+## 4. Approval request (shared — onboarding AND intake)
 
-Mirrors `hub/src/verity/hub/approval/models.py::ApprovalRequest`.
+Mirrors `hub/src/verity/hub/approval/models.py::ApprovalRequest` exactly. **One kind-agnostic shape** is
+returned for both `application_onboarding` and `intake` (dispatched on `request_kind_code`). There is
+no `application_name`/`required_signoffs`/`recorded_signoffs` and **no `returned_for_revision`** — those
+were an earlier draft that diverged from the backend.
 
 ```typescript
 interface ApprovalRequest {
   approval_request_id: string;    // UUID
-  application_id: string;         // UUID
-  application_name: string;
-  status_code: string;            // "pending" | "approved" | "returned_for_revision"
-  required_signoffs: RequiredSignoff[];
-  recorded_signoffs: RecordedSignoff[];
-  submitted_at: string;
-  resolved_at: string | null;
+  request_kind_code: string;      // "application_onboarding" | "intake"
+  status_code: string;            // "pending" | "approved" | "rejected" | "cancelled"
+  target_intake_id: string | null;       // set when kind=intake
+  target_application_id: string | null;   // set when kind=application_onboarding
+  required_roles: string[];        // computed quorum (FR-IN-005 for intake)
+  signoffs: SignoffRecord[];
+  created_at: string;
 }
 
-interface RequiredSignoff {
-  role_code: string;
-  label: string;
-}
-
-interface RecordedSignoff {
-  actor_id: string;
-  display_name: string;
-  role_code: string;
-  decision_code: string;
+interface SignoffRecord {
+  approver_actor_id: string;      // UUID
+  signed_as_role_code: string;
+  decision_code: string;          // "approved" | "rejected" | "requested_changes" | "abstained"
   comment: string | null;
-  recorded_at: string;
 }
 
-// POST /approvals/{id}/signoff body
+// POST /approvals/{id}/signoff body — reference.approval_decision vocabulary.
+// Resolution terminates only on `rejected` (→ rejected) or full-quorum `approved` (→ approved);
+// `requested_changes` / `abstained` leave the request `pending`.
+// UI rule (not an API constraint): onboarding offers Approve / Return-for-revision (requested_changes);
+// intake offers Approve / Reject only (rejected).
 interface Signoff {
-  decision_code: "approved" | "returned_for_revision";
+  decision_code: "approved" | "rejected" | "requested_changes" | "abstained";
   comment: string | null;
 }
 ```
@@ -180,25 +180,241 @@ interface AppLauncherState {
 
 ## 7. State transitions — Application status
 
+Reflects the shipped backend (`application/service.py`). `POST /applications/{id}/submit` opens a
+`kind=application_onboarding` approval but does **not** change the application status — the app stays
+`pending` while the approval is open. Only a full-quorum `approved` activates it.
+
 ```
-[proposed]
-    │ POST /applications/{id}/submit
+[pending]   (created by propose)
+    │ POST /applications/{id}/submit  → opens approval (app stays pending)
     ▼
-[pending_approval]
-    │ POST /approvals/{id}/signoff  decision_code=approved
-    ▼                                (quorum met)
+[pending] + open approval
+    │ POST /approvals/{id}/signoff  decision_code=approved   (quorum satisfied)
+    ▼
 [active]
 
-[pending_approval]
-    │ POST /approvals/{id}/signoff  decision_code=returned_for_revision
+[pending] + open approval
+    │ POST /approvals/{id}/signoff  decision_code=rejected   (any signer)
     ▼
-[pending]  (back to draft/editable)
+approval → rejected;  app stays [pending]   (no auto return-to-draft is enforced today)
+    # decision_code=requested_changes / abstained leave the approval `pending` (no terminal effect yet)
 
 [active] ──POST /applications/{id}/lifecycle to_status=suspended──▶ [suspended]
 [active] ──POST /applications/{id}/lifecycle to_status=retired────▶ [retired]
 ```
 
 Status badge colour mapping (design system tokens):
-- `pending` / `pending_approval` → `--color-warning` pill
+- `pending` → `--color-warning` pill
 - `active` → `--color-positive` pill
 - `suspended` / `retired` → `--text-tertiary` pill (neutral)
+
+---
+
+# Milestone 4 — Intake lifecycle types
+
+Field names mirror the backend models in `hub/src/verity/hub/intake/models.py` and
+`hub/src/verity/hub/assessment/models.py` verbatim (naming gate).
+
+## 8. Intake
+
+```typescript
+// GET /intakes/{intake_id}  &  rows in GET /applications/{application_id}/intakes
+interface Intake {
+  intake_id: string;                    // UUID
+  application_id: string;               // UUID
+  title: string;
+  description: string | null;
+  intake_status_code: string;           // "proposed" | "in_review" | "approved" | "rejected" | "retired"
+  ai_risk_tier_code: string | null;     // computed by the assessment; null until assessed
+  naic_materiality_code: string | null;
+  materiality_tier_code: string | null; // intake-level materiality (distinct from agent-level)
+  created_at: string;                   // ISO 8601
+}
+
+// POST /applications/{application_id}/intakes body — mirrors IntakeCreate
+interface IntakeCreate {
+  title: string;                        // min length 1
+  description?: string | null;
+}
+```
+
+## 9. Requirement
+
+```typescript
+interface Requirement {
+  intake_requirement_id: string;        // UUID
+  intake_id: string;                    // UUID
+  requirement_kind_code: string;
+  requirement_status_code: string;
+  title: string;
+  body: string;
+  created_at: string;
+}
+
+// POST /intakes/{intake_id}/requirements body — mirrors RequirementCreate
+interface RequirementCreate {
+  requirement_kind_code: string;
+  title: string;
+  body: string;
+}
+```
+
+## 10. Assessment (comprehensive sectioned model — A+B+C+D redesign)
+
+Grounded in EU AI Act (Art 9/10/14/27, Annex III), NIST AI RMF (MAP/MEASURE), the NAIC Model
+Bulletin's five risk dimensions, NY DFS CL-7, Colorado SB21-169, and GDPR Art 22; structured per the
+prevailing reference-implementation pattern (Microsoft RAIIA, ICO DPIA, OECD classification): **one
+sectioned assessment**, with **data**, **human-oversight controls**, **risks**, and **fairness
+metrics** as multi-entry inventories. Stored as a single jsonb snapshot (SCD-2 revisions) — no DB
+migration. Enums are model-level `Literal`s (frontend mirrors them); only `classification` is a
+`reference.data_classification` code. `★` marks a tier-driving field.
+
+```typescript
+// PUT /intakes/{intake_id}/assessment body — mirrors AssessmentInput. ONE snapshot, no partial PUT.
+interface AssessmentInput {
+  decision_context: DecisionContext;       // required
+  data_inventory: DataItem[];              // required, ≥1 — multi-entry (EU Art 10 / OECD)
+  human_oversight: HumanOversight;         // required (EU Art 14)
+  risks?: RiskItem[];                      // multi-entry (EU Art 9 / ICO register)
+  fairness?: Fairness | null;              // disparate-impact + metrics (NY DFS / CO SB21-169)
+  data_governance_narrative?: string | null;
+  rationale?: string | null;
+}
+
+interface DecisionContext {
+  decision_type: "underwriting"|"pricing"|"claims"|"fraud"|"marketing"|"servicing"|"eligibility"|"internal_ops"; // ★
+  consumer_effect: "none"|"marketing_only"|"rate_or_premium"|"coverage_or_eligibility"|"claim_denial";           // ★
+  annex_iii_high_risk: boolean;            // ★ EU Annex III high-risk category match (floors tier at high)
+  solely_automated: boolean;               // ★ GDPR Art 22
+  affected_populations: ("internal_only"|"brokers_agents"|"policyholders_consumers"|"vulnerable")[]; // ★ ≥1
+  deployment_scale: "pilot"|"limited"|"production_wide";
+}
+
+interface DataItem {                       // EU Art 10 / OECD Data&Input + Task&Output
+  name: string;                            // min length 1
+  direction: "input"|"output";
+  data_type: "tabular"|"text"|"image"|"audio"|"document"|"derived";
+  source: "internal"|"third_party"|"consumer_provided"|"public"|"synthetic"|"system_generated";
+  classification: string;                  // ★ reference.data_classification code (intake-level = MAX across items)
+  pii_presence: "none"|"indirect"|"direct"|"special_category"; // ★ (intake-level = strongest across items)
+  lawful_basis?: string | null;            // GDPR Art 6/9
+  retention?: string | null;
+  notes?: string | null;
+}
+
+interface HumanOversight {                 // EU Art 14 — autonomy classifier + a list of measures
+  autonomy_level: "assists"|"recommends_review"|"recommends_signoff"|"conditional_auto"|"fully_auto"; // ★
+  stop_mechanism: boolean;                 // ★ Art 14(4)(e) safe-halt
+  controls: OversightControl[];            // multi-entry "measures"
+}
+interface OversightControl {
+  name: string;                            // min length 1
+  stage: "pre_decision"|"real_time"|"post_hoc"|"exception"|"troubleshooting";
+  responsible_role: string;                // min length 1
+  trigger?: string | null;
+  can_override: boolean;                   // ★ Art 14(4)(d) — override/reverse lowers tier
+  what_inspected?: string | null;
+}
+
+interface RiskItem {                       // EU Art 9 likelihood × magnitude / ICO register
+  description: string;                     // min length 1
+  category: "fairness"|"privacy"|"safety"|"transparency"|"robustness"|"security"|"financial";
+  likelihood: "rare"|"possible"|"likely"|"almost_certain";
+  severity: "minor"|"moderate"|"major"|"severe";
+  mitigation?: string | null;
+  residual?: "low"|"medium"|"high" | null;
+}
+
+interface Fairness {
+  disparate_impact_tested: boolean;        // ★ NY DFS / CO SB21-169
+  protected_classes_tested: string[];
+  metrics: FairnessMetric[];               // multi-entry (NY DFS quantitative metrics)
+  less_discriminatory_alternative?: string | null;
+}
+interface FairnessMetric { name: string; group?: string | null; value?: string | null; }
+
+// Inherent-tier rule (assessment/rules.py::compute_tier — conservative, ordered, first-match):
+//  unacceptable  fully_auto + no oversight (no stop & no override) + affects consumers/vulnerable
+//                + (severe consumer_effect OR special-category data)            → auto-reject (FR-IN-004)
+//  high          annex_iii_high_risk  OR (insurance decision_type + affects people + severe effect)
+//                OR (special-category data + affects people)
+//  limited       affects anyone outside the org, OR autonomous, OR solely_automated
+//  minimal       otherwise.   materiality = material when high/unacceptable, affects consumers, or production-wide.
+
+// GET /intakes/{intake_id}/assessment — mirrors AssessmentView
+interface AssessmentView {
+  intake_id: string;
+  revision: number;
+  assessment: Record<string, unknown>;   // the captured AssessmentInput as stored
+  computed: Computed | null;
+  created_at: string;
+}
+
+interface Computed {
+  ai_risk_tier_code: string | null;
+  naic_materiality_code: string | null;
+  data_classification_code: string | null;
+  intake_status_code: string | null;
+  auto_rejected: boolean;                 // true when the tier computed to unacceptable → intake auto-rejected
+}
+
+// GET /intakes/{intake_id}/assessment/revisions — mirrors RevisionMeta
+interface RevisionMeta {
+  revision: number;
+  valid_from: string;
+  valid_to: string;
+  created_by_actor_id: string;
+}
+```
+
+## 11. Intake approval request (kind=intake)
+
+The intake approval reuses the shared approval entity. Shape per `hub/src/verity/hub/approval/models.py::ApprovalRequest` with `request_kind_code = "intake"` and `target_intake_id` set. `required_roles` is the FR-IN-005 tier quorum, computed from the intake's `ai_risk_tier_code` (not stored).
+
+```typescript
+// POST /intakes/{intake_id}/submit → ApprovalRequest (kind=intake)
+// GET /approvals/{approval_request_id} → ApprovalRequest
+// Reuses the shared ApprovalRequest type (§4). UI rule: for kind=intake the sign-off offers
+// approve/reject ONLY (a UI narrowing of the shared Signoff vocabulary — not a separate API shape).
+interface Signoff_Intake {
+  decision_code: "approved" | "rejected";   // intake UI omits requested_changes/abstained
+  comment: string | null;
+}
+```
+
+## 12. UI-only state — intake (not persisted, not sent to API)
+
+```typescript
+// Assessment editor: both tabs held client-side; a per-tab Save PUTs the FULL snapshot.
+// A save only succeeds once BOTH tabs' required fields are valid (backend requires both).
+interface AssessmentEditorState {
+  intake_id: string;
+  ai_decision_impact: Partial<AIDecisionImpact>;
+  data: Partial<DataTab>;
+  active_tab: "ai_decision_impact" | "data";
+  dirty: boolean;
+  computed: Computed | null;              // last server-computed result
+  approval_open: boolean;                 // true when intake is in_review → show the "re-save may change tier" banner
+}
+```
+
+## 13. State transitions — Intake status
+
+```
+[proposed]
+    │ PUT …/assessment  (tier computed)        │ assessment → unacceptable
+    │ POST /intakes/{id}/submit                 ▼
+    ▼                                       [rejected] (auto, terminal)
+[in_review]
+    │ POST /approvals/{id}/signoff  decision=approved  (full tier quorum)
+    ▼
+[approved]
+
+[in_review]
+    │ POST /approvals/{id}/signoff  decision=rejected  (any signer)
+    ▼
+[rejected] (terminal)
+```
+
+Intake status badge colours: `proposed` → `--color-warning`; `in_review` → `--color-info`/`--color-warning`; `approved` → `--color-positive`; `rejected` / `retired` → `--text-tertiary`.
+Risk-tier badge: `high`/`unacceptable` → `--color-negative`; `limited` → `--color-warning`; `minimal` → `--color-positive`.

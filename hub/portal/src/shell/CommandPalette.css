@@ -1,0 +1,13 @@
+/* Command-palette list — copied from specs/ui/kit/pages/sample.html <style>. Reuses the approved
+   overlay/modal/modal__search (AppShell.css) and canonical .icon/.eyebrow/.empty-state. The
+   width/background/border/text-align/font line on .presult resets it to render as a <button>. */
+
+.modal__body   { max-height: 52vh; overflow-y: auto; padding: var(--space-2); }
+.pgroup__label { padding: 8px 12px 4px; }
+.presult       { display: flex; align-items: center; gap: var(--space-3); padding: 8px 12px;
+                 border-radius: var(--radius-md); cursor: pointer;
+                 width: 100%; background: none; border: 0; text-align: left; font: inherit; }
+.presult:hover, .presult.is-active { background: var(--surface-hover); }
+.presult .icon    { color: var(--text-secondary); }
+.presult__name    { font-size: var(--fs-label); color: var(--text-primary); }
+.presult__hint    { margin-left: auto; font-size: var(--fs-caption); color: var(--text-tertiary); font-family: var(--font-mono); }

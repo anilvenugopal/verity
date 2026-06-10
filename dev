@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# The one command. `./dev` opens the menu; `./dev <action>` runs one action.
+# It just runs tools/dev.py with the hub's Python (which has InquirerPy + rich + psycopg).
+here="$(cd "$(dirname "$0")" && pwd)"
+exec "$here/hub/.venv/bin/python" "$here/tools/dev.py" "$@"

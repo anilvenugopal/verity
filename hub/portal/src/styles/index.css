@@ -1,0 +1,11 @@
+/* The five-layer kit, imported in the required cascade order. Source of truth:
+   specs/ui/kit/styles/ — never edit these copies directly; change the source then re-copy. */
+@import './tokens.css';
+@import './base.css';
+@import './layout.css';
+@import './components.css';
+@import './badges.css';
+@import './utilities.css';
+
+/* shared portal page composition (not part of the kit layers) */
+@import './page.css';

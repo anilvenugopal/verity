@@ -25,6 +25,18 @@ _CLASSIFICATION_RANK = {
     "tier1_public": 1, "tier2_internal": 2, "tier3_confidential": 3, "tier4_pii_restricted": 4,
 }
 _CONFIDENTIAL_RANK = 3
+_PII_RANK = {"none": 0, "indirect": 1, "direct": 2, "special_category": 3}
+
+
+def _derive_classification(items: list) -> str:
+    """The intake-level data classification is the STRONGEST (max-rank) across the data inventory
+    (FR-027). An unknown code ranks 0 and is left to the FK / ceiling check to reject."""
+    return max(items, key=lambda d: _CLASSIFICATION_RANK.get(d.classification, 0)).classification
+
+
+def _derive_pii(items: list) -> str:
+    """The intake-level PII presence is the strongest across the data inventory."""
+    return max((d.pii_presence for d in items), key=lambda p: _PII_RANK.get(p, 0), default="none")
 
 
 def _check_ceiling(classification: str, pii_presence: str | None, app_ceiling: str | None) -> None:
@@ -55,11 +67,13 @@ async def capture(conn: AsyncConnection, intake_id: UUID, body: AssessmentInput,
     if intake.intake_status_code in _TERMINAL_STATUSES:  # U1: no re-assessing a terminal intake
         raise AssessmentConflict(f"cannot assess an intake in terminal status '{intake.intake_status_code}'")
     answers = body.model_dump()
-    tier, materiality = compute_tier(body.ai_decision_impact)  # inherent (FR-AS-008)
-    classification = body.data.data_classification_code
-    # US3: enforce the application ceiling before any write (FR-IN-018).
+    tier, materiality = compute_tier(body)  # inherent (FR-AS-008)
+    # US3: the intake-level classification + PII are derived from the data inventory (FR-027).
+    classification = _derive_classification(body.data_inventory)
+    pii = _derive_pii(body.data_inventory)
+    # enforce the application ceiling before any write (FR-IN-018).
     ceiling_row = await queries.get_intake_app_ceiling(conn, intake_id=intake_id)
-    _check_ceiling(classification, body.data.pii_presence, ceiling_row["app_ceiling"] if ceiling_row else None)
+    _check_ceiling(classification, pii, ceiling_row["app_ceiling"] if ceiling_row else None)
     async with conn.transaction():
         revision = (await queries.next_revision(conn, intake_id=intake_id))["revision"]
         await queries.close_current_assessment(conn, intake_id=intake_id)

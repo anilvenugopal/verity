@@ -10,6 +10,9 @@ dependencies = [
   "aiosql>=10",
   "pydantic>=2.7",
   "pydantic-settings>=2.3",
+  "itsdangerous>=2.2",
+  "httpx>=0.27",        # Entra token exchange
+  "pyjwt[crypto]>=2.9", # validate the Entra ID token (RS256 via JWKS)
 ]
 
 [project.optional-dependencies]
@@ -19,6 +22,8 @@ dev = [
   "httpx>=0.27",
   "ruff>=0.5",
   "testcontainers[postgres]>=4.5",
+  "inquirerpy>=0.3",  # arrow-key menu for tools/dev.py
+  "rich>=13",         # pretty tables/output for tools/dev.py
 ]
 
 [build-system]

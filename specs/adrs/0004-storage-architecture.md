@@ -80,3 +80,38 @@ The equity-research slice runs **Postgres-only** to stay simple. The insert-only
 is adopted from day one (it is a schema-design rule, see [[0005-schema-hardening]]); the
 Tier-2 bulk store is introduced as a dedicated phase before log volume warrants it, not
 in the first slice.
+
+---
+
+## Amendment — 2026-06-09 (ADR-0015)
+
+**Per-run file format and ETL projection pattern clarified.** This ADR's Tier-2 bulk
+log store (Iceberg/Parquet) is an **ETL projection**, not the harness write target.
+The primary write format for individual runs is JSON/JSONL, written by the harness
+directly to object storage (MinIO) via a pre-signed PUT URL ([[0003-harness-governance-api]],
+[[0015-message-broker-dispatch-invocation]]).
+
+Per-run artifact layout written by the harness:
+```
+{tenant_id}/runs/{yyyy}/{mm}/{dd}/{run_id}/
+  decision_log.json        — JSON, nested (mirrors V1 agent_decision_log structure)
+  model_invocations.jsonl  — JSONL, one object per API call/turn
+  execution_events.jsonl   — JSONL, full execution event stream
+  error.json               — JSON, graceful failure only; absent on hard failure
+```
+
+The **ETL pipeline** reads these files asynchronously and writes aggregated Parquet
+tables to the Tier-2 Iceberg store for analytical queries. The harness is unaware of the
+ETL pipeline — it writes JSON and reports the path.
+
+**Retention tiers.** Object store lifecycle policies enforce expiry by date-prefix:
+
+| Artifact | Retention |
+|---|---|
+| `decision_log.json`, `model_invocations.jsonl` | Indefinite (compliance) |
+| `execution_events.jsonl`, `error.json` | 90 days (operational) |
+
+**Technical operational logs** (harness stdout/stderr, stack traces) are not written to
+object storage by the governance platform. On Kubernetes they go to pod stdout and are
+collected by the app team's log aggregator. The governance platform stores no reference
+to them.

@@ -1,0 +1,50 @@
+/* Page-local styles for the sign-in screen — faithful to specs/ui/kit/pages/signin.html.
+   These are component-scoped (NOT layer CSS); the five kit layers are unchanged. */
+.auth-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--surface-recessed);
+  padding: var(--space-6);
+}
+.auth {
+  width: min(420px, 94vw);
+  background: var(--surface-panel);
+  border: 0.5px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-8) var(--space-7);
+  text-align: center;
+}
+.auth__logo { margin: 0 auto var(--space-6); }
+.auth__title { font-size: var(--fs-title); font-weight: var(--fw-semibold); letter-spacing: -0.01em; }
+.auth__sub { font-size: var(--fs-label); color: var(--text-secondary); margin-top: 6px; }
+.auth__btn { width: 100%; justify-content: center; margin-top: var(--space-6); }
+.auth__note { font-size: var(--fs-caption); color: var(--text-tertiary); margin-top: var(--space-4); line-height: 1.55; }
+.auth__divider {
+  display: flex; align-items: center; gap: var(--space-3);
+  margin: var(--space-6) 0 var(--space-4);
+  color: var(--text-tertiary); font-size: var(--fs-eyebrow); font-weight: var(--fw-semibold);
+  text-transform: uppercase; letter-spacing: 0.07em;
+}
+.auth__divider::before, .auth__divider::after { content: ""; flex: 1; height: 1px; background: var(--border-default); }
+/* the alert itself is the master .callout--warning; only its top spacing is local */
+.auth__alert { margin-top: var(--space-4); text-align: left; }
+
+/* mock-card role picker: type is .eyebrow, chips are .chip — only spacing/layout is local */
+.mock__roles-label { margin-bottom: 6px; }
+.mock .chip-group { margin-bottom: var(--space-3); }
+.mock__go { width: 100%; justify-content: center; }
+.mock {
+  background: var(--color-warning-bg); border: 1px solid var(--color-warning-border);
+  border-radius: var(--radius-md); padding: var(--space-4); text-align: left;
+}
+.mock__tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: var(--fs-eyebrow); font-weight: var(--fw-semibold);
+  text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-warning);
+}
+.mock__tag .icon { width: 13px; height: 13px; }
+.mock__text { font-size: var(--fs-caption); color: var(--text-secondary); margin: 6px 0 var(--space-3); line-height: 1.5; }
+.mock__text code { font-family: var(--font-mono); font-size: 11px; }

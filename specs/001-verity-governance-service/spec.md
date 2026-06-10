@@ -60,6 +60,12 @@ consolidated under *What changes for production*.
 - Q: Target latency for a decision-log record to become visible in the UI? → A: ≤ 20 seconds (p95), via async/batched ingest.
 - Q: Quota enforcement posture in v2? → A: Per-quota configurable — soft (warn/breach, never refuse) by default, with an optional hard-stop that refuses the run when the budget is exceeded.
 
+### Session 2026-06-06
+
+*(Built during the 002 portal work, ahead of this spec, then recorded here. See FR-IN-015a.)*
+
+- Q: How does a rejected (or changes-requested) onboarding get unstuck, and how do we go view → edit? → A: A still-`pending` application is **editable in place** (`PUT /applications/{id}`) by any `onboard_application`-capable user (a pending app is a pre-activation draft; **not** restricted to proposer/owner — that gate blocked legitimate remediation). This is **distinct from change-proposal (FR-IN-013)**, which is for `active` apps. **Re-submit supersedes** any still-pending approval (→ `cancelled`); a **`requested_changes`** decision **closes** the approval like `rejected` (no deadlock). The application read exposes `created_by_actor_id` + the latest approval status/last decision so the UI derives a display **review status** (Draft / In review / Rejected / Changes requested) — display only, **no new status codes**. See FR-IN-015a.
+
 ### Session 2026-06-04
 
 *(Intake model simplification + assessment — guides the next slice; the shipped US1–US4 stays the thin CRUD foundation.)*
@@ -310,9 +316,11 @@ throughout.
 - **FR-IN-001**: The system MUST create an intake in status `proposed`, resolving the
   owning application (by `application_code` or `application_id`; reject if neither resolves
   or the application is unregistered), deriving a unique `code` slug from the title within
-  the application when not supplied, and atomically opening a `kind=intake` approval
-  request with `required_roles=[business_owner, ai_governance]`. The intake `(application,
-  code)` pair MUST be unique.
+  the application when not supplied. The intake `(application, code)` pair MUST be unique.
+  **Revised 2026-06-05 (Slice 4):** the intake approval is **not** opened on create with a fixed
+  `[business_owner, ai_governance]` set; per the clarified model it is opened on an explicit
+  **submit** (`POST /intakes/{id}/submit`, requires a computed tier) with the **tier-based quorum**
+  (FR-IN-005). The original on-create fixed-quorum wording is superseded.
 - **FR-IN-002**: The system MUST expose intake retrieval by natural key `(application_code,
   code)` and by id, and listing with optional filters (status, `ai_risk_tier`,
   business-owner email, application). A missing intake MUST surface as not-found.
@@ -414,6 +422,32 @@ throughout.
   Onboarding** UI surface is provided (potentially the application's first screen). The
   application's **compliance perimeter** is captured per FR-IN-017 and inherited by intakes per
   FR-IN-018.
+- **FR-IN-015a** *(v2-new — clarified 2026-06-06)*: **Pre-activation edit & rejection remediation.**
+  A **still-`pending`** application (draft, in review, or after a rejection) MUST be **editable in
+  place** (`PUT /applications/{id}`) — identity, ownership and the full compliance perimeter — so a
+  rejected or changes-requested onboarding can be remediated rather than getting stuck. This is
+  **distinct from change-proposal re-approval (FR-IN-013)**, which governs changes to an **`active`**
+  application; an `active`/`suspended`/`retired` application MUST NOT be edited this way. Editing is
+  gated by the **`onboard_application`** capability (a pending application is a pre-activation draft
+  the app team revises; attribution is audited) — it MUST NOT require the editor to be the proposer
+  or business owner. **Re-submit supersedes**: opening a new onboarding approval MUST mark any still-
+  `pending` approval for that application **`cancelled`**, so exactly one review is live. A sign-off
+  decision of **`requested_changes`** (like `rejected`) MUST **close** the approval (it does not
+  satisfy quorum and MUST NOT leave it deadlocked); the proposer remediates by editing and
+  re-submitting. **Review status (display):** the application read MUST expose `created_by_actor_id`
+  and the **latest approval's status + last decision** so the UI can derive a non-persisted review
+  status (Draft / In review / Rejected / Changes requested) for a `pending` application — no new
+  status codes are introduced (`cancelled`, `requested_changes` already exist in reference data).
+  **Cancel vs. delete (distinct from approver-side `withdraw_approval`):** (a) **Cancel** is the
+  *requester* withdrawing their own live submission — `POST /applications/{id}/withdraw`, gated
+  `onboard_application` (the app team, **not** approver roles); it MUST require an actual pending
+  approval (else 409) and sets it `cancelled`, returning the app to an editable draft. This is NOT
+  `withdraw_approval` (the approver-side action, APPROVAL_ROLES), which stays a separate concept.
+  (b) **Delete** is a hard delete (`DELETE /applications/{id}`, `delete_application` action gated to
+  the **app team** — `business_owner`/`ai_governance`/`security`) of a **pending** application + its
+  dependents (sign-offs, approvals, perimeter, app-team grants); a pending app is un-activated work
+  the team may discard, surfaced as a workspace **Delete** button (any pending state). **Active**
+  applications are retired via lifecycle, never hard-deleted (409).
 - **FR-IN-016** *(v2-new — clarified 2026-06-04)*: Beyond onboarding, the application is managed
   via a multi-tab **application screen** (Overview · Environments · Harnesses · Inventory). The
   **Environments** tab lets the application owner **define** environments (definitions only —

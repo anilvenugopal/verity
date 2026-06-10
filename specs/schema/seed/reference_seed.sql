@@ -9,9 +9,13 @@ INSERT INTO reference.actor_type (code, label, sort_order) VALUES
     ('automation', 'Automation / agent', 2)
     ON CONFLICT (code) DO NOTHING;
 
-INSERT INTO reference.ai_risk_tier (code, label, sort_order) VALUES
-    ('minimal','Minimal',1),('limited','Limited',2),('high','High',3),('unacceptable','Unacceptable',4)
-    ON CONFLICT (code) DO NOTHING;
+INSERT INTO reference.ai_risk_tier (code, label, sort_order, metadata) VALUES
+    ('minimal','Minimal',1,'{"tone":"positive"}'),
+    ('limited','Limited',2,'{"tone":"warning"}'),
+    ('high','High',3,'{"tone":"negative"}'),
+    ('unacceptable','Unacceptable',4,'{"tone":"negative"}')
+    ON CONFLICT (code) DO UPDATE SET
+        label = EXCLUDED.label, sort_order = EXCLUDED.sort_order, metadata = EXCLUDED.metadata;
 
 INSERT INTO reference.api_role (code, label, sort_order) VALUES
     ('system','System',1),('user','User',2),('assistant_prefill','Assistant Prefill',3)
@@ -26,9 +30,11 @@ INSERT INTO reference.approval_decision (code, label, sort_order) VALUES
     ('approved','Approved',1),('rejected','Rejected',2),('requested_changes','Requested Changes',3),('abstained','Abstained',4)
     ON CONFLICT (code) DO NOTHING;
 
-INSERT INTO reference.approval_request_status (code, label, sort_order) VALUES
-    ('pending','Pending',1),('approved','Approved',2),('rejected','Rejected',3),('cancelled','Cancelled',4)
-    ON CONFLICT (code) DO NOTHING;
+-- metadata.tone -> badge colour (closed palette: positive|warning|negative|info|neutral).
+INSERT INTO reference.approval_request_status (code, label, sort_order, metadata) VALUES
+    ('pending','Pending',1,'{"tone":"warning"}'),('approved','Approved',2,'{"tone":"positive"}'),
+    ('rejected','Rejected',3,'{"tone":"negative"}'),('cancelled','Cancelled',4,'{"tone":"neutral"}')
+    ON CONFLICT (code) DO UPDATE SET label = EXCLUDED.label, sort_order = EXCLUDED.sort_order, metadata = EXCLUDED.metadata;
 
 -- approval_request kinds (was unseeded): the gating-request kinds across slices. application_onboarding
 -- is this slice; intake/risk_reclassification/business_change/promote_*/retire are wired by their slices.
@@ -39,9 +45,15 @@ INSERT INTO reference.approval_request_kind (code, label, sort_order) VALUES
     ON CONFLICT (code) DO NOTHING;
 
 -- Application onboarding vocabularies (FR-IN-015/017).
-INSERT INTO reference.application_status (code, label, sort_order) VALUES
-    ('pending','Pending',1),('active','Active',2),('suspended','Suspended',3),('retired','Retired',4)
-    ON CONFLICT (code) DO NOTHING;
+-- description -> badge tooltip; metadata.tone -> badge colour (closed palette: positive|warning|negative|info|neutral).
+INSERT INTO reference.application_status (code, label, description, sort_order, metadata) VALUES
+    ('pending',  'Pending',  'Proposed; awaiting AI-Governance and business-owner approval.', 1, '{"tone":"warning"}'),
+    ('active',   'Active',   'Approved; may own promotable intakes and assets.',             2, '{"tone":"positive"}'),
+    ('suspended','Suspended','Temporary hold; cannot own promotable intakes or assets.',      3, '{"tone":"negative"}'),
+    ('retired',  'Retired',  'Terminal; decommissioned.',                                     4, '{"tone":"neutral"}')
+    ON CONFLICT (code) DO UPDATE SET
+        label = EXCLUDED.label, description = EXCLUDED.description,
+        sort_order = EXCLUDED.sort_order, metadata = EXCLUDED.metadata;
 
 INSERT INTO reference.line_of_business (code, label, sort_order) VALUES
     ('pc','Property & Casualty',1),('life','Life',2),('health','Health',3),('annuities','Annuities',4),
@@ -227,9 +239,17 @@ INSERT INTO reference.incident_severity (code,label,sort_order) VALUES ('critica
 INSERT INTO reference.incident_status (code,label,sort_order) VALUES ('open','Open',1),('investigating','Investigating',2),('mitigated','Mitigated',3),('resolved','Resolved',4),('closed','Closed',5)
     ON CONFLICT (code) DO NOTHING;
 
-INSERT INTO reference.intake_status (code, label, sort_order) VALUES
-    ('proposed','Proposed',1),('in_review','In Review',2),('impact_assessment','Impact Assessment',3),('approved','Approved',4),('in_build','In Build',5),('live','Live',6),('rejected','Rejected',7),('retired','Retired',8)
-    ON CONFLICT (code) DO NOTHING;
+INSERT INTO reference.intake_status (code, label, sort_order, metadata) VALUES
+    ('proposed','Proposed',1,'{"tone":"neutral"}'),
+    ('in_review','In Review',2,'{"tone":"info"}'),
+    ('impact_assessment','Impact Assessment',3,'{"tone":"info"}'),
+    ('approved','Approved',4,'{"tone":"positive"}'),
+    ('in_build','In Build',5,'{"tone":"info"}'),
+    ('live','Live',6,'{"tone":"positive"}'),
+    ('rejected','Rejected',7,'{"tone":"negative"}'),
+    ('retired','Retired',8,'{"tone":"neutral"}')
+    ON CONFLICT (code) DO UPDATE SET
+        label = EXCLUDED.label, sort_order = EXCLUDED.sort_order, metadata = EXCLUDED.metadata;
 
 INSERT INTO reference.lifecycle_state (code, label, sort_order, is_deployable, is_terminal, grouping) VALUES
     ('draft','Draft',1,false,false,'authoring'),
