@@ -66,10 +66,9 @@ graph TB
     GAPI --> REL
     REL -->|"drain outbox → NATS"| NJ
     NJ -->|"runs · commands"| CRD
-    CRD -->|"claim · release · heartbeat · events"| GW
+    CRD -->|"claim · release · heartbeat\n(GW returns pre-signed URL in /claim response)"| GW
     GW --> PG
-    GW -.->|"pre-signed URL"| MNO
-    WRK -->|"artifact PUT (direct)"| MNO
+    WRK -->|"artifact PUT (direct, pre-signed URL)"| MNO
     WRK -->|"LLM inference"| EXT_AN
     WRK -->|"MCP tool calls"| MCP
     CRD --> CLN
@@ -141,16 +140,16 @@ graph LR
 
     APP2 -->|"HTTPS"| GAPI2
     PORT2 -->|"HTTPS"| GAPI2
-    GAPI2 -->|"read/write"| PG2
-    GAPI2 -->|"write run_dispatch_outbox\nwrite harness_command_outbox"| PG2
+    GAPI2 -->|"read/write (incl. both outboxes)"| PG2
     REL2 -->|"drain outboxes"| PG2
     REL2 -->|"publish"| NJ2
     NJ2 -->|"verity.runs.pending"| HARN
     NJ2 -->|"verity.cluster.{id}.commands"| HARN
-    HARN -->|"claim · release\nheartbeat · ack · events"| GW2
+    HARN -->|"verity.events.* (status relay)"| NJ2
+    HARN -->|"claim · release · heartbeat · ack"| GW2
     GW2 -->|"read/write"| PG2
-    GW2 -->|"grant pre-signed PUT URL"| MNO2
-    HARN -->|"artifact bytes\n(direct, pre-signed)"| MNO2
+    GW2 -->|"pre-signed URL returned in /claim response"| HARN
+    HARN -->|"artifact bytes (direct, pre-signed)"| MNO2
     HBR2 -.->|"layer storage\nharbor-registry bucket"| MNO2
 ```
 
@@ -252,8 +251,10 @@ The connector type available in a given run is fixed at the image digest — con
 baked in, not dynamically loaded, so audit replay on the same image digest means exactly
 the same connector behaviour.
 
-**Governance Layer** — five components that run on every worker, always active, and
-non-bypassable by package code or model behaviour.
+**Governance Layer** — five components that run on every **worker**, always active, and
+non-bypassable by package code or model behaviour. The `coordinator` and `operator` roles
+do not activate the governance layer — they operate entirely within the framework and base
+layers. The arrows in the diagram show image composition order, not per-role activation.
 - **Tool Authorization Enforcer** checks every `tool_use` block against the package's
   `tool_authorizations` manifest before any network call is made. If the tool is not
   declared, the harness returns an authorization error to Claude and does not execute it.
@@ -430,8 +431,9 @@ sequenceDiagram
     Portal->>GovAPI: POST /deployments (cluster_id, package_id)
     GovAPI->>GovAPI: lifecycle gate OK, write deployment + command outbox
     Note over GovAPI: verity-relay drains outbox to NATS:<br/>verity.cluster.{id}.commands
+    Note over Coord: NATS delivers deploy_package command to Coordinator<br/>(Coordinator is a durable consumer of verity.cluster.{id}.commands)
 
-    Coord->>Coord: receive deploy_package, pull + verify bundle from MinIO
+    Coord->>Coord: pull + verify bundle from MinIO, write to Artifact Cache PVC
     Coord->>GW: POST /ack (command_id, acknowledged)
     GW-->>Portal: deployment status: Active
 
@@ -514,9 +516,9 @@ stateDiagram-v2
 
     draft --> candidate : author submits (editing locked)
 
-    candidate --> staging : LOW materiality\n(auto-approve — system action)
-    candidate --> staging : HIGH materiality\n(governance reviewer approves)
-    candidate --> draft : reviewer rejects\n(editing re-enabled, comment required)
+    candidate --> staging : auto-approve (low materiality — system action)
+    candidate --> staging : governance reviewer approves (high materiality)
+    candidate --> draft : reviewer rejects (comment required)
 
     staging --> challenger : promote to prod shadow/ab
     challenger --> champion : promote (governance approval)
@@ -603,7 +605,7 @@ sequenceDiagram
     participant Relay as verity-relay
     participant NATS as NATS JetStream
     participant Coord as Coordinator
-    participant Cache as Artifact Cache
+    participant MNO as MinIO (artifact store)
 
     AT->>Portal: Deploy Package (package_id, cluster_id)
     Portal->>GovAPI: POST /deployments
@@ -616,15 +618,15 @@ sequenceDiagram
     Relay->>PG: mark outbox row published
 
     Coord->>NATS: consume deploy_package command
-    Coord->>Cache: pull bundle from MinIO (bundle_uri)
-    Cache-->>Coord: .vtx / .vax bundle bytes
-    Coord->>Coord: SHA-256 verify, write to Artifact Cache PVC
+    Coord->>MNO: GET bundle by bundle_uri (pre-signed or mTLS)
+    MNO-->>Coord: .vtx / .vax bundle bytes
+    Coord->>Coord: SHA-256 verify, write bundle to Artifact Cache PVC
 
     Coord->>GovAPI: POST /harness/v1/ack (command_id, acknowledged)
     GovAPI->>PG: UPDATE deployment active, outbox acked
     GovAPI-->>Portal: deployment status: Active
 
-    Note over AT,Cache: Bundle cached. Workers load it at next claim time.<br/>In-flight jobs on the previous bundle complete normally.
+    Note over AT,MNO: Bundle cached on PVC. Workers load it at next claim time.<br/>In-flight jobs on the previous bundle complete normally.
 ```
 
 ### Explanation
@@ -674,46 +676,47 @@ sequenceDiagram
     participant ToolS as Tool (MCP / Connector)
     participant MNO as MinIO
 
-    App->>GovAPI: POST /api/v1/runs\n{ package_id, input, idempotency_key }
-    GovAPI->>PG: INSERT execution_run (status: queued)\nINSERT harness_dispatch (state: queued)\nINSERT run_dispatch_outbox (state: pending)\n[single transaction]
-    GovAPI-->>App: { run_id, status: "queued" }
+    App->>GovAPI: POST /api/v1/runs (package_id, input, idempotency_key)
+    Note over GovAPI,PG: Single Postgres transaction:<br/>INSERT execution_run (status: queued)<br/>INSERT harness_dispatch (state: queued)<br/>INSERT run_dispatch_outbox (state: pending)
+    GovAPI-->>App: run_id, status: queued
 
     Note over App: Application polls at its own cadence.<br/>No persistent connection required.
 
     Relay->>PG: drain run_dispatch_outbox
-    Relay->>NATS: publish verity.runs.pending\n{ run_id, cluster_id, package_id }
+    Relay->>NATS: publish verity.runs.pending (run_id, cluster_id, package_id)
 
     Coord->>NATS: consume verity.runs.pending
-    Coord->>GW: POST /harness/v1/claim\n{ run_id, coordinator_node_id }
-    GW->>PG: UPDATE harness_dispatch: state=claimed\nresolve MCP endpoints for package+cluster
-    GW-->>Coord: { job_details, mcp_endpoint_list,\nlog_upload_presigned_url }
+    Coord->>GW: POST /harness/v1/claim (run_id, coordinator_node_id)
+    GW->>PG: UPDATE harness_dispatch state=claimed, resolve MCP endpoints
+    GW-->>Coord: job_details, mcp_endpoint_list, log_upload_presigned_url
 
-    Coord->>Worker: dispatch via cluster-local NATS\n{ run_id, bundle_path, mcp_endpoints,\nlog_upload_url }
-    Worker->>Worker: load .vtx/.vax bundle from Artifact Cache PVC\ninitialise governance layer components
+    Coord->>Worker: dispatch via cluster-local NATS (run_id, bundle_path, mcp_endpoints, log_upload_url)
+    Worker->>Worker: load .vtx/.vax bundle from Artifact Cache PVC
+    Worker->>Worker: initialise governance layer components
 
     loop Agent execution loop (no hub in hot path)
-        Worker->>Ant: POST /v1/messages\n{ model, system, messages, tools }
+        Worker->>Ant: POST /v1/messages (model, system, messages, tools)
         Ant-->>Worker: response (text or tool_use block)
         opt Claude requests a tool call
-            Worker->>Worker: Tool Auth Enforcer gate\n(check tool vs. manifest authorizations)
-            Worker->>ToolS: execute tool call\n(MCP protocol or connector)
+            Worker->>Worker: Tool Auth Enforcer gate (check vs. manifest authorizations)
+            Worker->>ToolS: execute tool call (MCP protocol or connector)
             ToolS-->>Worker: tool result
             Worker->>Worker: append tool_result to messages
         end
-        Worker->>Coord: status relay (batched ~200ms)\nvia cluster-local NATS
-        Coord->>GW: POST /harness/v1/status\n{ run_id, status: executing, events[] }
+        Worker->>Coord: status relay batched ~200ms via cluster-local NATS
+        Coord->>GW: POST /harness/v1/status (run_id, status: executing, events[])
     end
 
     Worker->>MNO: PUT decision_log.json (via pre-signed URL)
     Worker->>MNO: PUT model_invocations.jsonl
     Worker->>MNO: PUT execution_events.jsonl
-    Worker->>Coord: report: completed\n{ output, log_path, decision_log_id }
-    Coord->>GW: POST /harness/v1/release\n{ run_id, status: completed,\noutput, log_path, decision_log_id }
-    GW->>PG: UPDATE execution_run: status=completed\nstore log_path, output, decision_log_id
+    Worker->>Coord: report completed (output, log_path, decision_log_id)
+    Coord->>GW: POST /harness/v1/release (run_id, status: completed, output, log_path, decision_log_id)
+    GW->>PG: UPDATE execution_run status=completed, store log_path and decision_log_id
 
     App->>GovAPI: GET /api/v1/runs/{run_id}
     GovAPI->>PG: SELECT from execution_run_current
-    GovAPI-->>App: { run_id, status: "completed",\noutput: "...",\ndecision_log_id: "...",\nlog_url: "<pre-signed GET URL>" }
+    GovAPI-->>App: run_id, status: completed, output, decision_log_id, log_url (pre-signed GET URL)
 ```
 
 ### Explanation
@@ -854,9 +857,9 @@ stateDiagram-v2
     [*] --> queued : POST /api/v1/runs accepted
     queued --> executing : coordinator claims + worker starts
     executing --> completed : worker releases with output
-    executing --> failed : graceful worker error\n(exception caught, error.json written)
-    executing --> failed : worker_lost\n(coordinator: missed worker heartbeat)
-    queued --> failed : coordinator_timeout\n(hub: lease_expires_at expired,\ncluster unresponsive)
+    executing --> failed : graceful error (exception caught, error.json written)
+    executing --> failed : worker_lost (coordinator: missed worker heartbeat)
+    queued --> failed : coordinator_timeout (hub: lease expired, cluster unresponsive)
     completed --> [*]
     failed --> [*]
 ```
@@ -981,9 +984,9 @@ graph LR
 
     PORTAL_D --> CMD
     CMD -->|"relay → NATS → coordinator"| OP_ROLL
-    OP_ROLL -->|"imagePull"| IMG_STORE
-    OP_ROLL -->|"verify signature (opt-in)"| KYVERNO
-    KYVERNO --> IMG_STORE
+    OP_ROLL -->|"imagePull (kubelet)"| IMG_STORE
+    OP_ROLL -.->|"pod creation triggers\nadmission webhook (opt-in)"| KYVERNO
+    KYVERNO -->|"cosign verify via OCI referrers API"| IMG_STORE
 ```
 
 ### Explanation
