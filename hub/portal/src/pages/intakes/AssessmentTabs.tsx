@@ -165,6 +165,9 @@ export function AssessmentTabs({
 
   return (
     <form className="aw-tabpanel card" onSubmit={save} noValidate>
+      {!canEdit && (
+        <p className="input-hint">Read-only — this assessment can’t be edited{revision ? '' : ' (none captured yet)'}.</p>
+      )}
       {section === 'impact' ? (
         <>
           <div className="rail-panel__title">AI decision impact</div>

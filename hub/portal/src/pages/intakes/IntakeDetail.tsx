@@ -274,7 +274,7 @@ export function IntakeDetail() {
           <div className="aw-tabpanel card">
             <div className="rail-panel__title">Requirements</div>
             {reqs.length === 0 && reqForm?.id == null ? (
-              reqForm ? null : <p className="input-hint">No requirements yet. Capture the business, functional, and compliance requirements for this use case.</p>
+              reqForm ? null : <p className="input-hint">{canEdit ? 'No requirements yet. Capture the business, functional, and compliance requirements for this use case.' : 'No requirements were captured for this use case.'}</p>
             ) : (
               <div className="kv">
                 {reqs.map((r) => (
@@ -338,7 +338,7 @@ export function IntakeDetail() {
                 onChange={onSignoff}
               />
             ) : (
-              <p className="input-hint">Not submitted for approval. Complete the assessment, then submit.</p>
+              <p className="input-hint">{revisable ? 'Not submitted for approval. Complete the assessment, then submit.' : `This use case is ${intake.intake_status_code} — no approval is open.`}</p>
             )}
             {/* submit / re-submit — available once a tier is computed and there is no open approval */}
             {canSubmit && (
@@ -347,7 +347,7 @@ export function IntakeDetail() {
                 {submitError && <span className="input-error-text">{submitError}</span>}
               </div>
             )}
-            {!tierKnown && !appr && <p className="input-hint">Complete the assessment to compute a risk tier, then submit for approval.</p>}
+            {revisable && !tierKnown && !appr && <p className="input-hint">Complete the assessment to compute a risk tier, then submit for approval.</p>}
           </div>
         </aside>
       </div>

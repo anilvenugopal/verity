@@ -208,8 +208,8 @@
 
 ## Phase 10: M4 Polish & Cross-Cutting
 
-- [ ] T057 [P] Audit M4 screens for empty states (no intakes on the Use Cases tab, no requirements, assessment not started) and terminal-status write-disable (no edit/submit affordances when `rejected`/`retired`); fix any blank-canvas or stuck-affordance gaps
-- [ ] T058 Update `specs/002-ui-shell-auth-onboarding/quickstart.md` §10 with any M4 deviations discovered during implementation (actual field labels, validation, tier-driving answer sets)
+- [X] T057 [P] Audit M4 screens for empty states (no intakes on the Use Cases tab, no requirements, assessment not started) and terminal-status write-disable (no edit/submit affordances when `rejected`/`retired`); fix any blank-canvas or stuck-affordance gaps
+- [X] T058 Update `specs/002-ui-shell-auth-onboarding/quickstart.md` §10 with any M4 deviations discovered during implementation (actual field labels, validation, tier-driving answer sets)
 
 ---
 

@@ -150,26 +150,26 @@ FastAPI serves the built dist at `/` via `StaticFiles` mount in `app.py` (added 
 
 ## 10. M4 — Intake lifecycle demo flow (mock auth, end-to-end)
 
-Demonstrates the full lifecycle the 001 backend already supports, with **separation of duty** via two mock roles (the author may not sign off on their own intake). No backend additions — every route already exists. Reference wireframe: `specs/ui/verity-intake-wireframe.html`.
+Demonstrates the full lifecycle, with **separation of duty** via two mock roles (the author may not sign off on their own intake). M4 added the intake lifecycle **parity backend** (`PUT /intakes/{id}` edit, `POST /intakes/{id}/withdraw`, `DELETE /intakes/{id}`, `delete_intake` action) so an intake's edit/cancel/delete mirror application onboarding; `ApprovalRequest` now exposes `opened_by_actor_id` so the portal disables the submitter's own sign-off. Reference wireframe: `specs/ui/verity-intake-wireframe.html`.
 
-**Pre-req**: an `active` application exists (onboard one via M3, or seed one).
+**Pre-req**: an `active` application exists (onboard one via M3, or seed one). An intake can only be created under an `active` application.
 
 1. **Author creates + assesses** — run the hub as an authoring role:
    ```bash
    VERITY_AUTH_MODE=mock VERITY_ENV=local \
      VERITY_MOCK_MICROSOFT_OID=aaaa1111-2222-3333-4444-555566667777 \
-     VERITY_MOCK_PLATFORM_ROLES=engineer \
+     VERITY_MOCK_PLATFORM_ROLES=ai_governance \
      uvicorn verity.hub.app:app --reload
    ```
-   In the portal: open the `active` application → **Use Cases** tab → **New intake** → land on `/intakes/{id}` (status `proposed`). Open the assessment → fill **AI Decision Impact** and **Data** → **Save** (a `high`-leaning set of answers gives a `high` tier). The computed tier + materiality render in the summary panel.
+   In the portal: **ACTIONS → New use case** (pick an active application) — or open the active application → **Use cases** tab → **New intake** — → land on `/intakes/{id}` (status `proposed`). The detail page is flat-tabbed: **Requirements | AI Decision Impact | Data**. Fill **AI Decision Impact** (8 fixed-choice fields — decision role/domain/population/adverse impact/human oversight/reversibility/GDPR Art. 22/deployment scale) and **Data** (description, classification, PII presence, sources, sensitive categories) → **Save assessment** (Save sends the *full* snapshot from both tabs; it stays disabled until both are valid). The backend computes the tier + NAIC materiality, shown in the **Computed classification** panel and the right-rail **Risk tier**. A `high`-leaning answer set (e.g. adverse impact = coverage/claim denial, autonomous, production-wide) gives `high`.
 
-2. **Author submits** — click **Submit for approval**. The intake advances to `in_review`; the returned `required_roles` are the tier quorum (e.g. `high` → 5 roles). The author cannot sign off (separation of duty).
+2. **Author submits** — **Submit for approval** (right-rail Governance & approval). The intake advances to `in_review`; the gate shows the tier quorum (`high` → 5 roles). The author cannot sign off (separation of duty — the button is disabled with an explanation).
 
 3. **Approver signs off** — restart the hub as a *distinct* quorum role (repeat for each required role, or use one principal holding several):
    ```bash
    VERITY_MOCK_MICROSOFT_OID=dddd1111-2222-3333-4444-555566667777 \
      VERITY_MOCK_PLATFORM_ROLES=business_owner,compliance,legal,model_risk,ai_governance
    ```
-   Open the intake's approval view (`/approvals/{approval_request_id}`) → scroll to the end (scroll-gate) → **Approve** (approve/reject only — no "Return for revision"). Once every required role has approved, the intake flips to **`approved`**.
+   Open the intake (`/intakes/{id}`, or follow `/approvals/{id}` which redirects there). The sign-off gate lives on the intake detail's **Governance & approval** rail and is **tab-gated** — open the **AI Decision Impact** and **Data** tabs to review before the decision buttons enable. Decisions are **Approve / Request changes / Reject** (the same shared gate as onboarding; both negatives close the request and drop the intake back to revisable for **Edit & re-submit**). Once every required role approves, the intake flips to **`approved`** (locked).
 
-**Edge demos**: an `unacceptable`-tier assessment auto-rejects the intake (no submit path); editing the assessment while `in_review` is allowed but shows a "re-saving may change the tier/quorum" banner; a submitter opening their own approval sees the sign-off action disabled.
+**Edge demos**: an `unacceptable`-tier assessment auto-rejects the intake (no submit path); editing while `in_review` stays enabled but shows a "re-saving may change the tier/quorum" banner; a submitter's own sign-off is disabled; the requester can **Cancel request** (withdraw the open approval → back to a revisable draft) and the app team can **Delete** a still-revisable intake (both in the intake-actions footer, mirroring the application workspace); a `rejected`/`retired` (locked) intake shows everything read-only with no edit/submit/delete affordances.
