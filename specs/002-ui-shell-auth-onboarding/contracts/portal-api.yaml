@@ -447,6 +447,22 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /intakes:
+    get:
+      summary: >
+        List every intake (newest first) with its parent application's name + created_by — the
+        top-level Use Cases list and the MY USE CASES sidebar projection. Requires view.
+      tags: [intakes]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/IntakeListItem" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /intakes/{intake_id}:
     get:
       summary: Get an intake (requires view)
@@ -571,6 +587,39 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /intakes/{intake_id}/requirements/{intake_requirement_id}:
+    put:
+      summary: Edit a requirement (kind / title / body) on an intake (requires edit_requirement)
+      tags: [intakes]
+      parameters:
+        - { name: intake_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: intake_requirement_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RequirementCreate" }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Requirement" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      summary: Remove a requirement from an intake (requires edit_requirement)
+      tags: [intakes]
+      parameters:
+        - { name: intake_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: intake_requirement_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "204": { description: deleted }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /intakes/{intake_id}/assessment:
     get:
@@ -868,6 +917,17 @@ components:
         naic_materiality_code: { type: string, nullable: true }
         materiality_tier_code: { type: string, nullable: true }
         created_at:            { type: string, format: date-time }
+
+    IntakeListItem:
+      type: object
+      description: An Intake plus its parent application's name + created_by — for the Use Cases list.
+      allOf:
+        - $ref: "#/components/schemas/Intake"
+        - type: object
+          required: [application_name, created_by_actor_id]
+          properties:
+            application_name:   { type: string }
+            created_by_actor_id: { type: string, format: uuid }
 
     IntakeCreate:
       type: object

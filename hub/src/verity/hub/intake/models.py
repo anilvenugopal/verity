@@ -50,6 +50,15 @@ class RequirementCreate(BaseModel):
     body: str = Field(min_length=1)
 
 
+class RequirementUpdate(BaseModel):
+    """Replace a requirement's mutable fields (kind / title / body) — same shape as RequirementCreate;
+    attribution is server-resolved, never from the body (FR-018)."""
+
+    requirement_kind_code: str = Field(min_length=1)
+    title: str = Field(min_length=1)
+    body: str = Field(min_length=1)
+
+
 class Requirement(BaseModel):
     intake_requirement_id: UUID
     intake_id: UUID
@@ -79,3 +88,11 @@ class Intake(BaseModel):
     naic_materiality_code: str | None = None
     materiality_tier_code: str | None = None
     created_at: datetime
+
+
+class IntakeListItem(Intake):
+    """A row for the top-level Use Cases list: an intake plus its parent application's name (display)
+    and created_by (the MY USE CASES projection filters on it)."""
+
+    application_name: str
+    created_by_actor_id: UUID

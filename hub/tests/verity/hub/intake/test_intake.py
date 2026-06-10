@@ -217,3 +217,55 @@ def test_add_requirement_embedding_null_and_list(pg_url):
             (requirement_id,),
         ).fetchone()[0]
     assert embedding is None
+
+
+def test_update_and_delete_requirement(pg_url):
+    app = _app(pg_url, oid=AUTHOR_OID, roles="business_owner")
+    with TestClient(app) as c:
+        application_id = _seed_active_application(pg_url, "RQE", "ReqEdit")
+        intake_id = c.post(f"/applications/{application_id}/intakes", json={"title": "Editable reqs"}).json()["intake_id"]
+        rid = c.post(f"/intakes/{intake_id}/requirements",
+                     json={"requirement_kind_code": "business", "title": "Old", "body": "old body"}).json()["intake_requirement_id"]
+        # edit kind + title + body
+        up = c.put(f"/intakes/{intake_id}/requirements/{rid}",
+                   json={"requirement_kind_code": "functional", "title": "New", "body": "new body"})
+        assert up.status_code == 200, up.text
+        assert up.json()["title"] == "New" and up.json()["requirement_kind_code"] == "functional"
+        # invalid kind -> 400 naming the field
+        bad = c.put(f"/intakes/{intake_id}/requirements/{rid}",
+                    json={"requirement_kind_code": "bogus", "title": "x", "body": "y"})
+        assert bad.status_code == 400 and "requirement_kind_code" in bad.json()["detail"]
+        # wrong (intake, requirement) pair -> 404
+        ghost = "00000000-0000-0000-0000-0000000000ff"
+        assert c.put(f"/intakes/{intake_id}/requirements/{ghost}",
+                     json={"requirement_kind_code": "business", "title": "x", "body": "y"}).status_code == 404
+        # delete, then it's gone (idempotent second delete -> 404)
+        assert c.delete(f"/intakes/{intake_id}/requirements/{rid}").status_code == 204
+        assert c.get(f"/intakes/{intake_id}/requirements").json() == []
+        assert c.delete(f"/intakes/{intake_id}/requirements/{rid}").status_code == 404
+
+
+def test_requirement_edit_delete_denied_for_viewer(pg_url):
+    with TestClient(_app(pg_url, oid=AUTHOR_OID, roles="business_owner")) as c:
+        application_id = _seed_active_application(pg_url, "RQV", "ReqViewer")
+        intake_id = c.post(f"/applications/{application_id}/intakes", json={"title": "x"}).json()["intake_id"]
+        rid = c.post(f"/intakes/{intake_id}/requirements",
+                     json={"requirement_kind_code": "business", "title": "t", "body": "b"}).json()["intake_requirement_id"]
+    with TestClient(_app(pg_url, oid=VIEWER_OID, roles="viewer")) as c:
+        assert c.put(f"/intakes/{intake_id}/requirements/{rid}",
+                     json={"requirement_kind_code": "business", "title": "t", "body": "b"}).status_code == 403
+        assert c.delete(f"/intakes/{intake_id}/requirements/{rid}").status_code == 403
+
+
+def test_list_all_intakes_carries_app_name_and_creator(pg_url):
+    with TestClient(_app(pg_url, oid=AUTHOR_OID, roles="business_owner")) as c:
+        a1 = _seed_active_application(pg_url, "LAO", "ListAllOne")
+        i1 = c.post(f"/applications/{a1}/intakes", json={"title": "First use case"}).json()["intake_id"]
+        rows = c.get("/intakes")
+        assert rows.status_code == 200, rows.text
+        mine = next(r for r in rows.json() if r["intake_id"] == i1)
+        assert mine["application_name"] == "ListAllOne"
+        assert "created_by_actor_id" in mine and mine["title"] == "First use case"
+    # a viewer can read the list too (gated `view`)
+    with TestClient(_app(pg_url, oid=VIEWER_OID, roles="viewer")) as c:
+        assert c.get("/intakes").status_code == 200

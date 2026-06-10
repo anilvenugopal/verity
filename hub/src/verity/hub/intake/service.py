@@ -18,9 +18,11 @@ from verity.hub.intake.models import (
     Intake,
     IntakeClassify,
     IntakeCreate,
+    IntakeListItem,
     IntakeStatusChange,
     Requirement,
     RequirementCreate,
+    RequirementUpdate,
 )
 
 
@@ -81,6 +83,12 @@ async def list_intakes_by_application(conn: AsyncConnection, application_id: UUI
     return [
         Intake(**r) async for r in queries.list_intakes_by_application(conn, application_id=application_id)
     ]
+
+
+async def list_all_intakes(conn: AsyncConnection) -> list[IntakeListItem]:
+    """Every intake (newest first) for the top-level Use Cases list, each carrying its application's
+    name + created_by. Role gating is the route's require_action("view")."""
+    return [IntakeListItem(**r) async for r in queries.list_all_intakes(conn)]
 
 
 async def classify_intake(
@@ -196,6 +204,33 @@ async def add_requirement(
         created_role_code=ctx.acting_role,
     )
     return Requirement(**row)
+
+
+async def update_requirement(
+    conn: AsyncConnection, intake_id: UUID, intake_requirement_id: UUID, req: RequirementUpdate, ctx: AuthContext
+) -> Requirement | None:
+    """Edit a requirement (kind / title / body) in place. None => no such requirement on this intake
+    (-> 404). Gated edit_requirement at the route."""
+    row = await queries.update_requirement(
+        conn,
+        intake_requirement_id=intake_requirement_id,
+        intake_id=intake_id,
+        requirement_kind_code=req.requirement_kind_code,
+        title=req.title,
+        body=req.body,
+    )
+    return Requirement(**row) if row else None
+
+
+async def delete_requirement(
+    conn: AsyncConnection, intake_id: UUID, intake_requirement_id: UUID, ctx: AuthContext
+) -> bool | None:
+    """Remove a requirement. None => no such requirement on this intake (-> 404). Gated
+    edit_requirement at the route."""
+    row = await queries.delete_requirement(
+        conn, intake_requirement_id=intake_requirement_id, intake_id=intake_id
+    )
+    return True if row else None
 
 
 async def list_requirements(conn: AsyncConnection, intake_id: UUID) -> list[Requirement]:

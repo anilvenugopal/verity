@@ -24,6 +24,17 @@ FROM core.intake
 WHERE application_id = %(application_id)s
 ORDER BY created_at DESC;
 
+-- name: list_all_intakes
+-- Every intake (newest first) with its parent application's name (for display) and created_by (for
+-- the MY USE CASES projection). Powers the top-level Use Cases list. Role gating is at the route
+-- (require_action("view")); there is no per-intake RLS this slice.
+SELECT i.intake_id, i.application_id, a.name AS application_name, i.title, i.description,
+       i.intake_status_code, i.ai_risk_tier_code, i.naic_materiality_code, i.materiality_tier_code,
+       i.created_by_actor_id, i.created_at
+FROM core.intake i
+JOIN core.application a ON a.application_id = i.application_id
+ORDER BY i.created_at DESC;
+
 -- name: get_intake_status^
 -- The current status, read inside the status-change transaction to capture from_code (D-INT-1).
 -- Null => the intake does not exist (-> 404).
