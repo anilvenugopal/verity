@@ -19,11 +19,11 @@ Built over the existing hardened schema (no metamodel schema design). The **meta
 
 **The governed metamodel + the resolution read-layer + new auth actions. US1/US2/US3 all depend on these.**
 
-- [ ] T003 Author the governed compliance metamodel seed in `specs/schema/seed/050_compliance_metamodel.sql`: `regulatory_provision` + `provision_requirement` + `canonical_requirement` (with governance domains) + `requirement_tier` (cumulative 1..N) + `control` (across design_time/deploy_time/static_model/execution) + `evidence_specification`, curated across EU AI Act, NAIC Model Bulletin, NY DFS CL-7, Colorado SB21-169, GDPR (research D9). **Governed seed — review with the user before merge (source of truth).**
+- [X] T003 Author the governed compliance metamodel seed in `specs/schema/seed/050_compliance_metamodel.sql`: `regulatory_provision` + `provision_requirement` + `canonical_requirement` (with governance domains) + `requirement_tier` (cumulative 1..N) + `control` (across design_time/deploy_time/static_model/execution) + `evidence_specification`, curated across EU AI Act, NAIC Model Bulletin, NY DFS CL-7, Colorado SB21-169, GDPR (research D9). **Governed seed — review with the user before merge (source of truth).**
 - [ ] T004 Wire `050_compliance_metamodel.sql` into the hub seed runner and verify idempotent application against a fresh PG18 testcontainer
 - [ ] T005 [P] Metamodel read SQL in `hub/db/queries/compliance.sql`: `applicable_requirements` (current canonical requirements where governance_domain ∈ app domains AND mapped via provision_requirement to a current provision of an app framework, with the provision minimum tier), `requirement_controls_evidence` (controls+evidence for a requirement's tiers 1..N cumulative), `requirement_source_provisions` (research D1/D2)
 - [ ] T006 [P] Seed the assessment signal→requirement trigger map in `specs/schema/seed/051_assessment_requirement_map.sql` (data-driven, keyed by `requirement_code` + tier: e.g. `solely_automated → GDPR-Art22`, `pii_presence=special_category → DPIA`, `disparate_impact → fairness-testing`) — research D3
-- [ ] T007 Add new actions to `hub/src/verity/hub/auth/matrix.py`: `record_evidence` (approval/governance roles), `approve_exception` (`compliance`,`security`), `link_asset` (`engineer`,`ai_governance`), `propose_change` (governance); extend `test_matrix_total_coverage`
+- [X] T007 Add new actions to `hub/src/verity/hub/auth/matrix.py`: `record_evidence` (approval/governance roles), `approve_exception` (`compliance`,`security`), `link_asset` (`engineer`,`ai_governance`), `propose_change` (governance); extend `test_matrix_total_coverage`
 
 **Checkpoint**: metamodel seeded + queryable; resolution can be built.
 
@@ -35,16 +35,16 @@ Built over the existing hardened schema (no metamodel schema design). The **meta
 
 **Independent test**: With the seed applied, a `high`-tier intake's Risk & Obligations summary lists resolved obligations (`outstanding`); record evidence → `satisfied`; raise + approve an exception → `excepted`; `GET /requirements/{code}/status?tier=N` answers met/outstanding from metamodel queries alone.
 
-- [ ] T008 [US1] Resolution service in `hub/src/verity/hub/compliance/service.py`: `resolve_obligations(intake)` per research D1 — risk-tier→tier-level map (minimal/limited/high → 1/2/3), clamp to [provision min, requirement max], cumulative controls/evidence; apply the D3 trigger map
-- [ ] T009 [US1] `hub/db/queries/obligation.sql` + `hub/src/verity/hub/obligation/` repo: persist one `intake_obligation_resolution` + its `intake_obligation` rows; **supersede** the prior resolution preserving still-applicable satisfied/excepted (FR-002)
-- [ ] T010 [US1] Hook resolution into assessment capture in `hub/src/verity/hub/assessment/service.py` so saving an assessment (re-)resolves obligations (FR-001/002) — this is the metamodel mapping layer (FR-021); no bespoke requirement list
-- [ ] T011 [US1] Obligation status derivation in `hub/src/verity/hub/obligation/service.py`: per-obligation `outstanding|satisfied|excepted` from recorded evidence + valid (approved, unexpired, tier-covering) exceptions; intake rollup `all_resolved` (FR-006, research D2)
-- [ ] T012 [US1] Evidence in `hub/db/queries/obligation.sql` + `POST /obligations/{id}/evidence` (`record_evidence`) → obligation `satisfied` when all tier≤target controls evidenced (FR-003) — `hub/src/verity/hub/obligation/router.py`
-- [ ] T013 [US1] Exceptions: `hub/db/queries/compliance_exception.sql` + `hub/src/verity/hub/exception/` (service+router): `POST /intakes/{id}/exceptions` (raise) + `POST /exceptions/{id}/signoff` (`approve_exception`, separation of duty, sets status/approver, `audit.status_transition`); expiry makes the obligation `outstanding` again (FR-004/005)
-- [ ] T014 [US1] Endpoints in `hub/src/verity/hub/obligation/router.py`: `GET /intakes/{id}/obligations` (set + rollup) and `GET /requirements/{code}/status?intake=&tier=` (the acid-test, FR-020); mount the router in `hub/src/verity/hub/app.py`
-- [ ] T015 [P] [US1] Tests `hub/tests/verity/hub/obligation/test_obligations.py`: resolve from seed (high/limited/minimal), re-resolution preserves satisfied, evidence→satisfied, exception→excepted + expiry→outstanding, acid-test tier-cumulativity, viewer-403 / SoD on exception sign-off
-- [ ] T016 [US1] Portal **Risk & Obligations** tab on `hub/portal/src/pages/intakes/IntakeDetail.tsx` (new section component): list obligations (requirement · target tier · source provision · control+phase · evidence spec · status badge); record-evidence + raise/track-exception affordances, role-gated; rollup summary (FR-007)
-- [ ] T017 [P] [US1] Extend `specs/002-ui-shell-auth-onboarding/contracts/portal-api.yaml` + `hub/portal/src/api/types.ts` with the obligation/exception shapes; add any new badge tones (obligation status) to the reference seed
+- [X] T008 [US1] Resolution service in `hub/src/verity/hub/compliance/service.py`: `resolve_obligations(intake)` per research D1 — risk-tier→tier-level map (minimal/limited/high → 1/2/3), clamp to [provision min, requirement max], cumulative controls/evidence; apply the D3 trigger map
+- [X] T009 [US1] `hub/db/queries/obligation.sql` + `hub/src/verity/hub/obligation/` repo: persist one `intake_obligation_resolution` + its `intake_obligation` rows; **supersede** the prior resolution preserving still-applicable satisfied/excepted (FR-002)
+- [X] T010 [US1] Hook resolution into assessment capture in `hub/src/verity/hub/assessment/service.py` so saving an assessment (re-)resolves obligations (FR-001/002) — this is the metamodel mapping layer (FR-021); no bespoke requirement list
+- [X] T011 [US1] Obligation status derivation in `hub/src/verity/hub/obligation/service.py`: per-obligation `outstanding|satisfied|excepted` from recorded evidence + valid (approved, unexpired, tier-covering) exceptions; intake rollup `all_resolved` (FR-006, research D2)
+- [X] T012 [US1] Evidence in `hub/db/queries/obligation.sql` + `POST /obligations/{id}/evidence` (`record_evidence`) → obligation `satisfied` when all tier≤target controls evidenced (FR-003) — `hub/src/verity/hub/obligation/router.py`
+- [X] T013 [US1] Exceptions: `hub/db/queries/compliance_exception.sql` + `hub/src/verity/hub/exception/` (service+router): `POST /intakes/{id}/exceptions` (raise) + `POST /exceptions/{id}/signoff` (`approve_exception`, separation of duty, sets status/approver, `audit.status_transition`); expiry makes the obligation `outstanding` again (FR-004/005)
+- [X] T014 [US1] Endpoints in `hub/src/verity/hub/obligation/router.py`: `GET /intakes/{id}/obligations` (set + rollup) and `GET /requirements/{code}/status?intake=&tier=` (the acid-test, FR-020); mount the router in `hub/src/verity/hub/app.py`
+- [X] T015 [P] [US1] Tests `hub/tests/verity/hub/obligation/test_obligations.py`: resolve from seed (high/limited/minimal), re-resolution preserves satisfied, evidence→satisfied, exception→excepted + expiry→outstanding, acid-test tier-cumulativity, viewer-403 / SoD on exception sign-off
+- [X] T016 [US1] Portal **Risk & Obligations** tab on `hub/portal/src/pages/intakes/IntakeDetail.tsx` (new section component): list obligations (requirement · target tier · source provision · control+phase · evidence spec · status badge); record-evidence + raise/track-exception affordances, role-gated; rollup summary (FR-007)
+- [X] T017 [P] [US1] Extend `specs/002-ui-shell-auth-onboarding/contracts/portal-api.yaml` + `hub/portal/src/api/types.ts` with the obligation/exception shapes; add any new badge tones (obligation status) to the reference seed
 
 **Checkpoint**: US1 independently demonstrable end-to-end (assess → resolve → satisfy/except → all_resolved).
 
@@ -54,10 +54,10 @@ Built over the existing hardened schema (no metamodel schema design). The **meta
 
 **Goal**: A read-only surface in the Compliance app to browse/validate the governed metamodel (the seed from T003). Independently testable: open Compliance ▸ Model → frameworks, domains, requirement catalog, requirement detail (provisions + tier ladder + controls + evidence), reverse + coverage views.
 
-- [ ] T034 Metamodel read SQL in `hub/db/queries/compliance.sql` (browse): list frameworks (+ provision/requirement counts), list canonical requirements (code, domain, title, source frameworks, max tier, control count), requirement detail (provisions w/ citation+min_tier; tiers w/ controls phase/type/enforcement + evidence specs)
-- [ ] T035 `hub/src/verity/hub/compliance/` (models + service + router): `GET /compliance/frameworks`, `GET /compliance/requirements`, `GET /compliance/requirements/{code}` (gate `view`); mount in `app.py`
-- [ ] T036 [P] Portal: `hub/portal/src/pages/compliance/ComplianceModel.tsx` — faceted browser (frameworks / domains / requirement catalog) + requirement detail (provisions, cumulative tier ladder, controls phase·type·enforcement, evidence) + coverage view; wire the Compliance app children + `/compliance/model` route in `nav.ts` + `App.tsx`
-- [ ] T037 [P] Portal types in `hub/portal/src/api/types.ts` for the metamodel browse shapes
+- [X] T034 Metamodel read SQL in `hub/db/queries/compliance.sql` (browse): list frameworks (+ provision/requirement counts), list canonical requirements (code, domain, title, source frameworks, max tier, control count), requirement detail (provisions w/ citation+min_tier; tiers w/ controls phase/type/enforcement + evidence specs)
+- [X] T035 `hub/src/verity/hub/compliance/` (models + service + router): `GET /compliance/frameworks`, `GET /compliance/requirements`, `GET /compliance/requirements/{code}` (gate `view`); mount in `app.py`
+- [X] T036 [P] Portal: `hub/portal/src/pages/compliance/ComplianceModel.tsx` — faceted browser (frameworks / domains / requirement catalog) + requirement detail (provisions, cumulative tier ladder, controls phase·type·enforcement, evidence) + coverage view; wire the Compliance app children + `/compliance/model` route in `nav.ts` + `App.tsx`
+- [X] T037 [P] Portal types in `hub/portal/src/api/types.ts` for the metamodel browse shapes
 
 ## Phase 4: User Story 2 — Gate asset promotion (Priority: P2)
 
