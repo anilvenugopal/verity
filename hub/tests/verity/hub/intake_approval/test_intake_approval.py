@@ -148,3 +148,18 @@ def test_guards_rejection_duplicate_double_sign_terminal_emptyquorum(pg_url):
         assert c.post(f"/approvals/{req_rej}/signoff", json={"decision_code": "rejected"}).json()["status_code"] == "rejected"
         assert c.post(f"/approvals/{req_dbl}/signoff", json={"decision_code": "approved"}).status_code == 200  # 1/5
         assert c.post(f"/approvals/{req_dbl}/signoff", json={"decision_code": "approved"}).status_code == 409  # same slot
+
+
+def test_requested_changes_closes_request_and_leaves_intake_revisable(pg_url):
+    # Parity with application onboarding: a 'requested_changes' sign-off closes the request (no
+    # deadlock); the intake stays at in_review so the author can edit & re-submit.
+    intake = _seed_intake(pg_url, "RQC", tier="minimal")
+    with TestClient(_submitter(pg_url)) as c:
+        request_id = c.post(f"/intakes/{intake}/submit", json={}).json()["approval_request_id"]
+    with TestClient(_app(pg_url, oid=BO_OID, roles="business_owner")) as c:
+        assert c.post(f"/approvals/{request_id}/signoff",
+                      json={"decision_code": "requested_changes"}).json()["status_code"] == "rejected"
+    with psycopg.connect(pg_url) as conn:
+        assert conn.execute(
+            "SELECT intake_status_code FROM core.intake WHERE intake_id = %s", (intake,)
+        ).fetchone()[0] == "in_review"  # revisable — not moved to a terminal status

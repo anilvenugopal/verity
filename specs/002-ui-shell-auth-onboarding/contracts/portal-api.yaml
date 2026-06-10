@@ -464,6 +464,73 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      summary: >
+        Edit a still-revisable intake's title/description in place (pre-activation remediation, e.g.
+        after a rejection). Mirrors PUT /applications/{id}. Revisable = status not in
+        {approved, in_build, live, retired} (409 otherwise); requires edit_intake. The portal's edit
+        mode uses this; re-submit then opens a fresh approval.
+      tags: [intakes]
+      parameters:
+        - name: intake_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/IntakeCreate" }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Intake" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    delete:
+      summary: >
+        Delete a still-revisable intake + its dependents (the workspace "Delete" button). Gated
+        delete_intake (the app team — business_owner/ai_governance/security); revisable-only (an
+        approved/live/retired intake is 409). Requirements cascade; the audit trail is retained.
+      tags: [intakes]
+      parameters:
+        - name: intake_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: deleted }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /intakes/{intake_id}/withdraw:
+    post:
+      summary: >
+        Cancel the intake's open approval — the requester withdrawing their own submission (the
+        workspace "Cancel request" button). Mirrors POST /applications/{id}/withdraw. Requires
+        edit_intake + a live pending kind=intake approval (409 otherwise); the intake returns to a
+        revisable draft (status unchanged). Distinct from the approver-side withdraw_approval.
+      tags: [intakes]
+      parameters:
+        - name: intake_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Intake" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
 
   /intakes/{intake_id}/requirements:
     get:

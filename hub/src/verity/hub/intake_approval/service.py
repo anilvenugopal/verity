@@ -116,7 +116,11 @@ async def sign_off(conn: AsyncConnection, approval_request_id: UUID, ctx: AuthCo
             signed_as_role_code=signed_as, decision_code=decision_code, comment=comment,
         )
         signoffs = await approval_service.list_signoffs(conn, approval_request_id)
-        if any(s["decision_code"] == "rejected" for s in signoffs):
+        # A 'rejected' OR 'requested_changes' sign-off closes the request (status -> rejected; no
+        # deadlock) — parity with application onboarding (FR-IN-015a / FR-019). Either way the intake
+        # stays at in_review (revisable), so the author can edit & re-submit. This lets the shared
+        # sign-off gate offer the same Approve / Request changes / Reject for kind=intake.
+        if any(s["decision_code"] in ("rejected", "requested_changes") for s in signoffs):
             await approval_service.set_request_status(conn, approval_request_id, "rejected")
         elif set(required) <= {s["signed_as_role_code"] for s in signoffs if s["decision_code"] == "approved"}:
             await approval_service.set_request_status(conn, approval_request_id, "approved")
