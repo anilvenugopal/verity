@@ -7,11 +7,13 @@ import { isIntakeRevisable } from '@/api/types'
 import { Badge } from '@/components/Badge'
 import { SignOffGate } from '@/components/SignOffGate'
 import { AssessmentForm } from './AssessmentForm'
+import { RiskObligations } from './RiskObligations'
 import '../applications/ApplicationWorkspace.css' // shared workspace layout (band/tabs/rail/footer)
 
 const TABS = [
   { key: 'requirements', label: 'Requirements' },
   { key: 'assessment', label: 'Assessment' },
+  { key: 'obligations', label: 'Risk & Obligations' },
 ]
 
 // The fixed requirement-kind vocabulary (reference.requirement_kind; not a badge table, rendered as a
@@ -317,6 +319,7 @@ export function IntakeDetail() {
               onComputed={refreshIntake}
             />
           </div>
+          {tab === 'obligations' && <RiskObligations intakeId={intake.intake_id} revisable={revisable} />}
         </div>
 
         {/* Right rail — always visible */}

@@ -17,11 +17,13 @@ from verity.hub.obligation import service
 from verity.hub.obligation.models import (
     EvidenceInput,
     ExceptionInput,
+    ExceptionListItem,
     ExceptionView,
     Obligation,
     ObligationSet,
     RequirementStatus,
 )
+from verity.hub.db import queries
 
 router = APIRouter(tags=["obligation"])
 
@@ -54,6 +56,11 @@ async def record_evidence(obligation_id: UUID, body: EvidenceInput, conn: AsyncC
 @router.get("/requirements/{requirement_code}/status", response_model=RequirementStatus)
 async def requirement_status(requirement_code: str, intake: UUID, tier: int, conn: AsyncConnection = Depends(get_conn), ctx: AuthContext = Depends(require_action("view"))) -> RequirementStatus:
     return await service.requirement_status(conn, intake, requirement_code, tier)
+
+
+@router.get("/intakes/{intake_id}/exceptions", response_model=list[ExceptionListItem])
+async def list_exceptions(intake_id: UUID, conn: AsyncConnection = Depends(get_conn), ctx: AuthContext = Depends(require_action("view"))) -> list[ExceptionListItem]:
+    return [ExceptionListItem(**r) async for r in queries.list_exceptions(conn, intake_id=intake_id)]
 
 
 @router.post("/intakes/{intake_id}/exceptions", response_model=ExceptionView, status_code=201)

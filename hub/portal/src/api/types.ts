@@ -215,6 +215,48 @@ export interface RevisionMeta {
   created_by_actor_id: string
 }
 
+// ── Intake obligations (003 US1) — mirrors hub/src/verity/hub/obligation/models.py ──
+export interface ObligationControl {
+  control_code: string
+  title: string
+  control_phase_code: string
+  enforcement_action_code: string
+  evidence_artifact_type_code: string | null
+  evidenced: boolean
+}
+export interface Obligation {
+  intake_obligation_id: string
+  requirement_code: string
+  title: string
+  governance_domain_code: string
+  target_tier: number
+  status: string // outstanding | satisfied | excepted
+  controls: ObligationControl[]
+}
+export interface ObligationRollup {
+  total: number
+  satisfied: number
+  excepted: number
+  outstanding: number
+  all_resolved: boolean
+}
+export interface ObligationSet {
+  intake_id: string
+  obligations: Obligation[]
+  rollup: ObligationRollup
+}
+export interface ExceptionListItem {
+  compliance_exception_id: string
+  requirement_code: string
+  waived_tier_level: number
+  exception_status_code: string
+  expires_at: string
+  opened_by_actor_id: string
+  approver_actor_id: string | null
+  rationale: string
+  compensating_controls: string
+}
+
 // ── Compliance Model browser (003 FR-023) — mirrors hub/src/verity/hub/compliance/models.py ──
 export interface ComplianceFramework {
   framework_code: string

@@ -68,3 +68,15 @@ class ExceptionView(BaseModel):
     exception_status_code: str
     expires_at: datetime
     approver_actor_id: UUID | None = None
+
+
+class ExceptionListItem(BaseModel):
+    compliance_exception_id: UUID
+    requirement_code: str
+    waived_tier_level: int
+    exception_status_code: str
+    expires_at: datetime
+    opened_by_actor_id: UUID
+    approver_actor_id: UUID | None = None
+    rationale: str
+    compensating_controls: str

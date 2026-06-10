@@ -112,6 +112,14 @@ SELECT compliance_exception_id, canonical_requirement_id, waived_tier_level, sco
        exception_status_code, opened_by_actor_id, approver_actor_id, expires_at
 FROM core.compliance_exception WHERE compliance_exception_id = %(exception_id)s;
 
+-- name: list_exceptions
+SELECT ce.compliance_exception_id, cr.requirement_code, ce.waived_tier_level, ce.exception_status_code,
+       ce.expires_at, ce.opened_by_actor_id, ce.approver_actor_id, ce.rationale, ce.compensating_controls
+FROM core.compliance_exception ce
+JOIN core.canonical_requirement cr ON cr.requirement_id = ce.canonical_requirement_id
+WHERE ce.scope_intake_id = %(intake_id)s
+ORDER BY ce.created_at DESC;
+
 -- name: set_exception_status!
 UPDATE core.compliance_exception
 SET exception_status_code = %(status)s, approver_actor_id = %(approver_actor_id)s, signed_as_role_code = %(signed_as_role_code)s, updated_at = now()
