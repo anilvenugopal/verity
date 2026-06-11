@@ -24,7 +24,15 @@ dev = [
   "testcontainers[postgres]>=4.5",
   "inquirerpy>=0.3",  # arrow-key menu for tools/dev.py
   "rich>=13",         # pretty tables/output for tools/dev.py
+  "pytest-cov>=5",
 ]
+
+[tool.coverage.run]
+source = ["verity.hub"]
+
+[tool.coverage.report]
+fail_under = 70
+show_missing = true
 
 [build-system]
 requires = ["hatchling"]

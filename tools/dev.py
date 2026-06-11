@@ -143,6 +143,26 @@ def down() -> None:
     _stop("hub")
 
 
+def test() -> None:
+    """Run pytest against the hub (append --cov to also report coverage)."""
+    if not HUB_PY.exists():
+        console.print("[red]hub/.venv not found — run `cd hub && uv sync --extra dev` first[/]")
+        return
+    py_ver = subprocess.check_output([str(HUB_PY), "--version"], text=True).strip()
+    console.print(f"[dim]Using: {HUB_PY} ({py_ver})[/]")
+    cmd = ["uv", "run", "pytest", "--tb=short"]
+    if "--cov" in sys.argv:
+        cmd += ["--cov=verity.hub", "--cov-report=term-missing"]
+    subprocess.run(cmd, cwd=HUB, env=_hub_env())
+
+
+def test_portal() -> None:
+    """Run Vitest unit tests in hub/portal/."""
+    node_ver = subprocess.check_output(["node", "--version"], text=True).strip()
+    console.print(f"[dim]Using: node {node_ver}[/]")
+    subprocess.run(["npm", "run", "test"], cwd=PORTAL)
+
+
 def demo() -> None:
     """Seed demo / test data (testing & demonstrations only — separate from the governed seed).
     The SQL lives in tools/demo_seed.py; this just picks the mode."""
@@ -170,6 +190,8 @@ ACTIONS = [
     Action("up", "Start the hub + portal", up),
     Action("down", "Stop the hub + portal", down),
     Action("demo", "Seed demo / test data (idempotent / refresh)", demo),
+    Action("test", "Run pytest (append --cov for coverage)", test),
+    Action("test:portal", "Run Vitest tests in hub/portal/", test_portal),
 ]
 BY_NAME = {a.name: a for a in ACTIONS}
 

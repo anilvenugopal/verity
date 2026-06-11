@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, ApiException } from '@/api/client'
 import { useSession } from '@/auth/useSession'
+import { useToast } from '@/shell/useToast'
 import type { Application, ApprovalRequest, Intake } from '@/api/types'
 import { Badge } from '@/components/Badge'
 import { ReviewBadge } from '@/components/ReviewBadge'
@@ -49,6 +50,7 @@ const REVIEW_TABS = ['compliance', 'ownership']
 export function ApplicationWorkspace() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { success } = useToast()
   const { principal, canDo } = useSession()
   const [app, setApp] = useState<Application | null>(null)
   const [ref, setRef] = useState<Ref | null>(null)
@@ -133,6 +135,7 @@ export function ApplicationWorkspace() {
       const fresh = await api.post<Application>(`/api/applications/${app.application_id}/withdraw`, {})
       setApp(fresh)
       setAppr(await api.get<ApprovalRequest>(`/api/applications/${app.application_id}/approval`).catch(() => null))
+      success('Application request cancelled')
     } catch (e) {
       setError(e instanceof ApiException ? e.body.detail : 'Cancel failed.')
     } finally {
@@ -146,6 +149,7 @@ export function ApplicationWorkspace() {
     setBusy(true); setError('')
     try {
       await api.del(`/api/applications/${app.application_id}`)
+      success('Application deleted')
       navigate('/applications')
     } catch (e) {
       setError(e instanceof ApiException ? e.body.detail : 'Delete failed.')
