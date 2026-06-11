@@ -122,9 +122,16 @@ paths:
       parameters: [{ $ref: '#/components/parameters/IntakeId' }]
       requestBody:
         required: true
-        content: { application/json: { schema: { type: object, required: [kind, impacted_executable_ids], properties: { kind: { type: string, enum: [risk_reclassification, business_change] }, impacted_executable_ids: { type: array, items: { type: string, format: uuid } }, rationale: { type: string } } } } }
+        content: { application/json: { schema: { type: object, required: [kind_code], properties: { kind_code: { type: string, enum: [risk_reclassification, business_change] }, asset_ids: { type: array, items: { type: string, format: uuid }, default: [] }, note: { type: string, nullable: true } } } } }
       responses:
         '201': { description: 'opened (approval_request) — sign off via /approvals/{id}/signoff', content: { application/json: { schema: { type: object, properties: { approval_request_id: { type: string, format: uuid } } } } } }
+    get:
+      summary: List change proposals for an intake (all kinds, all statuses)
+      x-action: view
+      parameters: [{ $ref: '#/components/parameters/IntakeId' }]
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ChangeProposalView' } } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
 
 components:
   parameters:
@@ -194,6 +201,26 @@ components:
     ExecutableVersion:
       type: object
       properties: { executable_version_id: { type: string, format: uuid }, executable_id: { type: string, format: uuid }, lifecycle_stage: { type: string } }
+    ProposalAsset:
+      type: object
+      properties: { executable_id: { type: string, format: uuid }, name: { type: string }, kind_code: { type: string } }
+    ChangeProposalView:
+      allOf:
+        - $ref: '#/components/schemas/ApprovalRequest'
+        - type: object
+          properties:
+            assets: { type: array, items: { $ref: '#/components/schemas/ProposalAsset' } }
+    ApprovalRequest:
+      type: object
+      required: [approval_request_id, request_kind_code, status_code, created_at, signoffs]
+      properties:
+        approval_request_id: { type: string, format: uuid }
+        request_kind_code: { type: string }
+        status_code: { type: string, enum: [pending, approved, rejected] }
+        created_at: { type: string, format: date-time }
+        target_intake_id: { type: string, format: uuid, nullable: true }
+        target_application_id: { type: string, format: uuid, nullable: true }
+        signoffs: { type: array, items: { type: object, properties: { signed_as_role_code: { type: string }, decision_code: { type: string }, created_at: { type: string, format: date-time, nullable: true } } } }
     GateBlock:
       type: object
       required: [code, detail, reason]

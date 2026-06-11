@@ -279,6 +279,7 @@ export function ApplicationWorkspace() {
             <span className="l-spacer" />
             {deleteBtn}
           </div>
+          {error && <span className="input-error-text">{error}</span>}
         </section>
       )}
 

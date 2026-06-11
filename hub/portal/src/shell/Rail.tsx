@@ -20,10 +20,12 @@ export function Rail({ onLauncher, sidebarCollapsed, onToggleSidebar }: {
   // An app is "active" if the current path is its own route OR any of its children's routes.
   // This ensures clicking the rail icon always toggles the sidebar when you're anywhere in the
   // app's subtree — never navigates away from a child page (e.g. /usecases is inside Intake).
-  const isActive = (app: { to?: string; children?: { to?: string }[] }) => {
+  const isActive = (app: { to?: string; children?: { to?: string }[]; ownedPaths?: string[] }) => {
     if (!app.to) return false
     const owns = (to: string) => to === '/' ? pathname === '/' : pathname.startsWith(to)
-    return owns(app.to) || (app.children?.some((c) => c.to && owns(c.to)) ?? false)
+    return owns(app.to) ||
+      (app.children?.some((c) => c.to && owns(c.to)) ?? false) ||
+      (app.ownedPaths?.some(owns) ?? false)
   }
   const activate = (fn: () => void) => (e: KeyboardEvent) => (e.key === 'Enter' || e.key === ' ') && fn()
 

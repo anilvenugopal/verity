@@ -27,6 +27,7 @@ from verity.hub.intake.router import router as intake_router
 from verity.hub.intake_approval.router import router as intake_approval_router
 from verity.hub.compliance.router import router as compliance_router
 from verity.hub.obligation.router import router as obligation_router
+from verity.hub.change_proposal.router import router as change_proposal_router
 from verity.hub.registry.router import router as registry_router
 from verity.hub.reference.router import router as reference_router
 from verity.hub.dashboard.router import router as dashboard_router
@@ -122,6 +123,7 @@ def create_app() -> FastAPI:
     app.include_router(compliance_router)
     app.include_router(obligation_router)
     app.include_router(registry_router)
+    app.include_router(change_proposal_router)
     app.include_router(preferences_router)
 
     # Serve the built portal (prod). Mounted LAST so the API routes above take priority; a no-op in

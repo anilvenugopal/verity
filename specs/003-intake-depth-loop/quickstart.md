@@ -44,7 +44,7 @@ A `draft → candidate → staging` advance is never gated (free POC); `challeng
 The use case changes. As the owner, raise a change proposal selecting the impacted asset:
 ```bash
 curl -s -XPOST $HUB/api/intakes/$INTAKE/change-proposals \
-  -d "{\"kind\":\"risk_reclassification\",\"impacted_executable_ids\":[\"$EXE\"],\"rationale\":\"New geography\"}"
+  -d "{\"kind_code\":\"risk_reclassification\",\"asset_ids\":[\"$EXE\"],\"note\":\"New geography\"}"
 # → opens an approval_request; sign off via /approvals/{id}/signoff (tier quorum, separation of duty)
 ```
 On approval: each impacted asset gets a **new `draft` forked from its champion** (production untouched), and a `risk_reclassification` **re-resolves** the obligations (back to P1). Promotion of the new draft re-enters the gate.

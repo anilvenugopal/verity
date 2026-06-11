@@ -69,7 +69,9 @@ export function Sidebar({ collapsed, onCollapse }: { collapsed: boolean; onColla
   const navApps = resolveNav(NAV, gate).filter((n) => n.kind === 'app')
   const active = navApps.find((a) => {
     if (!a.to || a.to === '/' || !a.children?.length) return false
-    return pathname.startsWith(a.to) || a.children.some((c) => c.to && pathname.startsWith(c.to))
+    return pathname.startsWith(a.to) ||
+      a.children.some((c) => c.to && pathname.startsWith(c.to)) ||
+      (a.ownedPaths?.some((p) => pathname.startsWith(p)) ?? false)
   })
   if (!active?.children?.length) return null
 

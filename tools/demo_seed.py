@@ -13,6 +13,7 @@ into prod — it lives only in the dev tool.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import uuid
 
@@ -38,6 +39,141 @@ def _intake_id(code: str) -> str:
     """Deterministic intake_id per demo use-case code — stable across refreshes (same rationale as
     _app_id)."""
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, f"verity.demo.intake.{code}"))
+
+
+def _executable_id(code: str) -> str:
+    """Deterministic executable_id for demo registry assets — stable across refreshes."""
+    return str(uuid.uuid5(uuid.NAMESPACE_DNS, f"verity.demo.executable.{code}"))
+
+
+async def _seed_003_loop_async(db_url: str, intake_id: str, you_id: str, team_id: str) -> list[str]:
+    """Seed the 003 governance depth loop on a given approved intake using the service layer:
+    obligation resolution → record evidence (1st obligation satisfied) → approve exception (2nd
+    obligation excepted) → registry asset linked + promoted to champion.
+    Returns human-readable summary lines. Idempotent — skips if obligations already resolved."""
+    from psycopg.rows import dict_row
+    from psycopg_pool import AsyncConnectionPool
+    from uuid import UUID
+
+    from verity.hub.auth.models import AuthContext, Principal
+    from verity.hub.obligation import service as obl_svc
+    from verity.hub.obligation.models import ExceptionInput
+    from verity.hub.registry import service as reg_svc
+
+    lines: list[str] = []
+
+    def _ctx(actor_id: str, roles: set[str], action: str, role: str) -> AuthContext:
+        return AuthContext(
+            principal=Principal(actor_id=actor_id, tenant_id="demo", microsoft_oid=actor_id,
+                                display_name="Demo", platform_roles=roles),
+            action=action, acting_role=role,
+        )
+
+    you_ctx = _ctx(you_id, {"ai_governance", "business_owner", "compliance", "engineer"}, "record_evidence", "ai_governance")
+    team_ctx = _ctx(team_id, {"compliance", "security", "business_owner"}, "approve_exception", "compliance")
+
+    pool = AsyncConnectionPool(conninfo=db_url, open=False, kwargs={"row_factory": dict_row})
+    await pool.open()
+    try:
+        async with pool.connection() as conn:
+            iid = UUID(intake_id)
+
+            # 1. Resolve obligations (idempotent — supersedes if already present).
+            count = await obl_svc.resolve(conn, iid, you_ctx)
+            lines.append(f"    obligations resolved: {count}")
+            if count == 0:
+                lines.append("    (no metamodel requirements matched — check ZUW frameworks/domains)")
+                return lines
+
+            # 2. Get the obligation set.
+            oset = await obl_svc.get_obligation_set(conn, iid)
+            obligations = oset.obligations
+            if not obligations:
+                return lines
+
+            # 3. Record evidence for the first obligation's first unevidenced control → satisfied.
+            first = obligations[0]
+            unevidenced = [c for c in first.controls if not c.evidenced]
+            if unevidenced:
+                for ctrl in unevidenced:
+                    await obl_svc.record_evidence(
+                        conn, first.intake_obligation_id, ctrl.control_code,
+                        "Demo: system testing confirmed compliance.", you_ctx,
+                    )
+                lines.append(f"    evidence recorded for '{first.requirement_code}' → satisfied")
+            else:
+                lines.append(f"    '{first.requirement_code}' already evidenced")
+
+            # 4. Raise + approve an exception for the second obligation (if there is one).
+            if len(obligations) >= 2:
+                second = obligations[1]
+                ex_input = ExceptionInput(
+                    requirement_code=second.requirement_code,
+                    waived_tier_level=second.target_tier,
+                    compensating_controls="Manual review by compliance officer each quarter.",
+                    rationale="Demo: legacy system constraint; compensating review in place.",
+                    expires_at="2027-12-31T00:00:00Z",
+                )
+                exc = await obl_svc.raise_exception(conn, iid, ex_input, you_ctx)
+                from uuid import UUID as _UUID
+                exc_signoff = await obl_svc.signoff_exception(conn, exc.compliance_exception_id, "approved", team_ctx)
+                lines.append(f"    exception approved for '{second.requirement_code}' → excepted")
+            else:
+                lines.append("    only 1 obligation — skipping exception demo")
+
+        # 5. Create a registry asset + link to the approved intake + promote to champion.
+        #    Each step needs its own connection (registry service does its own transactions).
+        eid = UUID(_executable_id("ZUW-fraud-scorer"))
+        async with pool.connection() as conn:
+            existing = await reg_svc.list_executables(conn)
+            if any(str(e.executable_id) == str(eid) for e in existing):
+                lines.append("    registry asset already exists — skipped")
+                return lines
+
+        # Use raw SQL to insert with a deterministic ID (service always generates a new uuidv7).
+        async with pool.connection() as conn:
+            await conn.execute(
+                "INSERT INTO core.executable (executable_id, kind_code, name, description, created_by_actor_id, created_role_code) "
+                "VALUES (%s, 'task', 'Fraud Detection Scorer', 'Demo: detects anomalous claims.', %s, 'engineer') "
+                "ON CONFLICT (executable_id) DO NOTHING",
+                (str(eid), you_id),
+            )
+            # version
+            async with conn.transaction():
+                ver = await reg_svc.create_version(conn, eid, you_ctx)
+            if ver is None:
+                lines.append("    could not create version")
+                return lines
+            vid = ver.executable_version_id
+
+        # link to intake
+        async with pool.connection() as conn:
+            try:
+                async with conn.transaction():
+                    await reg_svc.link(conn, iid, eid, None, you_ctx)
+                lines.append(f"    asset linked to intake")
+            except ValueError as e:
+                lines.append(f"    link skipped: {e}")
+
+        # advance to champion (requires approved intake + all_resolved)
+        async with pool.connection() as conn:
+            try:
+                async with conn.transaction():
+                    await reg_svc.advance_lifecycle(conn, vid, "candidate", you_ctx)
+                    await reg_svc.advance_lifecycle(conn, vid, "champion", you_ctx)
+                lines.append(f"    asset promoted to champion (gate passed)")
+            except Exception as e:
+                lines.append(f"    promotion skipped: {e}")
+
+    finally:
+        await pool.close()
+
+    return lines
+
+
+def _seed_003_loop(db_url: str, intake_id: str, you_id: str, team_id: str) -> list[str]:
+    """Sync wrapper — runs the async 003 loop seeder via asyncio.run()."""
+    return asyncio.run(_seed_003_loop_async(db_url, intake_id, you_id, team_id))
 
 # Each demo app: who proposes/owns it, what state, and a self-documenting name + description so the
 # screen explains what it's demonstrating. owner/proposer ∈ {"you", "team"}.
@@ -130,10 +266,22 @@ def teardown(conn) -> int:
             "SELECT intake_id FROM core.intake WHERE application_id = ANY(%s)", (ids,)
         ).fetchall()]
         if intake_ids:
+            # compliance_exception has ON DELETE RESTRICT — must remove before intake.
+            conn.execute("DELETE FROM core.compliance_exception WHERE scope_intake_id = ANY(%s)", (intake_ids,))
             conn.execute("DELETE FROM core.approval_signoff WHERE approval_request_id IN "
                          "(SELECT approval_request_id FROM core.approval_request WHERE target_intake_id = ANY(%s))", (intake_ids,))
             conn.execute("DELETE FROM core.approval_request WHERE target_intake_id = ANY(%s)", (intake_ids,))
             conn.execute("DELETE FROM core.intake WHERE intake_id = ANY(%s)", (intake_ids,))
+        # demo registry assets (created by _seed_003_loop).
+        demo_exe_ids = [_executable_id("ZUW-fraud-scorer")]
+        for eid in demo_exe_ids:
+            if conn.execute("SELECT 1 FROM core.executable WHERE executable_id = %s", (eid,)).fetchone():
+                conn.execute("DELETE FROM core.champion_assignment WHERE executable_version_id IN "
+                             "(SELECT executable_version_id FROM core.executable_version WHERE executable_id = %s)", (eid,))
+                conn.execute("DELETE FROM core.lifecycle_event WHERE executable_version_id IN "
+                             "(SELECT executable_version_id FROM core.executable_version WHERE executable_id = %s)", (eid,))
+                conn.execute("DELETE FROM core.executable_version WHERE executable_id = %s", (eid,))
+                conn.execute("DELETE FROM core.executable WHERE executable_id = %s", (eid,))
         conn.execute("DELETE FROM core.approval_signoff WHERE approval_request_id IN "
                      "(SELECT approval_request_id FROM core.approval_request WHERE target_application_id = ANY(%s))", (ids,))
         conn.execute("DELETE FROM core.approval_request WHERE target_application_id = ANY(%s)", (ids,))
@@ -277,6 +425,30 @@ DEMO_INTAKES = [
             ("functional", "Document type", "Classify each document into one of the known policy-document types."),
         ],
     },
+    {
+        # 003 depth-loop showcase: approved high-tier intake with resolved obligations, a satisfied
+        # evidence record, an approved exception, a linked registry asset promoted to champion.
+        "code": "uc-fraud-detect", "title": "Claims fraud detection",
+        "description": "Scores incoming claims for fraud indicators using behavioural signals and "
+                       "claims history. High-tier — the full governance loop (obligations → asset → "
+                       "champion) is seeded so the 003 UI is populated out of the box.",
+        "owner": "you", "status": "approved",
+        "tier": "high", "naic": "material", "mtier": "high", "classification": "tier3_confidential",
+        "assess": dict(decision_type="claims", consumer_effect="claim_denial", annex_iii=True,
+                       populations=["policyholders_consumers"], scale="production_wide",
+                       autonomy="recommends_signoff", stop=True,
+                       data_name="Claims event stream", data_type="document", source="internal", pii="direct",
+                       risks=[{"description": "False positives flagging legitimate claims.",
+                                "category": "fairness", "likelihood": "possible", "severity": "high",
+                                "mitigation": "Human adjuster sign-off on all flagged claims", "residual": "low"}]),
+        "approval": "approved",
+        "reqs": [
+            ("business", "Reduce fraud losses", "Flag anomalous claims before payment to reduce loss ratio."),
+            ("functional", "Fraud score", "Output a calibrated fraud-risk score at claim submission."),
+            ("compliance", "Explainability", "Provide a human-readable rationale for each flagged claim."),
+        ],
+        "seed_loop": True,  # triggers _seed_003_loop after intake creation
+    },
 ]
 
 
@@ -378,14 +550,26 @@ def run(db_url: str, mode: str) -> list[str]:
         existing_intakes = {str(r[0]) for r in conn.execute(
             "SELECT intake_id FROM core.intake WHERE application_id = %s", (zuw_id,)
         ).fetchall()}
+        loop_intakes: list[str] = []  # intake_ids that need the 003 depth-loop seeded
         for ispec in DEMO_INTAKES:
-            if _intake_id(ispec["code"]) in existing_intakes:
+            iid = _intake_id(ispec["code"])
+            if iid in existing_intakes:
                 out.append(f"    use case '{ispec['title']}' — exists, skipped")
                 continue
             _create_intake(conn, zuw_id, ispec, you_id, team)
             created += 1
             out.append(f"    use case '{ispec['title']}' ({ispec['status']}) — created")
+            if ispec.get("seed_loop"):
+                loop_intakes.append(iid)
 
         conn.commit()
         out.append(f"done: {created} created, {len(existing)} skipped")
+
+    # Seed the 003 governance depth loop for newly created loop intakes (after commit so the intake
+    # rows are visible to the async pool's connections).
+    for iid in loop_intakes:
+        out.append(f"  seeding 003 depth loop for {iid}…")
+        loop_lines = _seed_003_loop(db_url, iid, you_id, team)
+        out.extend(loop_lines)
+
     return out

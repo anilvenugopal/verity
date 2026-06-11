@@ -17,6 +17,7 @@ export interface NavNode {
   action?: string // kind:'action' — the action code (also its mode intent)
   mode?: string // optional landing mode; capabilities are resolved on the destination
   scope?: 'global' | 'application'
+  ownedPaths?: string[] // additional URL prefixes owned by this app (active detection only — not shown in nav)
   requires?: string // affordance gate: an action code or role; omitted = visible to all
   section?: string // sidebar group label (eyebrow); ungrouped if omitted
   badge?: string | number // sidebar static badge (presentation)
@@ -32,6 +33,7 @@ export const NAV: NavNode[] = [
   { key: 'home', kind: 'app', label: 'Home', desc: 'Landing & getting started', icon: 'i-app-home', to: '/' },
   {
     key: 'intake', kind: 'app', label: 'Intake', desc: 'Onboard applications', icon: 'i-app-intake', to: '/applications',
+    ownedPaths: ['/intakes'],
     children: [
       // Primary object links — ungrouped (no eyebrow) so they sit directly under the panel header
       // (the header already reads "Intake"; a second "INTAKE" label was redundant).

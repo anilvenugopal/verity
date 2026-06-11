@@ -327,6 +327,25 @@ export interface RequirementDetail {
   tiers: TierView[]
 }
 
+// ── Change proposals (003 US3) — mirrors hub/src/verity/hub/change_proposal/models.py ──
+export interface ProposalAsset {
+  executable_id: string
+  name: string
+  kind_code: string
+}
+export interface ChangeProposalView {
+  approval_request_id: string
+  request_kind_code: string // risk_reclassification | business_change
+  status_code: string       // pending | approved | rejected | cancelled
+  target_intake_id: string | null
+  target_application_id: string | null
+  opened_by_actor_id: string
+  required_roles: string[]
+  signoffs: { approver_actor_id: string; signed_as_role_code: string; decision_code: string; comment: string | null; created_at: string | null }[]
+  assets: ProposalAsset[]
+  created_at: string
+}
+
 export type AuthState =
   | 'loading'
   | 'authenticated'
