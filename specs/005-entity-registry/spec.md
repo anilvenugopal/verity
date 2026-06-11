@@ -120,6 +120,42 @@ An operator registers provider models (e.g., `claude-sonnet-4-6`) into the model
 
 ---
 
+### User Story 7 — Browse and navigate the entity registry (Priority: P7)
+
+A governance reviewer or developer opens the web portal to browse the entity registry — viewing lists of agents, tasks, prompts, tools, and the model catalog. They can navigate into any entity to see its versions, and from a version's detail page follow links to the components it depends on. They can also navigate from a prompt or tool to see which agent and task versions depend on it (where-used).
+
+**Why this priority**: The API backend is complete before the portal layer; this is the read-only browse surface over already-stored data.
+
+**Independent Test**: Navigate to `/registry/agents`, open an agent, open a version, follow a link to an assigned prompt — all navigable without any write actions.
+
+**Acceptance Scenarios**:
+
+1. **Given** the registry contains agents and tasks, **When** a reviewer opens the registry, **Then** they see separate lists for agents and tasks showing name, champion semver badge, and lifecycle stage.
+2. **Given** an agent in the list, **When** the reviewer clicks it, **Then** they see the agent detail — all versions, champion badge, and a link to the related intake if one exists.
+3. **Given** an agent version detail page, **When** the reviewer views the composition manifest, **Then** prompt and tool assignments appear as clickable links leading to the respective component detail pages.
+4. **Given** a prompt detail page, **When** the reviewer views it, **Then** a "Used by" section lists every agent and task version that includes this prompt, with navigation links to each version detail page.
+5. **Given** the Ctrl+J command palette, **When** the reviewer types an agent or prompt name, **Then** the entity appears as a result and navigates to its detail page.
+
+---
+
+### User Story 8 — Manage composition, champion promotion, and inference config from the portal (Priority: P8)
+
+An AI developer manages the composition of an agent or task version directly from the portal — assigning and removing prompt and tool assignments, configuring inference settings inline (model reference priority, temperature, token limits), and promoting a version to champion. Tools and MCP servers remain agent-only; the UI enforces this by omitting the tool assignment section from task version pages.
+
+**Why this priority**: Builds on US7 (navigation must exist before write actions).
+
+**Independent Test**: Open an agent version, assign a prompt version via the portal form, configure inference settings, promote to champion — testable without YAML or model catalog write UI.
+
+**Acceptance Scenarios**:
+
+1. **Given** an agent version detail page, **When** the developer opens the "Assign Prompt" action, **Then** they can search for a prompt version, specify the API role and ordinal, and save — the manifest updates immediately.
+2. **Given** an agent version with a tool assignment, **When** the developer removes the tool via the portal, **Then** the manifest updates without a full page reload and a success toast confirms the action.
+3. **Given** a version detail page, **When** the developer opens the inference config section, **Then** they see editable fields for max_tokens, temperature, and a model reference priority list (add/remove/reorder references).
+4. **Given** a composed version with at least one prompt, **When** a governance reviewer clicks "Promote to champion", **Then** the version becomes champion, the previous champion is retired, and the UI reflects the updated state with a success toast.
+5. **Given** a task version detail page, **When** a developer looks for the tool assignment section, **Then** the section is absent — tools are not offered as an option for tasks.
+
+---
+
 ### Edge Cases
 
 - What happens when a developer tries to create a new version of an agent using a semver that already exists? → Rejected with a duplicate-version error.
@@ -188,6 +224,26 @@ An operator registers provider models (e.g., `claude-sonnet-4-6`) into the model
 - **FR-YM-004**: The system MUST reject a YAML import that would create a name collision with an existing entity of a different kind.
 - **FR-YM-005**: The system MUST treat a version whose content hash already exists as a no-op during import.
 
+**Registry Portal — Browse**
+
+- **FR-UI-001**: The portal MUST provide browsable list pages for agents, tasks, prompts, and tools, each showing name, champion semver (if any), and lifecycle stage.
+- **FR-UI-002**: The portal MUST provide a detail page for each executable showing all versions with lifecycle stage, champion badge, and a linked intake chip if an intake exists.
+- **FR-UI-003**: The portal MUST provide a version detail page showing the composition manifest (prompt, tool, and MCP assignments), source/target bindings, and an inline inference config section.
+- **FR-UI-004**: The portal MUST render composition manifest entries as clickable links navigating to the component's own detail page.
+- **FR-UI-005**: The portal MUST provide a "Used by" section on prompt and tool detail pages listing all executable versions that include the component, with links to each version detail page.
+- **FR-UI-006**: The portal MUST provide a model catalog page listing models with current price, and a model detail page showing price history and which model references are currently bound to the model.
+
+**Registry Portal — Write**
+
+- **FR-UI-007**: The portal MUST allow an authorised developer to assign and remove prompt and tool versions from an agent version's composition manifest; the tool assignment section MUST be absent on task version pages.
+- **FR-UI-008**: The portal MUST allow an authorised developer to set or update the inference config (model reference priority list, max_tokens, temperature) on any executable version inline.
+- **FR-UI-009**: The portal MUST allow an authorised reviewer to promote an executable version to champion via a single confirm action; success and failure MUST surface as toast notifications.
+
+**Registry Portal — Discovery**
+
+- **FR-UI-010**: The portal Ctrl+J command palette MUST include searchable entries for agents, tasks, prompts, and tools.
+- **FR-UI-011**: The portal help system MUST include pages covering: registry entity types reference, composing a version, the full AI asset lifecycle, and navigating connected assets.
+
 ### Key Entities
 
 - **Executable**: A governed, promotable unit that the harness runs. Has a kind (`agent` or `task`) and a name unique per kind. Agents may use tools and MCP servers; tasks may not.
@@ -217,6 +273,7 @@ An operator registers provider models (e.g., `claude-sonnet-4-6`) into the model
 - **SC-005**: The where-used reverse lookup returns results in under 200ms for a component used across up to 50 executable versions.
 - **SC-006**: Historical config resolution (as-of a given timestamp) returns a deterministic, frozen snapshot consistent with what the harness used at that time — verifiable by comparing with the decision log snapshot.
 - **SC-007**: 100% of existing pytest suite continues to pass after the feature is delivered (no regressions in prior features).
+- **SC-008**: A reviewer can navigate from the registry agent list to a specific version's composition manifest in 3 clicks or fewer.
 
 ---
 
@@ -229,4 +286,4 @@ An operator registers provider models (e.g., `claude-sonnet-4-6`) into the model
 - YAML portability covers the entity model only (executables, components, bindings, inference configs, model references); deployment artifacts (`.vtx`/`.vax` packaging) are out of scope and belong to feature 007.
 - Authentication and authorization use the existing actor/role model from feature 001; this feature does not introduce new roles, only applies the existing `app_team_developer` and `governance_reviewer` role checks to new endpoints.
 - Multi-application import isolation: during YAML import, entity names are scoped to the target application; cross-application name collisions are not checked.
-- The UI for the entity registry is out of scope for this feature (belongs to feature 006, Studio UI).
+- Registry portal pages (browse, compose write actions, champion promotion, and inference config editing) are in scope for this feature. YAML import/export UI wizard and multi-environment deploy tooling remain deferred.

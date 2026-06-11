@@ -1,0 +1,1188 @@
+openapi: "3.1.0"
+info:
+  title: Verity Registry API
+  version: "005"
+  description: |
+    Entity model & registry endpoints. All paths are relative to the governance
+    API root (e.g. /api/). Authentication uses session cookies or API-key header.
+    All write operations require an `acting_role` header or session role context.
+
+servers:
+  - url: /api
+
+tags:
+  - name: executables
+    description: Agents and tasks (the governed, runnable unit)
+  - name: prompts
+    description: Reusable prompt components
+  - name: tools
+    description: Callable tool components (agent-only)
+  - name: mcp-servers
+    description: MCP server components (agent-only)
+  - name: connectors
+    description: Data connector components
+  - name: inference-configs
+    description: Inference parameter configs
+  - name: composition
+    description: Assign/remove components to/from executable versions
+  - name: bindings
+    description: Source and target data bindings on executable versions
+  - name: model-catalog
+    description: Provider models, pricing windows, and stable model references
+  - name: yaml-io
+    description: YAML bundle export and import
+
+paths:
+
+  # ── Executables ────────────────────────────────────────────────────────────
+
+  /registry/executables:
+    get:
+      tags: [executables]
+      summary: List all executables
+      parameters:
+        - name: kind
+          in: query
+          schema: { type: string, enum: [agent, task] }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ExecutableSummary" }
+
+    post:
+      tags: [executables]
+      summary: Register a new executable
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateExecutable" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExecutableSummary" }
+        "409":
+          description: Duplicate name within kind
+
+  /registry/executables/{executable_id}:
+    get:
+      tags: [executables]
+      summary: Get executable detail
+      parameters:
+        - { name: executable_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExecutableDetail" }
+        "404": { description: Not found }
+
+    patch:
+      tags: [executables]
+      summary: Update executable description
+      parameters:
+        - { name: executable_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                description: { type: string }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExecutableDetail" }
+
+  /registry/executables/{executable_id}/versions:
+    get:
+      tags: [executables]
+      summary: List versions of an executable
+      parameters:
+        - { name: executable_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ExecutableVersionSummary" }
+
+    post:
+      tags: [executables]
+      summary: Create a new version (draft)
+      parameters:
+        - { name: executable_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateExecutableVersion" }
+      responses:
+        "201":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExecutableVersionDetail" }
+        "404": { description: Executable not found }
+        "409": { description: Duplicate semver }
+
+  /registry/executables/{executable_id}/champion:
+    get:
+      tags: [executables]
+      summary: Resolve current champion (or as-of a timestamp)
+      parameters:
+        - { name: executable_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - name: as_of
+          in: query
+          description: ISO-8601 timestamp for historical resolution
+          schema: { type: string, format: date-time }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExecutableVersionDetail" }
+        "404": { description: No champion (never promoted) }
+
+  /registry/versions/{version_id}:
+    get:
+      tags: [executables]
+      summary: Get executable version detail
+      parameters:
+        - { name: version_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExecutableVersionDetail" }
+        "404": { description: Not found }
+
+  /registry/versions/{version_id}/promote:
+    post:
+      tags: [executables]
+      summary: Promote version to champion (atomic — retires old champion)
+      parameters:
+        - { name: version_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExecutableVersionSummary" }
+        "404": { description: Not found }
+        "409": { description: Promotion blocked (gate) }
+
+  # ── Prompts ────────────────────────────────────────────────────────────────
+
+  /registry/prompts:
+    get:
+      tags: [prompts]
+      summary: List all prompts
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/PromptSummary" } }
+    post:
+      tags: [prompts]
+      summary: Register a new prompt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreatePrompt" }
+      responses:
+        "201":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PromptSummary" }
+        "409": { description: Duplicate name }
+
+  /registry/prompts/{prompt_id}/versions:
+    get:
+      tags: [prompts]
+      summary: List prompt versions
+      parameters:
+        - { name: prompt_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/PromptVersionSummary" } }
+
+    post:
+      tags: [prompts]
+      summary: Create a new prompt version
+      parameters:
+        - { name: prompt_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreatePromptVersion" }
+      responses:
+        "201":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PromptVersionSummary" }
+        "409": { description: Duplicate semver }
+
+  /registry/prompt-versions/{prompt_version_id}/used-by:
+    get:
+      tags: [prompts, composition]
+      summary: Reverse lookup — which executable versions use this prompt version
+      parameters:
+        - { name: prompt_version_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/UsedByEntry" } }
+
+  # ── Tools ──────────────────────────────────────────────────────────────────
+
+  /registry/tools:
+    get:
+      tags: [tools]
+      summary: List all tools
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/ToolSummary" } }
+    post:
+      tags: [tools]
+      summary: Register a new tool
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateTool" }
+      responses:
+        "201":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ToolSummary" }
+        "409": { description: Duplicate name }
+
+  /registry/tools/{tool_id}/versions:
+    get:
+      tags: [tools]
+      parameters:
+        - { name: tool_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/ToolVersionSummary" } }
+    post:
+      tags: [tools]
+      parameters:
+        - { name: tool_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateToolVersion" }
+      responses:
+        "201":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ToolVersionSummary" }
+        "409": { description: Duplicate semver }
+
+  /registry/tool-versions/{tool_version_id}/used-by:
+    get:
+      tags: [tools, composition]
+      summary: Reverse lookup — which executable versions use this tool version
+      parameters:
+        - { name: tool_version_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/UsedByEntry" } }
+
+  # ── MCP Servers ────────────────────────────────────────────────────────────
+
+  /registry/mcp-servers:
+    get:
+      tags: [mcp-servers]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/McpServerVersionSummary" } }
+    post:
+      tags: [mcp-servers]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateMcpServerVersion" }
+      responses:
+        "201":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/McpServerVersionSummary" }
+
+  /registry/mcp-versions/{mcp_version_id}/used-by:
+    get:
+      tags: [mcp-servers, composition]
+      summary: Reverse lookup — which executable versions use this MCP server version
+      parameters:
+        - { name: mcp_version_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/UsedByEntry" } }
+
+  # ── Data Connectors ────────────────────────────────────────────────────────
+
+  /registry/connectors:
+    get:
+      tags: [connectors]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/ConnectorSummary" } }
+    post:
+      tags: [connectors]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateConnector" }
+      responses:
+        "201":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConnectorSummary" }
+        "409": { description: Duplicate name }
+
+  /registry/connectors/{connector_id}/versions:
+    get:
+      tags: [connectors]
+      parameters:
+        - { name: connector_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/ConnectorVersionSummary" } }
+    post:
+      tags: [connectors]
+      parameters:
+        - { name: connector_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateConnectorVersion" }
+      responses:
+        "201":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConnectorVersionSummary" }
+
+  # ── Inference Configs ──────────────────────────────────────────────────────
+
+  /registry/inference-configs:
+    post:
+      tags: [inference-configs]
+      summary: Create an inference config
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateInferenceConfig" }
+      responses:
+        "201":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InferenceConfigDetail" }
+
+  /registry/inference-configs/{config_id}:
+    get:
+      tags: [inference-configs]
+      parameters:
+        - { name: config_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InferenceConfigDetail" }
+        "404": { description: Not found }
+
+  # ── Composition ────────────────────────────────────────────────────────────
+
+  /registry/versions/{version_id}/prompt-assignments:
+    get:
+      tags: [composition]
+      summary: List prompt assignments for a version
+      parameters:
+        - { name: version_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/PromptAssignment" } }
+    post:
+      tags: [composition]
+      summary: Add a prompt assignment
+      parameters:
+        - { name: version_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreatePromptAssignment" }
+      responses:
+        "201":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PromptAssignment" }
+        "409": { description: Assignment already exists }
+
+  /registry/versions/{version_id}/prompt-assignments/{prompt_version_id}/{api_role}:
+    delete:
+      tags: [composition]
+      summary: Remove a prompt assignment
+      parameters:
+        - { name: version_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: prompt_version_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: api_role, in: path, required: true, schema: { type: string } }
+      responses:
+        "204": { description: Deleted }
+        "404": { description: Not found }
+
+  /registry/versions/{version_id}/tool-assignments:
+    get:
+      tags: [composition]
+      parameters:
+        - { name: version_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/ToolAssignment" } }
+    post:
+      tags: [composition]
+      parameters:
+        - { name: version_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateToolAssignment" }
+      responses:
+        "201":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ToolAssignment" }
+        "409":
+          description: Already assigned or task-only rejection (tools are agent-only)
+
+  /registry/versions/{version_id}/tool-assignments/{tool_version_id}:
+    delete:
+      tags: [composition]
+      parameters:
+        - { name: version_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: tool_version_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "204": { description: Deleted }
+        "404": { description: Not found }
+
+  /registry/versions/{version_id}/mcp-assignments:
+    get:
+      tags: [composition]
+      parameters:
+        - { name: version_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/McpAssignment" } }
+    post:
+      tags: [composition]
+      parameters:
+        - { name: version_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateMcpAssignment" }
+      responses:
+        "201":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/McpAssignment" }
+        "409":
+          description: Already assigned or task-only rejection
+
+  /registry/versions/{version_id}/mcp-assignments/{mcp_version_id}:
+    delete:
+      tags: [composition]
+      parameters:
+        - { name: version_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: mcp_version_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "204": { description: Deleted }
+
+  # ── Bindings ───────────────────────────────────────────────────────────────
+
+  /registry/versions/{version_id}/source-bindings:
+    get:
+      tags: [bindings]
+      summary: List source bindings for a version
+      parameters:
+        - { name: version_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/SourceBinding" } }
+    post:
+      tags: [bindings]
+      summary: Create a source binding
+      parameters:
+        - { name: version_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateSourceBinding" }
+      responses:
+        "201":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SourceBinding" }
+        "422":
+          description: |
+            Validation error — e.g. storage_object source requires connector_version_id
+
+  /registry/versions/{version_id}/source-bindings/{binding_id}:
+    delete:
+      tags: [bindings]
+      parameters:
+        - { name: version_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: binding_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "204": { description: Deleted }
+        "404": { description: Not found }
+
+  /registry/versions/{version_id}/target-bindings:
+    get:
+      tags: [bindings]
+      parameters:
+        - { name: version_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/TargetBinding" } }
+    post:
+      tags: [bindings]
+      parameters:
+        - { name: version_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateTargetBinding" }
+      responses:
+        "201":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TargetBinding" }
+        "422":
+          description: storage_object target requires connector_version_id and write_mode_code
+
+  /registry/versions/{version_id}/target-bindings/{binding_id}:
+    delete:
+      tags: [bindings]
+      parameters:
+        - { name: version_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: binding_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "204": { description: Deleted }
+
+  # ── Model Catalog ──────────────────────────────────────────────────────────
+
+  /registry/models:
+    get:
+      tags: [model-catalog]
+      summary: List all registered models
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/ModelSummary" } }
+    post:
+      tags: [model-catalog]
+      summary: Register a provider model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateModel" }
+      responses:
+        "201":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ModelSummary" }
+        "409": { description: Duplicate model_code }
+
+  /registry/models/{model_id}/prices:
+    get:
+      tags: [model-catalog]
+      summary: List price windows for a model
+      parameters:
+        - { name: model_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/ModelPrice" } }
+    post:
+      tags: [model-catalog]
+      summary: Record a new price window (closes the current open window atomically)
+      parameters:
+        - { name: model_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateModelPrice" }
+      responses:
+        "201":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ModelPrice" }
+
+  /registry/model-references:
+    get:
+      tags: [model-catalog]
+      summary: List model references
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/ModelReferenceSummary" } }
+    post:
+      tags: [model-catalog]
+      summary: Register a model reference (stable logical alias)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateModelReference" }
+      responses:
+        "201":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ModelReferenceSummary" }
+        "409": { description: Duplicate reference_code }
+
+  /registry/model-references/{ref_id}/bindings:
+    get:
+      tags: [model-catalog]
+      summary: List binding windows for a model reference
+      parameters:
+        - { name: ref_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/ModelReferenceBinding" } }
+    post:
+      tags: [model-catalog]
+      summary: Rebind reference to a concrete model (closes current binding atomically)
+      parameters:
+        - { name: ref_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateModelReferenceBinding" }
+      responses:
+        "201":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ModelReferenceBinding" }
+
+  # ── YAML I/O ───────────────────────────────────────────────────────────────
+
+  /registry/versions/{version_id}/export:
+    get:
+      tags: [yaml-io]
+      summary: Export a version and its full composition as a YAML bundle
+      parameters:
+        - { name: version_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          content:
+            application/x-yaml:
+              schema: { type: string }
+        "404": { description: Not found }
+
+  /registry/import/dry-run:
+    post:
+      tags: [yaml-io]
+      summary: Dry-run import — reports what would change without applying
+      requestBody:
+        required: true
+        content:
+          application/x-yaml:
+            schema: { type: string }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ImportReport" }
+        "422": { description: Malformed bundle or name/kind conflict }
+
+  /registry/import:
+    post:
+      tags: [yaml-io]
+      summary: Apply YAML bundle import (idempotent)
+      requestBody:
+        required: true
+        content:
+          application/x-yaml:
+            schema: { type: string }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ImportReport" }
+        "422": { description: Malformed bundle or name/kind conflict }
+
+# ── Schemas ──────────────────────────────────────────────────────────────────
+
+components:
+  schemas:
+
+    ExecutableSummary:
+      type: object
+      properties:
+        executable_id: { type: string, format: uuid }
+        kind_code: { type: string, enum: [agent, task] }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        version_count: { type: integer }
+        champion_semver: { type: string, nullable: true }
+
+    ExecutableDetail:
+      allOf:
+        - { $ref: "#/components/schemas/ExecutableSummary" }
+        - type: object
+          properties:
+            versions:
+              type: array
+              items: { $ref: "#/components/schemas/ExecutableVersionSummary" }
+
+    CreateExecutable:
+      type: object
+      required: [name, kind_code]
+      properties:
+        name: { type: string, minLength: 1 }
+        kind_code: { type: string, enum: [agent, task] }
+        description: { type: string }
+
+    ExecutableVersionSummary:
+      type: object
+      properties:
+        executable_version_id: { type: string, format: uuid }
+        executable_id: { type: string, format: uuid }
+        semver: { type: string }
+        lifecycle_stage: { type: string }
+        governance_tier_code: { type: string, nullable: true }
+        capability_type_code: { type: string, nullable: true }
+
+    ExecutableVersionDetail:
+      allOf:
+        - { $ref: "#/components/schemas/ExecutableVersionSummary" }
+        - type: object
+          properties:
+            kind_code: { type: string }
+            trust_level_code: { type: string, nullable: true }
+            data_classification_code: { type: string, nullable: true }
+            inference_config_id: { type: string, format: uuid, nullable: true }
+            input_schema: { type: object, nullable: true }
+            output_schema: { type: object, nullable: true }
+            cloned_from_version_id: { type: string, format: uuid, nullable: true }
+
+    CreateExecutableVersion:
+      type: object
+      required: [semver]
+      properties:
+        semver: { type: string }
+        governance_tier_code: { type: string }
+        capability_type_code: { type: string }
+        trust_level_code: { type: string }
+        data_classification_code: { type: string }
+        inference_config_id: { type: string, format: uuid }
+        input_schema: { type: object }
+        output_schema: { type: object }
+        version_change_type_code: { type: string, enum: [major, minor, patch] }
+        cloned_from_version_id: { type: string, format: uuid }
+
+    PromptSummary:
+      type: object
+      properties:
+        prompt_id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        version_count: { type: integer }
+
+    CreatePrompt:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1 }
+        description: { type: string }
+
+    PromptVersionSummary:
+      type: object
+      properties:
+        prompt_version_id: { type: string, format: uuid }
+        prompt_id: { type: string, format: uuid }
+        semver: { type: string }
+        content_hash: { type: string }
+
+    CreatePromptVersion:
+      type: object
+      required: [semver, blocks]
+      properties:
+        semver: { type: string }
+        blocks:
+          type: array
+          description: Ordered, typed prompt blocks
+          items: { type: object }
+
+    ToolSummary:
+      type: object
+      properties:
+        tool_id: { type: string, format: uuid }
+        name: { type: string }
+        transport_code: { type: string }
+        description: { type: string, nullable: true }
+
+    CreateTool:
+      type: object
+      required: [name, transport_code]
+      properties:
+        name: { type: string, minLength: 1 }
+        transport_code: { type: string }
+        description: { type: string }
+
+    ToolVersionSummary:
+      type: object
+      properties:
+        tool_version_id: { type: string, format: uuid }
+        tool_id: { type: string, format: uuid }
+        semver: { type: string }
+        data_classification_code: { type: string, nullable: true }
+
+    CreateToolVersion:
+      type: object
+      required: [semver]
+      properties:
+        semver: { type: string }
+        input_schema: { type: object }
+        config: { type: object }
+        data_classification_code: { type: string }
+
+    McpServerVersionSummary:
+      type: object
+      properties:
+        mcp_server_version_id: { type: string, format: uuid }
+        name: { type: string }
+        semver: { type: string }
+
+    CreateMcpServerVersion:
+      type: object
+      required: [name, semver]
+      properties:
+        name: { type: string }
+        semver: { type: string }
+        config: { type: object }
+
+    ConnectorSummary:
+      type: object
+      properties:
+        data_connector_id: { type: string, format: uuid }
+        name: { type: string }
+        connector_type_code: { type: string }
+
+    CreateConnector:
+      type: object
+      required: [name, connector_type_code]
+      properties:
+        name: { type: string }
+        connector_type_code: { type: string }
+        description: { type: string }
+
+    ConnectorVersionSummary:
+      type: object
+      properties:
+        data_connector_version_id: { type: string, format: uuid }
+        data_connector_id: { type: string, format: uuid }
+        semver: { type: string }
+
+    CreateConnectorVersion:
+      type: object
+      required: [semver]
+      properties:
+        semver: { type: string }
+        config: { type: object, description: "Backend config (bucket, path, auth ref)" }
+
+    InferenceConfigDetail:
+      type: object
+      properties:
+        inference_config_id: { type: string, format: uuid }
+        max_tokens: { type: integer, nullable: true }
+        temperature: { type: number, nullable: true }
+        params: { type: object }
+        model_references:
+          type: array
+          items:
+            type: object
+            properties:
+              priority: { type: integer }
+              model_reference_id: { type: string, format: uuid }
+              reference_code: { type: string }
+
+    CreateInferenceConfig:
+      type: object
+      properties:
+        max_tokens: { type: integer }
+        temperature: { type: number, minimum: 0, maximum: 2 }
+        params: { type: object }
+        model_references:
+          type: array
+          items:
+            type: object
+            required: [priority, model_reference_id]
+            properties:
+              priority: { type: integer, minimum: 1 }
+              model_reference_id: { type: string, format: uuid }
+
+    PromptAssignment:
+      type: object
+      properties:
+        executable_version_id: { type: string, format: uuid }
+        prompt_version_id: { type: string, format: uuid }
+        prompt_name: { type: string }
+        prompt_semver: { type: string }
+        api_role_code: { type: string }
+        ordinal: { type: integer }
+
+    CreatePromptAssignment:
+      type: object
+      required: [prompt_version_id, api_role_code]
+      properties:
+        prompt_version_id: { type: string, format: uuid }
+        api_role_code: { type: string }
+        ordinal: { type: integer, default: 1 }
+
+    ToolAssignment:
+      type: object
+      properties:
+        executable_version_id: { type: string, format: uuid }
+        tool_version_id: { type: string, format: uuid }
+        tool_name: { type: string }
+        tool_semver: { type: string }
+
+    CreateToolAssignment:
+      type: object
+      required: [tool_version_id]
+      properties:
+        tool_version_id: { type: string, format: uuid }
+
+    McpAssignment:
+      type: object
+      properties:
+        executable_version_id: { type: string, format: uuid }
+        mcp_server_version_id: { type: string, format: uuid }
+        name: { type: string }
+        semver: { type: string }
+
+    CreateMcpAssignment:
+      type: object
+      required: [mcp_server_version_id]
+      properties:
+        mcp_server_version_id: { type: string, format: uuid }
+
+    SourceBinding:
+      type: object
+      properties:
+        source_binding_id: { type: string, format: uuid }
+        executable_version_id: { type: string, format: uuid }
+        name: { type: string }
+        source_kind_code: { type: string, enum: [storage_object, task_output, structured, inline_content] }
+        data_connector_version_id: { type: string, format: uuid, nullable: true }
+        delivery_mode_code: { type: string, enum: [inline, reference, download, extracted] }
+        media_type: { type: string, nullable: true }
+        locator: { type: object }
+        nullable: { type: boolean }
+        ordinal: { type: integer }
+
+    CreateSourceBinding:
+      type: object
+      required: [name, source_kind_code, delivery_mode_code]
+      properties:
+        name: { type: string }
+        source_kind_code: { type: string, enum: [storage_object, task_output, structured, inline_content] }
+        data_connector_version_id: { type: string, format: uuid, description: "Required when source_kind=storage_object" }
+        delivery_mode_code: { type: string, enum: [inline, reference, download, extracted] }
+        media_type: { type: string }
+        locator: { type: object, default: {} }
+        nullable: { type: boolean, default: false }
+        ordinal: { type: integer, default: 1 }
+
+    TargetBinding:
+      type: object
+      properties:
+        target_binding_id: { type: string, format: uuid }
+        executable_version_id: { type: string, format: uuid }
+        name: { type: string }
+        target_kind_code: { type: string, enum: [storage_object, task_output, structured] }
+        data_connector_version_id: { type: string, format: uuid, nullable: true }
+        delivery_mode_code: { type: string }
+        write_mode_code: { type: string, nullable: true, enum: [create, overwrite, create_or_version] }
+        target_payload_field: { type: string, nullable: true }
+        locator: { type: object }
+        ordinal: { type: integer }
+
+    CreateTargetBinding:
+      type: object
+      required: [name, target_kind_code, delivery_mode_code]
+      properties:
+        name: { type: string }
+        target_kind_code: { type: string, enum: [storage_object, task_output, structured] }
+        data_connector_version_id: { type: string, format: uuid, description: "Required when target_kind=storage_object" }
+        delivery_mode_code: { type: string }
+        write_mode_code: { type: string, enum: [create, overwrite, create_or_version], description: "Required when target_kind=storage_object" }
+        target_payload_field: { type: string }
+        media_type: { type: string }
+        locator: { type: object, default: {} }
+        ordinal: { type: integer, default: 1 }
+
+    ModelSummary:
+      type: object
+      properties:
+        model_id: { type: string, format: uuid }
+        model_code: { type: string }
+        provider: { type: string }
+        modality: { type: string }
+        model_status_code: { type: string }
+        current_price: { $ref: "#/components/schemas/ModelPrice", nullable: true }
+
+    CreateModel:
+      type: object
+      required: [model_code, provider]
+      properties:
+        model_code: { type: string }
+        provider: { type: string }
+        modality: { type: string, default: chat }
+
+    ModelPrice:
+      type: object
+      properties:
+        model_price_id: { type: string, format: uuid }
+        input_price_per_1k: { type: number }
+        output_price_per_1k: { type: number }
+        currency_code: { type: string }
+        valid_from: { type: string, format: date-time }
+        valid_to: { type: string, format: date-time }
+
+    CreateModelPrice:
+      type: object
+      required: [input_price_per_1k, output_price_per_1k]
+      properties:
+        input_price_per_1k: { type: number }
+        output_price_per_1k: { type: number }
+        currency_code: { type: string, default: usd }
+
+    ModelReferenceSummary:
+      type: object
+      properties:
+        model_reference_id: { type: string, format: uuid }
+        reference_code: { type: string }
+        name: { type: string }
+        current_model_code: { type: string, nullable: true }
+
+    CreateModelReference:
+      type: object
+      required: [reference_code, name]
+      properties:
+        reference_code: { type: string }
+        name: { type: string }
+        description: { type: string }
+
+    ModelReferenceBinding:
+      type: object
+      properties:
+        model_reference_binding_id: { type: string, format: uuid }
+        model_reference_id: { type: string, format: uuid }
+        model_id: { type: string, format: uuid }
+        model_code: { type: string }
+        valid_from: { type: string, format: date-time }
+        valid_to: { type: string, format: date-time }
+        reason: { type: string, nullable: true }
+
+    CreateModelReferenceBinding:
+      type: object
+      required: [model_id]
+      properties:
+        model_id: { type: string, format: uuid }
+        reason: { type: string }
+
+    UsedByEntry:
+      type: object
+      properties:
+        executable_id: { type: string, format: uuid }
+        executable_name: { type: string }
+        kind_code: { type: string }
+        executable_version_id: { type: string, format: uuid }
+        semver: { type: string }
+
+    ImportReport:
+      type: object
+      properties:
+        created: { type: integer }
+        updated: { type: integer }
+        no_op: { type: integer }
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              entity_type: { type: string }
+              name: { type: string }
+              error: { type: string }
+        entries:
+          type: array
+          items:
+            type: object
+            properties:
+              entity_type: { type: string }
+              name: { type: string }
+              action: { type: string, enum: [created, updated, no_op, error] }
