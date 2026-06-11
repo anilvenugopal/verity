@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { usePreferences } from '@/hooks/usePreferences'
 import { Topbar } from './Topbar'
@@ -7,6 +7,7 @@ import { Sidebar } from './Sidebar'
 import { AppLauncher } from './AppLauncher'
 import { CommandPalette } from './CommandPalette'
 import { PreferencesModal } from './PreferencesModal'
+import { HelpDrawer, helpDrawer } from './HelpDrawer'
 import './AppShell.css'
 
 // The five-region app shell (FR-009): topbar · body(rail + canvas) · statusbar. The sidebar region
@@ -17,6 +18,8 @@ export function AppShell() {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [prefsOpen, setPrefsOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
+  const onHelpOpenChange = useCallback((open: boolean) => setHelpOpen(open), [])
   const { prefs, update } = usePreferences()
 
   // ⌘J / Ctrl-J opens the global search (command palette). The rail launcher is the apps grid.
@@ -31,13 +34,18 @@ export function AppShell() {
         e.preventDefault()
         setPrefsOpen(true)
       }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '?') {
+        e.preventDefault()
+        if (helpOpen) helpDrawer.close()
+        else helpDrawer.open('home')
+      }
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [])
 
   return (
-    <div className="app">
+    <div className={`app${helpOpen ? ' app--help-open' : ''}`}>
       <Topbar onSearch={() => setPaletteOpen(true)} onPreferences={() => setPrefsOpen(true)} />
       <div className="app__body">
         <Rail
@@ -49,6 +57,7 @@ export function AppShell() {
         <main className="app__canvas">
           <Outlet />
         </main>
+        <HelpDrawer onOpenChange={onHelpOpenChange} />
       </div>
       <footer className="app__statusbar">
         <div className="statusbar-row">

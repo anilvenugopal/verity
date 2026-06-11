@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { api, ApiException } from '@/api/client'
 import { useSession } from '@/auth/useSession'
+import { useToast } from '@/shell/useToast'
 import type { ApprovalRequest } from '@/api/types'
 
 const ROLE_LABEL: Record<string, string> = {
@@ -25,6 +26,7 @@ export function SignOffGate({ approval, reviewed, reviewHint, onChange }: {
   onChange: (updated: ApprovalRequest) => void
 }) {
   const { principal } = useSession()
+  const { success } = useToast()
   const [comment, setComment] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -47,7 +49,9 @@ export function SignOffGate({ approval, reviewed, reviewHint, onChange }: {
     setBusy(true); setError('')
     try {
       const updated = await api.post<ApprovalRequest>(`/api/approvals/${approval.approval_request_id}/signoff`, { decision_code, comment: comment || null })
-      setComment(''); onChange(updated)
+      setComment('')
+      success(decision_code === 'approved' ? 'Approved' : 'Decision recorded')
+      onChange(updated)
     } catch (e) {
       setError(e instanceof ApiException ? e.body.detail : 'Sign-off failed.')
     } finally {

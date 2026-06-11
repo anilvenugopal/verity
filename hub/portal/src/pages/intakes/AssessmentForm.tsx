@@ -1,9 +1,11 @@
 import { type FormEvent, useEffect, useState } from 'react'
 import { api, ApiException } from '@/api/client'
+import { useToast } from '@/shell/useToast'
 import type {
   AssessmentInput, AssessmentView, DataItem, FairnessMetric, OversightControl, RiskItem,
 } from '@/api/types'
 import { Badge } from '@/components/Badge'
+import { HelpPopover } from '@/shell/HelpPopover'
 import { FieldHelp } from './FieldHelp'
 import { InventoryEditor } from './InventoryEditor'
 import { FIELDS, type Opt } from './assessmentCatalog'
@@ -52,6 +54,7 @@ export function AssessmentForm({
   const [revision, setRevision] = useState<number | null>(null)
   const [classes, setClasses] = useState<RefCode[]>([])
   const [active, setActive] = useState('context')
+  const { success } = useToast()
   const [busy, setBusy] = useState(false)
   const [attempted, setAttempted] = useState(false)
   const [error, setError] = useState('')
@@ -90,6 +93,7 @@ export function AssessmentForm({
     try {
       const v = await api.put<AssessmentView>(`/api/intakes/${intakeId}/assessment`, d)
       setComputed(v.computed); setRevision(v.revision); onComputed()
+      success('Assessment saved')
     } catch (err) {
       setError(err instanceof ApiException ? err.body.detail : 'Could not save the assessment.')
     } finally {
@@ -102,7 +106,7 @@ export function AssessmentForm({
   const sel = (id: string, key: string, value: string, on: (v: string) => void, opts?: Opt[], req = true) => (
     <div className="field">
       <div className="form-field">
-        <FieldHelp field={FIELDS[key]} required={req} htmlFor={id} />
+        <FieldHelp field={FIELDS[key] ?? { label: key, help: '' }} required={req} htmlFor={id} />
         <select id={id} className={`input${errCls(req, value)}`} value={value} disabled={!canEdit} onChange={(e) => on(e.target.value)}>
           <option value="">Select…</option>
           {(opts ?? FIELDS[key]?.options ?? []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -114,7 +118,7 @@ export function AssessmentForm({
   const bool = (key: string, value: boolean, on: (v: boolean) => void) => (
     <div className="field">
       <div className="form-field">
-        <FieldHelp field={FIELDS[key]} />
+        <FieldHelp field={FIELDS[key] ?? { label: key, help: '' }} />
         <div className="chip-group" role="radiogroup" aria-label={FIELDS[key]?.label ?? key}>
           <button type="button" role="radio" aria-checked={value} className={`chip${value ? ' is-selected' : ''}`} disabled={!canEdit} onClick={() => on(true)}>Yes</button>
           <button type="button" role="radio" aria-checked={!value} className={`chip${!value ? ' is-selected' : ''}`} disabled={!canEdit} onClick={() => on(false)}>No</button>
@@ -166,7 +170,7 @@ export function AssessmentForm({
         <div className="asec__sections">
           {/* Decision context */}
           <section className="card" id="asec-context">
-            <div className="rail-panel__title">Decision context</div>
+            <div className="rail-panel__title">Decision context<HelpPopover helpId="forms.assessment.fields.decision_type" /></div>
             <div className="field-grid">
               {sel('a-dtype', 'decision_type', dc.decision_type, (v) => setDC({ decision_type: v }))}
               {sel('a-effect', 'consumer_effect', dc.consumer_effect, (v) => setDC({ consumer_effect: v }))}
@@ -175,9 +179,9 @@ export function AssessmentForm({
               {bool('solely_automated', dc.solely_automated, (v) => setDC({ solely_automated: v }))}
               <div className="field field-full">
                 <div className="form-field">
-                  <FieldHelp field={FIELDS.affected_populations} required />
+                  <FieldHelp field={FIELDS.affected_populations ?? { label: 'Affected populations', help: '' }} required />
                   <div className="chip-group" aria-label="Affected populations">
-                    {FIELDS.affected_populations.options!.map((o) => {
+                    {(FIELDS.affected_populations?.options ?? []).map((o) => {
                       const on = dc.affected_populations.includes(o.value)
                       return (
                         <button type="button" key={o.value} className={`chip${on ? ' is-selected' : ''}`} disabled={!canEdit}
@@ -187,7 +191,7 @@ export function AssessmentForm({
                       )
                     })}
                   </div>
-                  <span className="input-hint">{FIELDS.affected_populations.help}</span>
+                  <span className="input-hint">{FIELDS.affected_populations?.help}</span>
                   {attempted && dc.affected_populations.length === 0 && <span className="input-error-text">Select at least one.</span>}
                 </div>
               </div>
@@ -196,7 +200,7 @@ export function AssessmentForm({
 
           {/* Data inventory */}
           <section className="card" id="asec-data">
-            <div className="rail-panel__title">Data inventory</div>
+            <div className="rail-panel__title">Data inventory<HelpPopover helpId="forms.assessment.fields.source" /></div>
             <p className="input-hint">Every data input the use case consumes and every output it produces (EU AI Act Art 10). The intake’s overall classification + PII are taken from the most sensitive item.</p>
             <InventoryEditor<DataItem>
               items={d.data_inventory} canEdit={canEdit}
@@ -221,7 +225,7 @@ export function AssessmentForm({
 
           {/* Human oversight */}
           <section className="card" id="asec-oversight">
-            <div className="rail-panel__title">Human oversight</div>
+            <div className="rail-panel__title">Human oversight<HelpPopover helpId="forms.assessment.fields.autonomy_level" /></div>
             <div className="field-grid">
               {sel('a-auto', 'autonomy_level', ho.autonomy_level, (v) => setHO({ autonomy_level: v }))}
               {bool('stop_mechanism', ho.stop_mechanism, (v) => setHO({ stop_mechanism: v }))}
@@ -248,7 +252,7 @@ export function AssessmentForm({
 
           {/* Risks */}
           <section className="card" id="asec-risks">
-            <div className="rail-panel__title">Risks</div>
+            <div className="rail-panel__title">Risks<HelpPopover helpId="forms.assessment.fields.category" /></div>
             <p className="input-hint">Risks to health, safety or fundamental rights, scored likelihood × severity (EU AI Act Art 9 / ICO register). Optional, but expected for higher-tier use cases.</p>
             <InventoryEditor<RiskItem>
               items={d.risks ?? []} canEdit={canEdit}
@@ -271,7 +275,7 @@ export function AssessmentForm({
 
           {/* Fairness */}
           <section className="card" id="asec-fairness">
-            <div className="rail-panel__title">Fairness</div>
+            <div className="rail-panel__title">Fairness<HelpPopover helpId="forms.assessment.fields.disparate_impact_tested" /></div>
             <div className="field-grid">
               {bool('disparate_impact_tested', fair.disparate_impact_tested, (v) => setFair({ disparate_impact_tested: v }))}
               {plainTxt('fa-classes', 'Protected classes tested', fair.protected_classes_tested.join(', '), (v) => setFair({ protected_classes_tested: v.split(',').map((x) => x.trim()).filter(Boolean) }), 'Comma-separated, e.g. race, gender, age.')}

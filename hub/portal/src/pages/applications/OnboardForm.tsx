@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, ApiException } from '@/api/client'
 import { useSession } from '@/auth/useSession'
+import { useToast } from '@/shell/useToast'
 import type { Application } from '@/api/types'
 import './ApplicationWorkspace.css' // shared workspace layout (band/tabs/rail)
 import './OnboardForm.css'
@@ -37,6 +38,7 @@ const FIELD_TAB: Record<string, string> = {
 // marker, live count, inline errors + a focusing summary on attempt (no silently disabled button).
 export function OnboardForm() {
   const navigate = useNavigate()
+  const { success } = useToast()
   const { id } = useParams<{ id: string }>() // set => edit mode (pending app), unset => create
   const editing = !!id
   const { principal } = useSession()
@@ -131,7 +133,7 @@ export function OnboardForm() {
     if (busy || !principal) return
     if (!valid) {
       setAttempted(true)
-      focusField(missing[0].key)
+      focusField(missing[0]?.key ?? '')
       return
     }
     setBusy(true)
@@ -154,7 +156,12 @@ export function OnboardForm() {
       const appId = editing
         ? (await api.put<{ application_id: string }>(`/api/applications/${id}`, payload)).application_id
         : (await api.post<{ application_id: string }>('/api/applications', payload)).application_id
-      if (alsoSubmit) await api.post(`/api/applications/${appId}/submit`, {})
+      if (alsoSubmit) {
+        await api.post(`/api/applications/${appId}/submit`, {})
+        success('Application submitted for approval')
+      } else {
+        success(editing ? 'Application updated' : 'Application created')
+      }
       navigate(`/applications/${appId}`) // into the workspace
     } catch (err) {
       setError(err instanceof ApiException ? err.body.detail : 'Submit failed.')

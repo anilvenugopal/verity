@@ -1,6 +1,7 @@
 import { type FormEvent, Fragment, useCallback, useEffect, useState } from 'react'
 import { api } from '@/api/client'
 import { useSession } from '@/auth/useSession'
+import { useToast } from '@/shell/useToast'
 import type { Executable, ExceptionListItem, IntakeAssetLink, ObligationSet } from '@/api/types'
 import { domainLabel } from '../compliance/ComplianceModel'
 
@@ -9,6 +10,7 @@ import { domainLabel } from '../compliance/ComplianceModel'
 // (raise + approve, separation of duty). Reuses canonical classes — no new CSS.
 export function RiskObligations({ intakeId, revisable }: { intakeId: string; revisable: boolean }) {
   const { canDo, principal } = useSession()
+  const { success } = useToast()
   const [set, setSet] = useState<ObligationSet | null>(null)
   const [excs, setExcs] = useState<ExceptionListItem[]>([])
   const [links, setLinks] = useState<IntakeAssetLink[]>([])
@@ -32,14 +34,14 @@ export function RiskObligations({ intakeId, revisable }: { intakeId: string; rev
   async function linkAsset() {
     if (!pick || busy) return
     setBusy(true)
-    try { await api.post(`/api/intakes/${intakeId}/links`, { executable_id: pick }); setPick(''); load() } finally { setBusy(false) }
+    try { await api.post(`/api/intakes/${intakeId}/links`, { executable_id: pick }); setPick(''); success('Asset linked'); load() } finally { setBusy(false) }
   }
   useEffect(() => load(), [load])
 
   async function record(obId: string, control: string) {
     if (busy) return
     setBusy(true)
-    try { await api.post(`/api/obligations/${obId}/evidence`, { control_code: control }); load() } finally { setBusy(false) }
+    try { await api.post(`/api/obligations/${obId}/evidence`, { control_code: control }); success('Evidence recorded'); load() } finally { setBusy(false) }
   }
   async function raise(e: FormEvent) {
     e.preventDefault()
@@ -50,13 +52,13 @@ export function RiskObligations({ intakeId, revisable }: { intakeId: string; rev
         requirement_code: form.code, waived_tier_level: form.tier, compensating_controls: form.comp,
         rationale: form.why, expires_at: new Date(form.expires).toISOString(),
       })
-      setForm(null); load()
+      setForm(null); success('Exception raised'); load()
     } finally { setBusy(false) }
   }
   async function signoff(id: string, decision: 'approved' | 'rejected') {
     if (busy) return
     setBusy(true)
-    try { await api.post(`/api/exceptions/${id}/signoff`, { decision }); load() } finally { setBusy(false) }
+    try { await api.post(`/api/exceptions/${id}/signoff`, { decision }); success(decision === 'approved' ? 'Exception approved' : 'Exception rejected'); load() } finally { setBusy(false) }
   }
 
   if (!set) return <div className="aw-tabpanel card"><p className="input-hint">Loading…</p></div>

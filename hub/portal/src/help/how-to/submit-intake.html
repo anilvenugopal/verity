@@ -1,0 +1,40 @@
+<article class="help-page">
+  <header class="help-page__header">
+    <h1>How to Submit an Intake</h1>
+    <p class="help-page__subtitle">Step-by-step guide from creating a use case to getting it approved.</p>
+  </header>
+
+  <section class="help-page__section">
+    <h2>Step 1 — Create the intake</h2>
+    <p>Go to <strong>Applications</strong>, open the application the use case belongs to, and click <strong>New Intake</strong>. Give it a clear title that identifies the AI system and the decision it supports (e.g. "Auto underwriting — residential property"). Add a description that explains what the system does and how it is used in production.</p>
+  </section>
+
+  <section class="help-page__section">
+    <h2>Step 2 — Complete the assessment</h2>
+    <p>The intake opens in <em>draft</em> state. Click <strong>Edit Assessment</strong> to enter the five-section risk analysis:</p>
+    <ol>
+      <li><strong>Decision context</strong> — the type of insurance decision, consumer effect, deployment scale, and EU AI Act Annex III flags.</li>
+      <li><strong>Data inventory</strong> — every input and output the system consumes or produces, with classification and PII flags.</li>
+      <li><strong>Human oversight</strong> — the automation level, override capability, and stop mechanism.</li>
+      <li><strong>Risks</strong> — identified risks by category, with likelihood and severity scores.</li>
+      <li><strong>Fairness</strong> — affected populations and disparate-impact testing status.</li>
+    </ol>
+    <p>Click <strong>Save Assessment</strong>. The platform computes the risk tier from your answers and displays it on the intake header.</p>
+  </section>
+
+  <section class="help-page__section">
+    <h2>Step 3 — Submit for approval</h2>
+    <p>Once the assessment is complete and the tier is computed, click <strong>Submit for Approval</strong>. This creates a quorum request. The tier determines which roles must sign off — for example, a Tier-3 use case requires sign-off from both a Compliance Officer and a Risk Manager.</p>
+  </section>
+
+  <section class="help-page__section">
+    <h2>Step 4 — Quorum sign-off</h2>
+    <p>Each required approver reviews the intake and signs. <strong>Separation of duty</strong>: you cannot approve an intake you submitted. If you are the only available approver for a required role, arrange for another team member with that role to review.</p>
+    <p>Approvers can see the full assessment, the risk tier, and the identified risks. They may withdraw their sign-off before the quorum is complete if they need more information.</p>
+  </section>
+
+  <section class="help-page__section">
+    <h2>Step 5 — After approval</h2>
+    <p>Once the quorum is satisfied, the intake moves to <em>approved</em> state. The next step is obligation resolution: the platform derives the compliance controls that apply at the intake's tier and governance domains. You must record evidence for each control before any linked registry assets can advance to staging or production.</p>
+  </section>
+</article>

@@ -1,0 +1,64 @@
+<article class="help-page">
+  <header class="help-page__header">
+    <h1>AI Decision Impact Assessment</h1>
+    <p class="help-page__subtitle">Captures the risk profile of a governed AI use case across five dimensions: decision context, data, human oversight, risks, and fairness.</p>
+  </header>
+
+  <section class="help-page__section">
+    <h2>Purpose</h2>
+    <p>The assessment is the primary governance instrument for an intake. It answers two questions the regulator cares about: <em>what does this AI decide, and over whom?</em> The answers drive the computed risk tier (Limited / High / Unacceptable), which determines the approver quorum and the applicable obligation set.</p>
+    <p>All five sections are required before submission. The system computes the tier when you save — it does not wait for approval.</p>
+  </section>
+
+  <section class="help-page__section">
+    <h2>Decision context</h2>
+    <dl class="help-page__fields">
+      <dt>Decision type</dt>
+      <dd>The insurance decision this AI supports. Underwriting, pricing, claims, fraud detection, and eligibility are consumer-consequential categories that raise the inherent tier (NAIC risk dimension 1).</dd>
+      <dt>Effect on the consumer</dt>
+      <dd>The worst-case outcome for a policyholder. Coverage denial and claim denial are the most severe and drive the tier to High.</dd>
+      <dt>EU AI Act high-risk category</dt>
+      <dd>An Annex III match (e.g. risk assessment &amp; pricing in life/health insurance) floors the tier at High regardless of other answers.</dd>
+      <dt>Solely automated decision</dt>
+      <dd>Triggers GDPR Art 22 safeguards — the right to obtain human review — when there is a legal or similarly significant effect.</dd>
+      <dt>Affected populations</dt>
+      <dd>Select all that apply. Consumers and vulnerable groups raise the tier; an internal-only audience lowers it (EU Art 27 fundamental-rights impact).</dd>
+      <dt>Deployment scale</dt>
+      <dd>Production-wide deployment makes the use case material under the NAIC Model Bulletin.</dd>
+    </dl>
+  </section>
+
+  <section class="help-page__section">
+    <h2>Data inventory</h2>
+    <p>Every data asset the use case consumes (inputs) or produces (outputs), per EU AI Act Art 10. Required fields: name, direction, data type, source, classification, personal data.</p>
+    <dl class="help-page__fields">
+      <dt>Classification</dt>
+      <dd>The sensitivity tier of the asset. The intake's overall classification ceiling is the most sensitive asset here.</dd>
+      <dt>Personal data</dt>
+      <dd>Special-category data (health, biometric) is the strongest signal and can raise the tier to High.</dd>
+      <dt>Source / provenance</dt>
+      <dd>Third-party and consumer-provided data carry extra due-diligence obligations (NY DFS CL-7, EU Art 10 origin).</dd>
+    </dl>
+  </section>
+
+  <section class="help-page__section">
+    <h2>Human oversight</h2>
+    <p>How much a human can observe, intervene in, and override the system (EU AI Act Art 14). Effective oversight — an overridable control <em>and</em> a stop mechanism — lowers the inherent tier.</p>
+    <dl class="help-page__fields">
+      <dt>Autonomy level</dt>
+      <dd>Higher autonomy with weak oversight raises the tier. Fully automated + no oversight + severe consumer harm triggers auto-rejection.</dd>
+      <dt>Stop mechanism</dt>
+      <dd>EU Art 14(4)(e) requires a safe-halt for high-risk systems. Its presence, combined with override capability, makes oversight effective.</dd>
+    </dl>
+  </section>
+
+  <section class="help-page__section">
+    <h2>Risks</h2>
+    <p>Risks to health, safety, or fundamental rights — scored likelihood × severity (EU AI Act Art 9 / ICO register). Optional, but expected for higher-tier use cases. Each risk should have a mitigation.</p>
+  </section>
+
+  <section class="help-page__section">
+    <h2>Fairness</h2>
+    <p>Quantitative disparate-impact metrics per NY DFS CL-7 and Colorado SB21-169. Record the protected classes tested and the metrics (e.g. Adverse Impact Ratio). Document any search for a less-discriminatory alternative.</p>
+  </section>
+</article>

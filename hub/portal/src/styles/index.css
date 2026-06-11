@@ -9,3 +9,7 @@
 
 /* shared portal page composition (not part of the kit layers) */
 @import './page.css';
+
+/* portal-local component styles */
+@import './toast.css';
+@import './help.css';

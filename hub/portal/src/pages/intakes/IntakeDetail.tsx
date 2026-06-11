@@ -2,6 +2,7 @@ import { Fragment, type FormEvent, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, ApiException } from '@/api/client'
 import { useSession } from '@/auth/useSession'
+import { useToast } from '@/shell/useToast'
 import type { ApprovalRequest, ChangeProposalView, Intake, IntakeAssetLink, Requirement } from '@/api/types'
 import { isIntakeRevisable } from '@/api/types'
 import { Badge } from '@/components/Badge'
@@ -45,6 +46,7 @@ export function IntakeDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { canDo } = useSession()
+  const { success } = useToast()
   const [intake, setIntake] = useState<Intake | null>(null)
   const [reqs, setReqs] = useState<Requirement[]>([])
   const [appr, setAppr] = useState<ApprovalRequest | null>(null)
@@ -94,6 +96,7 @@ export function IntakeDetail() {
     try {
       const a = await api.post<ApprovalRequest>(`/api/intakes/${intake!.intake_id}/submit`, {})
       setAppr(a); refreshIntake()
+      success('Submitted for approval')
     } catch (err) {
       setSubmitError(err instanceof ApiException ? err.body.detail : 'Submit failed.')
     } finally {
@@ -164,6 +167,7 @@ export function IntakeDetail() {
       if (reqForm.id) await api.put<Requirement>(`/api/intakes/${intake!.intake_id}/requirements/${reqForm.id}`, body)
       else await api.post<Requirement>(`/api/intakes/${intake!.intake_id}/requirements`, body)
       setReqs(await api.get<Requirement[]>(`/api/intakes/${intake!.intake_id}/requirements`))
+      success(reqForm.id ? 'Requirement updated' : 'Requirement added')
       setReqForm(null)
     } catch (err) {
       setError(err instanceof ApiException ? err.body.detail : 'Could not save requirement.')
@@ -179,6 +183,7 @@ export function IntakeDetail() {
     try {
       await api.del(`/api/intakes/${intake!.intake_id}/requirements/${r.intake_requirement_id}`)
       setReqs(await api.get<Requirement[]>(`/api/intakes/${intake!.intake_id}/requirements`))
+      success('Requirement removed')
     } catch (err) {
       setError(err instanceof ApiException ? err.body.detail : 'Could not remove requirement.')
     } finally {
@@ -192,6 +197,7 @@ export function IntakeDetail() {
     try {
       setIntake(await api.post<Intake>(`/api/intakes/${intake!.intake_id}/withdraw`, {}))
       loadApproval(intake!.intake_id)
+      success('Approval request cancelled')
     } catch (err) {
       setError(err instanceof ApiException ? err.body.detail : 'Cancel failed.')
     } finally {
@@ -222,6 +228,7 @@ export function IntakeDetail() {
         asset_ids: Array.from(cpAssets),
       })
       setProposals((prev) => [p, ...prev])
+      success('Change proposal raised')
       setShowCpForm(false); setCpAssets(new Set())
     } catch (err) {
       setCpError(err instanceof ApiException ? err.body.detail : 'Could not raise proposal.')

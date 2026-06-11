@@ -1,6 +1,7 @@
 import { type FormEvent, Fragment, useEffect, useState } from 'react'
 import { api, ApiException } from '@/api/client'
 import { useSession } from '@/auth/useSession'
+import { useToast } from '@/shell/useToast'
 import type { Executable, ExecutableVersion } from '@/api/types'
 
 // Minimal registry (003 US2): create governed assets (agents/tasks) + versions, advance the
@@ -22,6 +23,7 @@ export function RegistryList() {
   const [msg, setMsg] = useState('')
   const [busy, setBusy] = useState(false)
 
+  const { success } = useToast()
   const canAuthor = canDo('author_registry')
   const canPromote = canDo('promote_registry')
 
@@ -34,19 +36,19 @@ export function RegistryList() {
     e.preventDefault()
     if (busy) return
     setBusy(true); setMsg('')
-    try { const ex = await api.post<Executable>('/api/executables', { name, kind_code: kind }); setName(''); loadExes(); setSel(ex.executable_id) }
+    try { const ex = await api.post<Executable>('/api/executables', { name, kind_code: kind }); setName(''); success('Asset created'); loadExes(); setSel(ex.executable_id) }
     catch (err) { setMsg(err instanceof ApiException ? err.body.detail : 'Could not create asset.') }
     finally { setBusy(false) }
   }
   async function addVersion() {
     if (!sel || busy) return
     setBusy(true)
-    try { await api.post(`/api/executables/${sel}/versions`); loadVersions(sel); loadExes() } finally { setBusy(false) }
+    try { await api.post(`/api/executables/${sel}/versions`); success('Version created'); loadVersions(sel); loadExes() } finally { setBusy(false) }
   }
   async function advance(vid: string, to: string) {
     if (busy) return
     setBusy(true); setMsg('')
-    try { await api.post(`/api/versions/${vid}/lifecycle`, { to_stage: to }); if (sel) loadVersions(sel); setMsg(`Promoted to ${to}.`) }
+    try { await api.post(`/api/versions/${vid}/lifecycle`, { to_stage: to }); if (sel) loadVersions(sel); setMsg(''); success('Stage advanced') }
     catch (err) { setMsg(err instanceof ApiException ? err.body.detail : 'Advance failed.') }
     finally { setBusy(false) }
   }

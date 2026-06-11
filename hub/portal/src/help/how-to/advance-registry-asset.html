@@ -1,0 +1,37 @@
+<article class="help-page">
+  <header class="help-page__header">
+    <h1>How to Advance a Registry Asset</h1>
+    <p class="help-page__subtitle">From draft registration to champion in production.</p>
+  </header>
+
+  <section class="help-page__section">
+    <h2>Step 1 — Create the asset</h2>
+    <p>Go to <strong>Registry</strong> and click <strong>Create Asset</strong>. Choose a kind — <em>task</em> (a single-step function) or <em>agent</em> (an orchestrating entity). Give it a name and an initial version number (e.g. <code>1.0.0</code>). The asset is created in <em>draft</em> lifecycle stage.</p>
+  </section>
+
+  <section class="help-page__section">
+    <h2>Step 2 — Link to an approved intake</h2>
+    <p>Before the asset can advance beyond <em>staging</em>, it must be linked to an intake that is both <em>approved</em> and <em>obligation-resolved</em>. Use the <strong>Link Intake</strong> action on the asset card. This is the governance gate — it ensures every production asset is backed by a reviewed and approved use case.</p>
+    <p>You can link the asset before the intake is approved; the gate is enforced at promotion time, not at linking time.</p>
+  </section>
+
+  <section class="help-page__section">
+    <h2>Step 3 — Staging</h2>
+    <p>Advance the asset to <em>staging</em> for non-production testing. At this stage the asset can be deployed in test or pre-production environments. The linked intake must exist, but does not yet need to be resolved (this allows early integration testing before compliance sign-off is complete).</p>
+  </section>
+
+  <section class="help-page__section">
+    <h2>Step 4 — Challenger</h2>
+    <p>Advance to <em>challenger</em> to run alongside the current champion in production in <strong>shadow mode</strong> (outputs logged but suppressed — no business effect) or <strong>A/B mode</strong> (outputs applied to a scoped sample). This requires the linked intake to be both approved and obligation-resolved. The governance gate enforces this at the point of promotion.</p>
+  </section>
+
+  <section class="help-page__section">
+    <h2>Step 5 — Champion</h2>
+    <p>Once the challenger has been validated, advance to <em>champion</em>. The champion is the active production asset. Advancing a new challenger to champion automatically deprecates the previous one, which is retained in a locked, audit-only state.</p>
+  </section>
+
+  <section class="help-page__section">
+    <h2>Rollback</h2>
+    <p>A deprecated champion can be restored via rollback if the new champion has a defect. The rollback is recorded in the asset's audit trail.</p>
+  </section>
+</article>

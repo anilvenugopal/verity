@@ -4,6 +4,7 @@
 // - 403 → emits 'forbidden' with the parsed ApiError (route-level forbidden takeover)
 // - returns typed JSON or throws ApiError
 import { emitAuth, emitDataChanged } from './events'
+import { emitToast } from '../shell/ToastContext'
 import type { ApiError } from './types'
 
 export class ApiException extends Error {
@@ -27,12 +28,18 @@ async function parseError(res: Response): Promise<ApiError> {
 }
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const res = await fetch(path, {
+  let res: Response
+  try {
+    res = await fetch(path, {
     method,
     credentials: 'include',
     headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  })
+      body: body === undefined ? undefined : JSON.stringify(body),
+    })
+  } catch {
+    emitToast('Network error — check your connection', 'error', false)
+    throw new ApiException(0, { code: 'network_error', detail: 'Network error', request_id: '' })
+  }
 
   if (res.status === 401) {
     emitAuth('session-expired')
@@ -44,7 +51,9 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     throw new ApiException(403, err)
   }
   if (!res.ok) {
-    throw new ApiException(res.status, await parseError(res))
+    const err = await parseError(res)
+    emitToast(err.detail || 'Request failed', 'error', false)
+    throw new ApiException(res.status, err)
   }
   // PATCH is only used for actor-scoped writes (preferences) that don't affect shared views.
   if (method !== 'GET' && method !== 'PATCH') emitDataChanged()
