@@ -193,6 +193,8 @@ Both in one transaction — guaranteed no gap, no dual-champion.
 
 **Note**: PK is `(executable_version_id, prompt_version_id, api_role_code)` — same prompt version CAN appear in multiple roles.
 
+> The priority chain in `core.inference_config_model` is walked by `gateway_llm_call` in Feature 008 (Harness Runtime): priority 1 is tried first; on exhausted retries against a transient error, priority 2+ is tried in order. The chain is resolved at claim time via `get_inference_config_chain` — see Feature 008 / ADR-0019.
+
 ### `core.executable_tool_assignment`
 
 | Column | Type | Notes |
@@ -293,6 +295,8 @@ Both in one transaction — guaranteed no gap, no dual-champion.
 | `bound_by_actor_id` / `bound_role_code` | uuid/text | Who set it |
 
 **UNIQUE partial index**: one open binding per reference (`WHERE valid_to = '2099-12-31...'`).
+
+> Swapping the underlying model (close old binding + open new) takes effect for all executables using that reference at the next run — no package re-promotion required (design decision D10). Migration 0007 adds `was_fallback` and `model_reference_id` to `audit.model_invocation_log` so each governed decision records which chain position fired (ADR-0019).
 
 ---
 

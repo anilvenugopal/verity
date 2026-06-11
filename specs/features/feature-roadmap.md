@@ -268,11 +268,13 @@ a **demo checkpoint** a non-technical stakeholder can click (no curl in demos). 
 - Enrollment: one-time short-lived token → cluster-scoped mTLS identity + app-scoped API key; outbound-only spoke→hub traffic; auto-rotating certificates
 - App data-source credentials: metadata-only at hub (name, connector type, verification status — no secret value, no vault reference); secret stays on spoke
 - Package deployment: load-once at claim time, old/new bundles coexist in cache (no drain on package deploy); image patch surfaces graceful vs force drain choice
+- **Model reference chain resolution** (ADR-0019): `gateway_llm_call` resolves `inference_config_model` rows at claim time via `get_inference_config_chain`; walks chain by priority (1 = primary, 2+ = fallbacks) with exponential-backoff retries per candidate; on exhausted retries against priority-N, tries priority-N+1; `was_fallback` and `model_reference_id` written to `audit.model_invocation_log` on every invocation so compliance reviewers can identify decisions produced by non-primary models
+- **MCP transport** (net-new scope — not a v1 port): v1 MCP supports `stdio` only; this feature adds `sse` and `http` transports required for cluster-deployed MCP servers per ADR-0016 §4 topology
 
 **Key FRs**: FR-HR-001–006, FR-RN-001–007  
 **Depends on**: 007 (packages to deploy)  
 **Blocks**: 009 (runs generate decision logs), 012 (deployment and run-mode gates), 016 (production HA substrate replaces local Postgres/dispatch)  
-**ADRs**: ADR-0010, ADR-0003 (API-only boundary)  
+**ADRs**: ADR-0010, ADR-0003 (API-only boundary), ADR-0019 (model reference chain resolution)  
 **Key contracts**: `contract/gateway-openapi.yaml` (hub↔harness; this is the linchpin — only allowed cross-component dependency)
 
 ---

@@ -25,3 +25,57 @@ INSERT INTO core.regulatory_framework (framework_code, name, authority) VALUES
     ('iso_42001','ISO/IEC 42001 (AI Management System)','ISO/IEC'),
     ('internal_only','Internal governance only (no external regime)','Internal')
     ON CONFLICT (framework_code) DO NOTHING;
+
+-- -------------------------------------------------------------------------
+-- Model catalog seed (ADR-0019 / design decision D10)
+-- Standard Anthropic models, stable logical references, and initial bindings.
+-- Apply AFTER reference_seed.sql (reference.model_status, reference.role,
+-- reference.actor_type must exist).
+-- -------------------------------------------------------------------------
+
+-- Bootstrap automation actor for seed-time operations (NULL created_by_actor_id
+-- is the only valid nil; see core.actor schema comment).
+INSERT INTO core.actor (actor_id, actor_type_code, display_name, primary_role_code, created_by_actor_id) VALUES
+    ('00000000-0000-0000-0000-000000000001'::uuid, 'automation', 'Verity Seed', 'ai_governance', NULL)
+    ON CONFLICT (actor_id) DO NOTHING;
+
+-- Provider models (current Anthropic Claude 4 family)
+INSERT INTO core.model (model_code, provider, modality, model_status_code) VALUES
+    ('claude-opus-4-8',   'anthropic', 'chat', 'active'),
+    ('claude-sonnet-4-6', 'anthropic', 'chat', 'active'),
+    ('claude-haiku-4-5',  'anthropic', 'chat', 'active')
+    ON CONFLICT (model_code) DO NOTHING;
+
+-- Standard logical model references (stable aliases; executables point at these,
+-- not at concrete model strings — see ADR-0019 and design decision D10).
+INSERT INTO core.model_reference (reference_code, name, description) VALUES
+    ('reasoning-primary',     'Reasoning Primary',      'Default for agentic / assessment tasks'),
+    ('reasoning-fallback',    'Reasoning Fallback',     'Fallback for reasoning tasks'),
+    ('extraction-primary',    'Extraction Primary',     'Lighter tasks, higher throughput'),
+    ('extraction-fallback',   'Extraction Fallback',    'Fallback for extraction tasks'),
+    ('classification-primary','Classification Primary', 'Classification, low-latency')
+    ON CONFLICT (reference_code) DO NOTHING;
+
+-- Initial model_reference_binding rows — one open SCD-2 window per reference.
+-- Operators close and re-open these via POST /api/registry/model-references/:id/bind
+-- without requiring re-promotion of any executable.
+INSERT INTO core.model_reference_binding
+    (model_reference_id, model_id, valid_from, valid_to, reason, bound_by_actor_id, bound_role_code)
+SELECT
+    mr.model_reference_id,
+    m.model_id,
+    now(),
+    '2099-12-31 00:00:00+00'::timestamptz,
+    'initial seed',
+    '00000000-0000-0000-0000-000000000001'::uuid,
+    'ai_governance'
+FROM (VALUES
+    ('reasoning-primary',     'claude-opus-4-8'),
+    ('reasoning-fallback',    'claude-sonnet-4-6'),
+    ('extraction-primary',    'claude-sonnet-4-6'),
+    ('extraction-fallback',   'claude-haiku-4-5'),
+    ('classification-primary','claude-haiku-4-5')
+) AS seed(ref_code, model_code)
+JOIN core.model_reference mr ON mr.reference_code = seed.ref_code
+JOIN core.model            m  ON m.model_code      = seed.model_code
+ON CONFLICT DO NOTHING;

@@ -139,7 +139,7 @@ Write the migration and all SQL query files. No service code yet.
 1. Write `hub/db/migrations/0006_tool_data_classification.sql` — additive `ALTER TABLE core.tool_version ADD COLUMN IF NOT EXISTS data_classification_code text` + FK constraint
 2. Write `hub/db/queries/registry_components.sql` — CRUD for prompts, prompt_versions, tools, tool_versions, mcp_server_versions, data_connectors, data_connector_versions, inference_configs, inference_config_models
 3. Write `hub/db/queries/registry_bindings.sql` — CRUD for source_binding, target_binding
-4. Write `hub/db/queries/registry_model_catalog.sql` — CRUD for model, model_price (SCD-2 close+insert), model_reference, model_reference_binding (SCD-2 close+insert)
+4. Write `hub/db/queries/registry_model_catalog.sql` — CRUD for model, model_price (SCD-2 close+insert), model_reference, model_reference_binding (SCD-2 close+insert); include `get_inference_config_chain(inference_config_id)` returning the full ordered chain (priority, model_reference_id, reference_code, resolved model_code joined via the current open model_reference_binding row) — this is the cross-feature contract that Feature 008's `gateway_llm_call` depends on at claim time (ADR-0019)
 5. Extend `hub/db/queries/registry.sql`:
    - `get_version_detail` — full version row including governance fields
    - `champion_current` — resolves via `entity_champion_current` view
@@ -147,6 +147,7 @@ Write the migration and all SQL query files. No service code yet.
    - `promote_champion` — atomic revocation of old champion + insert new (research.md Finding 2)
    - `where_used_prompt_version`, `where_used_tool_version`, `where_used_mcp_version`
 6. Wire new SQL query files to the aiosql loader in `hub/src/verity/hub/db.py`
+7. Seed standard `model_reference` and `model_reference_binding` rows in `specs/schema/seed/core_seed.sql` — five reference codes from `specs/design/model-reference-binding.md` §Standard Reference Codes, each with one open `model_reference_binding` row (`valid_to = '2099-12-31 00:00:00+00'`). This gives Feature 008 working references at first run
 
 ### Phase 2 — Component CRUD (US1)
 
@@ -183,7 +184,7 @@ Fix champion atomicity; add champion resolution with as-of.
 
 ### Phase 6 — Model catalog (US6)
 
-1. Add service functions: `create_model`, `list_models`, `add_model_price`, `list_model_prices`, `create_model_reference`, `list_model_references`, `bind_model_reference`, `list_model_reference_bindings`
+1. Add service functions: `create_model`, `list_models`, `add_model_price`, `list_model_prices`, `create_model_reference`, `list_model_references`, `bind_model_reference`, `list_model_reference_bindings`; update `get_inference_config` (introduced in Phase 2) to call `get_inference_config_chain` so that `GET /api/registry/inference-configs/:id` returns the full ordered priority list (model_reference entries with resolved model_code) — required for Feature 008 claim-time resolution and for the portal inference config editor
 2. SCD-2 close pattern for prices: `UPDATE ... SET valid_to = now() WHERE valid_to = '2099-12-31...'` + INSERT in same tx (SQL in `registry_model_catalog.sql`)
 3. Same pattern for reference bindings
 4. Add route handlers: `/registry/models*`, `/registry/model-references*`
@@ -216,6 +217,8 @@ Fix champion atomicity; add champion resolution with as-of.
    - Where-used lookups
    - Model price + reference binding SCD-2 atomicity
    - YAML round-trip (all no-ops on re-import)
+   - `get_inference_config_chain` returns rows in priority order and resolves the correct model_code via the current open model_reference_binding
+   - SCD-2 rebinding a model_reference (close old + open new) causes `get_inference_config_chain` to return the updated model_code — no package re-promotion needed
 2. Run full pytest suite to confirm no regressions (SC-007)
 
 ### Phase 10 — Portal: Registry browse pages (US7)
@@ -237,7 +240,7 @@ Implement read-only registry portal pages — multi-entity list pages, detail pa
 Add write actions to version detail pages, extend the command palette with registry entries, and add help corpus pages.
 
 1. Add compose write actions to `AgentVersionDetail.tsx`: inline "Assign Prompt" form (prompt search, role selector, ordinal field); remove-assignment button per manifest row; "Assign Tool" inline form; each write calls `POST`/`DELETE` endpoint and refreshes local state with toast notification
-2. Add inference config inline editor to `AgentVersionDetail.tsx` and `TaskVersionDetail.tsx`: editable `max_tokens` and `temperature` fields; model reference priority list (add/remove/reorder); submits to `POST /api/registry/inference-configs` (or `PATCH` if config already exists on the version)
+2. Add inference config inline editor to `AgentVersionDetail.tsx` and `TaskVersionDetail.tsx`: editable `max_tokens` and `temperature` fields; model reference priority list — this operates on `core.inference_config_model` rows (adding/removing model_reference entries by reference_code, reordering by priority integer); submits to `POST /api/registry/inference-configs`; does NOT operate on `core.model_reference_binding` — the binding swap (which underlying model a reference resolves to) is a separate action on `ModelDetail.tsx` via `POST /api/registry/model-references/:id/bind`, not from the version detail page
 3. Add champion promotion to `AgentVersionDetail.tsx` and `TaskVersionDetail.tsx`: "Promote to champion" button (shown when `lifecycle_stage !== 'champion'`); confirm dialog; calls `POST /api/registry/versions/:vid/promote`; success/failure toast; champion badge reflects new state
 4. Extend `hub/portal/src/shell/CommandPalette.tsx` `OBJECT_SOURCES`: add agents entry (`hint` = champion semver), tasks entry, prompts entry (`hint` = version count), tools entry (`hint` = transport_code); use `i-app-registry` sprite if entity-specific icons are not yet present in `sprite.svg`
 5. Create `hub/portal/src/help/registry-entity-types.tsx`, `registry-compose.tsx`, `registry-full-lifecycle.tsx`, `registry-navigate.tsx`; add four entries to `hub/portal/src/help/pages.ts` HELP_PAGES array (groups: `reference`, `forms`, `workflows`, `how-to`)

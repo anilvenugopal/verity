@@ -4,6 +4,8 @@ CREATE TABLE audit.model_invocation_log (
     model_invocation_log_id uuid     NOT NULL DEFAULT uuidv7(),
     decision_log_id        uuid,                                 -- soft ref -> decision_log
     model_id               uuid,                                 -- soft ref -> core.model
+    model_reference_id     uuid,                                 -- soft ref -> core.model_reference (null for legacy rows)
+    was_fallback           boolean      NOT NULL DEFAULT false,
     invocation_status      audit.invocation_status NOT NULL,
     input_tokens           integer,
     output_tokens          integer,
@@ -28,6 +30,11 @@ COMMENT ON COLUMN audit.model_invocation_log.decision_log_id IS
 'The decision this call served. @ref audit.decision_log soft';
 COMMENT ON COLUMN audit.model_invocation_log.model_id IS
 'The model actually called (resolved from the reference). @ref core.model soft';
+COMMENT ON COLUMN audit.model_invocation_log.model_reference_id IS
+'The model_reference that resolved to the called model. Soft ref — no FK (log is append-only). '
+'Null for legacy rows. @ref core.model_reference soft';
+COMMENT ON COLUMN audit.model_invocation_log.was_fallback IS
+'True when this call used a fallback (priority > 1) rather than the primary reference.';
 COMMENT ON COLUMN audit.model_invocation_log.invocation_status IS
 'complete/error/timeout. @enum audit.invocation_status';
 COMMENT ON COLUMN audit.model_invocation_log.input_tokens IS
