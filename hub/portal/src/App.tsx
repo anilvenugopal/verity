@@ -10,6 +10,9 @@ import { ApprovalRedirect } from './pages/applications/ApprovalRedirect'
 import { IntakeCreate } from './pages/intakes/IntakeCreate'
 import { IntakeDetail } from './pages/intakes/IntakeDetail'
 import { UseCasesList } from './pages/intakes/UseCasesList'
+import { ComplianceModel } from './pages/compliance/ComplianceModel'
+import { ComplianceRequirement } from './pages/compliance/ComplianceRequirement'
+import { RegistryList } from './pages/registry/RegistryList'
 import { SignIn } from './pages/SignIn'
 import { AuthCallback } from './pages/AuthCallback'
 import { SessionExpiredPage, ForbiddenPage, DisabledPage } from './pages/AuthStatePage'
@@ -40,6 +43,10 @@ function AppRoutes() {
           <Route path="/intakes/:id/edit" element={<IntakeCreate />} />
           <Route path="/intakes/:id" element={<IntakeDetail />} />
           <Route path="/approvals/:id" element={<ApprovalRedirect />} />
+          <Route path="/compliance" element={<Navigate to="/compliance/model" replace />} />
+          <Route path="/compliance/model" element={<ComplianceModel />} />
+          <Route path="/compliance/requirements/:code" element={<ComplianceRequirement />} />
+          <Route path="/registry" element={<RegistryList />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

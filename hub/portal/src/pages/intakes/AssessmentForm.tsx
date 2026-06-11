@@ -105,9 +105,9 @@ export function AssessmentForm({
         <FieldHelp field={FIELDS[key]} required={req} htmlFor={id} />
         <select id={id} className={`input${errCls(req, value)}`} value={value} disabled={!canEdit} onChange={(e) => on(e.target.value)}>
           <option value="">Select…</option>
-          {(opts ?? FIELDS[key].options ?? []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          {(opts ?? FIELDS[key]?.options ?? []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
-        <span className="input-hint">{FIELDS[key].help}</span>
+        {FIELDS[key]?.help && <span className="input-hint">{FIELDS[key].help}</span>}
       </div>
     </div>
   )
@@ -115,11 +115,11 @@ export function AssessmentForm({
     <div className="field">
       <div className="form-field">
         <FieldHelp field={FIELDS[key]} />
-        <div className="chip-group" role="radiogroup" aria-label={FIELDS[key].label}>
+        <div className="chip-group" role="radiogroup" aria-label={FIELDS[key]?.label ?? key}>
           <button type="button" role="radio" aria-checked={value} className={`chip${value ? ' is-selected' : ''}`} disabled={!canEdit} onClick={() => on(true)}>Yes</button>
           <button type="button" role="radio" aria-checked={!value} className={`chip${!value ? ' is-selected' : ''}`} disabled={!canEdit} onClick={() => on(false)}>No</button>
         </div>
-        <span className="input-hint">{FIELDS[key].help}</span>
+        {FIELDS[key]?.help && <span className="input-hint">{FIELDS[key]?.help}</span>}
       </div>
     </div>
   )

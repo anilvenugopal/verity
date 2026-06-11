@@ -66,10 +66,9 @@ graph TB
     GAPI --> REL
     REL -->|"drain outbox → NATS"| NJ
     NJ -->|"runs · commands"| CRD
-    CRD -->|"claim · release · heartbeat · events"| GW
+    CRD -->|"claim · release · heartbeat\n(GW returns pre-signed URL in /claim response)"| GW
     GW --> PG
-    GW -.->|"pre-signed URL"| MNO
-    WRK -->|"artifact PUT (direct)"| MNO
+    WRK -->|"artifact PUT (direct, pre-signed URL)"| MNO
     WRK -->|"LLM inference"| EXT_AN
     WRK -->|"MCP tool calls"| MCP
     CRD --> CLN
@@ -141,16 +140,16 @@ graph LR
 
     APP2 -->|"HTTPS"| GAPI2
     PORT2 -->|"HTTPS"| GAPI2
-    GAPI2 -->|"read/write"| PG2
-    GAPI2 -->|"write run_dispatch_outbox\nwrite harness_command_outbox"| PG2
+    GAPI2 -->|"read/write (incl. both outboxes)"| PG2
     REL2 -->|"drain outboxes"| PG2
     REL2 -->|"publish"| NJ2
     NJ2 -->|"verity.runs.pending"| HARN
     NJ2 -->|"verity.cluster.{id}.commands"| HARN
-    HARN -->|"claim · release\nheartbeat · ack · events"| GW2
+    HARN -->|"verity.events.* (status relay)"| NJ2
+    HARN -->|"claim · release · heartbeat · ack"| GW2
     GW2 -->|"read/write"| PG2
-    GW2 -->|"grant pre-signed PUT URL"| MNO2
-    HARN -->|"artifact bytes\n(direct, pre-signed)"| MNO2
+    GW2 -->|"pre-signed URL returned in /claim response"| HARN
+    HARN -->|"artifact bytes (direct, pre-signed)"| MNO2
     HBR2 -.->|"layer storage\nharbor-registry bucket"| MNO2
 ```
 
@@ -252,8 +251,10 @@ The connector type available in a given run is fixed at the image digest — con
 baked in, not dynamically loaded, so audit replay on the same image digest means exactly
 the same connector behaviour.
 
-**Governance Layer** — five components that run on every worker, always active, and
-non-bypassable by package code or model behaviour.
+**Governance Layer** — five components that run on every **worker**, always active, and
+non-bypassable by package code or model behaviour. The `coordinator` and `operator` roles
+do not activate the governance layer — they operate entirely within the framework and base
+layers. The arrows in the diagram show image composition order, not per-role activation.
 - **Tool Authorization Enforcer** checks every `tool_use` block against the package's
   `tool_authorizations` manifest before any network call is made. If the tool is not
   declared, the harness returns an authorization error to Claude and does not execute it.
@@ -430,8 +431,9 @@ sequenceDiagram
     Portal->>GovAPI: POST /deployments (cluster_id, package_id)
     GovAPI->>GovAPI: lifecycle gate OK, write deployment + command outbox
     Note over GovAPI: verity-relay drains outbox to NATS:<br/>verity.cluster.{id}.commands
+    Note over Coord: NATS delivers deploy_package command to Coordinator<br/>(Coordinator is a durable consumer of verity.cluster.{id}.commands)
 
-    Coord->>Coord: receive deploy_package, pull + verify bundle from MinIO
+    Coord->>Coord: pull + verify bundle from MinIO, write to Artifact Cache PVC
     Coord->>GW: POST /ack (command_id, acknowledged)
     GW-->>Portal: deployment status: Active
 
@@ -514,9 +516,9 @@ stateDiagram-v2
 
     draft --> candidate : author submits (editing locked)
 
-    candidate --> staging : LOW materiality\n(auto-approve — system action)
-    candidate --> staging : HIGH materiality\n(governance reviewer approves)
-    candidate --> draft : reviewer rejects\n(editing re-enabled, comment required)
+    candidate --> staging : auto-approve (low materiality — system action)
+    candidate --> staging : governance reviewer approves (high materiality)
+    candidate --> draft : reviewer rejects (comment required)
 
     staging --> challenger : promote to prod shadow/ab
     challenger --> champion : promote (governance approval)
@@ -603,7 +605,7 @@ sequenceDiagram
     participant Relay as verity-relay
     participant NATS as NATS JetStream
     participant Coord as Coordinator
-    participant Cache as Artifact Cache
+    participant MNO as MinIO (artifact store)
 
     AT->>Portal: Deploy Package (package_id, cluster_id)
     Portal->>GovAPI: POST /deployments
@@ -616,15 +618,15 @@ sequenceDiagram
     Relay->>PG: mark outbox row published
 
     Coord->>NATS: consume deploy_package command
-    Coord->>Cache: pull bundle from MinIO (bundle_uri)
-    Cache-->>Coord: .vtx / .vax bundle bytes
-    Coord->>Coord: SHA-256 verify, write to Artifact Cache PVC
+    Coord->>MNO: GET bundle by bundle_uri (pre-signed or mTLS)
+    MNO-->>Coord: .vtx / .vax bundle bytes
+    Coord->>Coord: SHA-256 verify, write bundle to Artifact Cache PVC
 
     Coord->>GovAPI: POST /harness/v1/ack (command_id, acknowledged)
     GovAPI->>PG: UPDATE deployment active, outbox acked
     GovAPI-->>Portal: deployment status: Active
 
-    Note over AT,Cache: Bundle cached. Workers load it at next claim time.<br/>In-flight jobs on the previous bundle complete normally.
+    Note over AT,MNO: Bundle cached on PVC. Workers load it at next claim time.<br/>In-flight jobs on the previous bundle complete normally.
 ```
 
 ### Explanation
@@ -674,46 +676,47 @@ sequenceDiagram
     participant ToolS as Tool (MCP / Connector)
     participant MNO as MinIO
 
-    App->>GovAPI: POST /api/v1/runs\n{ package_id, input, idempotency_key }
-    GovAPI->>PG: INSERT execution_run (status: queued)\nINSERT harness_dispatch (state: queued)\nINSERT run_dispatch_outbox (state: pending)\n[single transaction]
-    GovAPI-->>App: { run_id, status: "queued" }
+    App->>GovAPI: POST /api/v1/runs (package_id, input, idempotency_key)
+    Note over GovAPI,PG: Single Postgres transaction:<br/>INSERT execution_run (status: queued)<br/>INSERT harness_dispatch (state: queued)<br/>INSERT run_dispatch_outbox (state: pending)
+    GovAPI-->>App: run_id, status: queued
 
     Note over App: Application polls at its own cadence.<br/>No persistent connection required.
 
     Relay->>PG: drain run_dispatch_outbox
-    Relay->>NATS: publish verity.runs.pending\n{ run_id, cluster_id, package_id }
+    Relay->>NATS: publish verity.runs.pending (run_id, cluster_id, package_id)
 
     Coord->>NATS: consume verity.runs.pending
-    Coord->>GW: POST /harness/v1/claim\n{ run_id, coordinator_node_id }
-    GW->>PG: UPDATE harness_dispatch: state=claimed\nresolve MCP endpoints for package+cluster
-    GW-->>Coord: { job_details, mcp_endpoint_list,\nlog_upload_presigned_url }
+    Coord->>GW: POST /harness/v1/claim (run_id, coordinator_node_id)
+    GW->>PG: UPDATE harness_dispatch state=claimed, resolve MCP endpoints
+    GW-->>Coord: job_details, mcp_endpoint_list, log_upload_presigned_url
 
-    Coord->>Worker: dispatch via cluster-local NATS\n{ run_id, bundle_path, mcp_endpoints,\nlog_upload_url }
-    Worker->>Worker: load .vtx/.vax bundle from Artifact Cache PVC\ninitialise governance layer components
+    Coord->>Worker: dispatch via cluster-local NATS (run_id, bundle_path, mcp_endpoints, log_upload_url)
+    Worker->>Worker: load .vtx/.vax bundle from Artifact Cache PVC
+    Worker->>Worker: initialise governance layer components
 
     loop Agent execution loop (no hub in hot path)
-        Worker->>Ant: POST /v1/messages\n{ model, system, messages, tools }
+        Worker->>Ant: POST /v1/messages (model, system, messages, tools)
         Ant-->>Worker: response (text or tool_use block)
         opt Claude requests a tool call
-            Worker->>Worker: Tool Auth Enforcer gate\n(check tool vs. manifest authorizations)
-            Worker->>ToolS: execute tool call\n(MCP protocol or connector)
+            Worker->>Worker: Tool Auth Enforcer gate (check vs. manifest authorizations)
+            Worker->>ToolS: execute tool call (MCP protocol or connector)
             ToolS-->>Worker: tool result
             Worker->>Worker: append tool_result to messages
         end
-        Worker->>Coord: status relay (batched ~200ms)\nvia cluster-local NATS
-        Coord->>GW: POST /harness/v1/status\n{ run_id, status: executing, events[] }
+        Worker->>Coord: status relay batched ~200ms via cluster-local NATS
+        Coord->>GW: POST /harness/v1/status (run_id, status: executing, events[])
     end
 
     Worker->>MNO: PUT decision_log.json (via pre-signed URL)
     Worker->>MNO: PUT model_invocations.jsonl
     Worker->>MNO: PUT execution_events.jsonl
-    Worker->>Coord: report: completed\n{ output, log_path, decision_log_id }
-    Coord->>GW: POST /harness/v1/release\n{ run_id, status: completed,\noutput, log_path, decision_log_id }
-    GW->>PG: UPDATE execution_run: status=completed\nstore log_path, output, decision_log_id
+    Worker->>Coord: report completed (output, log_path, decision_log_id)
+    Coord->>GW: POST /harness/v1/release (run_id, status: completed, output, log_path, decision_log_id)
+    GW->>PG: UPDATE execution_run status=completed, store log_path and decision_log_id
 
     App->>GovAPI: GET /api/v1/runs/{run_id}
     GovAPI->>PG: SELECT from execution_run_current
-    GovAPI-->>App: { run_id, status: "completed",\noutput: "...",\ndecision_log_id: "...",\nlog_url: "<pre-signed GET URL>" }
+    GovAPI-->>App: run_id, status: completed, output, decision_log_id, log_url (pre-signed GET URL)
 ```
 
 ### Explanation
@@ -854,56 +857,89 @@ stateDiagram-v2
     [*] --> queued : POST /api/v1/runs accepted
     queued --> executing : coordinator claims + worker starts
     executing --> completed : worker releases with output
-    executing --> failed : graceful worker error\n(exception caught, error.json written)
-    executing --> failed : worker_lost\n(coordinator: missed worker heartbeat)
-    queued --> failed : coordinator_timeout\n(hub: lease_expires_at expired,\ncluster unresponsive)
+    executing --> failed : graceful error (exception caught, error.json written)
+    executing --> failed : worker_lost (coordinator: missed worker heartbeat)
+    queued --> failed : coordinator_timeout (hub: lease expired, cluster unresponsive)
     completed --> [*]
     failed --> [*]
 ```
 
-### 10b. Internal dispatch pipeline states
+### 10b. Internal dispatch pipeline — two tables, one pipeline
+
+> **Why two tables?** `run_dispatch_outbox` (OB) is a short-lived delivery guarantee:
+> it only exists to survive a relay crash and get the message to NATS. Once NATS has the
+> message, OB's job is done. `harness_dispatch` (HD) is the long-lived execution state
+> tracker: it follows the run from creation all the way to completion or failure. They are
+> written together in one transaction but serve different purposes and have different lifespans.
 
 ```mermaid
-stateDiagram-v2
-    state "run_dispatch_outbox" as OB {
-        [*] --> ob_pending : written by Governance API
-        ob_pending --> ob_published : verity-relay drains to NATS
-    }
+graph TD
+    subgraph STEP1 ["① Governance API — single Postgres transaction on POST /runs"]
+        OBP["run_dispatch_outbox\nstate: PENDING\nDelivery guarantee: survives relay crash"]
+        HDQ["harness_dispatch\nstate: QUEUED\nExecution tracker: follows the full run"]
+    end
 
-    state "harness_dispatch" as HD {
-        [*] --> hd_queued : written by Governance API
-        hd_queued --> hd_claimed : coordinator claims via Gateway API
-        hd_claimed --> hd_executing : worker starts
-        hd_executing --> hd_released : worker completes (success or graceful fail)
-        hd_executing --> hd_failed : worker_lost or coordinator_timeout
-    }
+    subgraph STEP2 ["② verity-relay — drains OB, delivers to NATS  (OB lifecycle ends here)"]
+        OBPUB["run_dispatch_outbox\nstate: PUBLISHED\nOB role complete — no further updates"]
+        NM["NATS: verity.runs.pending\nmessage in broker"]
+    end
 
-    ob_published --> hd_claimed : NATS delivery → coordinator claim
+    subgraph STEP3 ["③ Coordinator → Gateway API POST /claim  (HD transitions: QUEUED → CLAIMED)"]
+        HDC["harness_dispatch\nstate: CLAIMED\nGateway API updates the HD row created in ①"]
+    end
+
+    subgraph STEP4 ["④ Coordinator dispatches to worker  (HD transitions: CLAIMED → EXECUTING)"]
+        HDE["harness_dispatch\nstate: EXECUTING\nWorker holds claim locally — hub not in hot path"]
+    end
+
+    subgraph STEP5 ["⑤ Terminal  (Gateway API /release or hub heartbeat/lease detection)"]
+        HDR["harness_dispatch: RELEASED\nWorker calls Gateway API POST /release\n(success or graceful failure)"]
+        HDF["harness_dispatch: FAILED\nworker_lost — coordinator missed heartbeat\ncoordinator_timeout — hub lease expired"]
+    end
+
+    OBP -->|"relay drains PENDING rows"| OBPUB
+    OBPUB -->|"relay publishes to NATS"| NM
+    NM -->|"coordinator consumes message\ncalls Gateway API POST /claim"| HDC
+    HDQ -.->|"same HD row from ①\nGateway API updates state in-place"| HDC
+    HDC -->|"coordinator dispatches job\nto worker via cluster-local NATS"| HDE
+    HDE -->|"worker calls POST /release\nwith output + log_path"| HDR
+    HDE -->|"coordinator or hub\ndetects hard failure"| HDF
 ```
 
 ### Explanation
 
-The run state is tracked across two state machines that serve different purposes.
+**Why there are two tables and not one** — the two tables answer different questions at
+different points in time. `run_dispatch_outbox` answers a single question: *has this run
+been successfully handed off to NATS?* It has two states (`PENDING`, `PUBLISHED`) and is
+done the moment `verity-relay` delivers the message. Its only purpose is to make NATS
+delivery durable: if the relay process crashes between the Governance API commit and the
+NATS publish, the row stays `PENDING` and the relay republishes it on its next sweep.
+Without this table a relay crash would silently drop runs. `harness_dispatch` answers a
+different question: *what is the current state of this run's execution?* It starts at
+`QUEUED` (same transaction as OB) and is updated at every execution milestone —
+`CLAIMED`, `EXECUTING`, `RELEASED`, `FAILED` — all the way to the terminal state. It is
+the live record that the application's poll reads through `execution_run_current`.
 
-**Application-visible states** are the four states the polling API can return. The
-application needs to know: is the run queued (waiting for dispatch), executing (agent
-loop running), completed (result available inline), or failed (with or without a log
-URL). The state `failed` covers three distinct internal causes: a graceful worker failure
-(Python exception caught, `error.json` written), a hard worker failure detected by the
-coordinator via missed heartbeat (`worker_lost`), and a hard cluster failure detected by
-the hub via expired lease (`coordinator_timeout`). All three appear as `failed` to the
-application; the `error_code` field distinguishes them for operational diagnosis.
+**They are born together** — step ① writes both rows in a single Postgres transaction.
+No run can exist in `harness_dispatch` without a corresponding `run_dispatch_outbox` row,
+and vice versa. This atomicity means there is no window where a run is "in HD but not in
+OB" or "in OB but not in HD."
 
-**Internal dispatch pipeline states** reflect the two-table design in Postgres. The
-`run_dispatch_outbox` has only two states: `pending` (the run is committed, waiting for
-relay) and `published` (the relay has delivered it to NATS). The `harness_dispatch`
-table is the mutable current state: `queued → claimed → executing → released` (or `→
-failed`). The `harness_dispatch` and `execution_run_status` audit record are written in
-the same transaction at every state transition — they cannot drift.
+**OB exits the picture at step ②** — once `verity-relay` marks the row `PUBLISHED` and
+NATS has the message, the outbox row is effectively inert. HD is now the only table
+tracking the run.
 
-The **idempotency key** provided by the application at submission guards against
-duplicate runs if the application retries a timed-out `POST /runs` call. The Governance
-API returns the existing `run_id` for a duplicate key rather than creating a second run.
+**HD transitions are driven by different actors** — this is the key operational
+distinction: the Governance API creates the HD row (`QUEUED`); the Harness Gateway API
+updates it on every milestone (`CLAIMED`, `EXECUTING`, `RELEASED`, `FAILED`). The
+Governance API never touches HD again after creation. The coordinator drives the claim
+and release transitions (by calling the Gateway API); the hub's lease-expiry job drives
+the `coordinator_timeout` failure transition autonomously.
+
+**The `harness_dispatch` and `execution_run_status` audit record are always written in
+the same transaction** at every state transition — they cannot drift. The idempotency key
+the application provides at `POST /runs` guards against duplicate HD rows if the
+application retries a timed-out submission.
 
 ---
 
@@ -948,9 +984,9 @@ graph LR
 
     PORTAL_D --> CMD
     CMD -->|"relay → NATS → coordinator"| OP_ROLL
-    OP_ROLL -->|"imagePull"| IMG_STORE
-    OP_ROLL -->|"verify signature (opt-in)"| KYVERNO
-    KYVERNO --> IMG_STORE
+    OP_ROLL -->|"imagePull (kubelet)"| IMG_STORE
+    OP_ROLL -.->|"pod creation triggers\nadmission webhook (opt-in)"| KYVERNO
+    KYVERNO -->|"cosign verify via OCI referrers API"| IMG_STORE
 ```
 
 ### Explanation

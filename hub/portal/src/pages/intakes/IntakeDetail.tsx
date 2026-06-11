@@ -2,16 +2,18 @@ import { Fragment, type FormEvent, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, ApiException } from '@/api/client'
 import { useSession } from '@/auth/useSession'
-import type { ApprovalRequest, Intake, Requirement } from '@/api/types'
+import type { ApprovalRequest, ChangeProposalView, Intake, IntakeAssetLink, Requirement } from '@/api/types'
 import { isIntakeRevisable } from '@/api/types'
 import { Badge } from '@/components/Badge'
 import { SignOffGate } from '@/components/SignOffGate'
 import { AssessmentForm } from './AssessmentForm'
+import { RiskObligations } from './RiskObligations'
 import '../applications/ApplicationWorkspace.css' // shared workspace layout (band/tabs/rail/footer)
 
 const TABS = [
   { key: 'requirements', label: 'Requirements' },
   { key: 'assessment', label: 'Assessment' },
+  { key: 'obligations', label: 'Risk & Obligations' },
 ]
 
 // The fixed requirement-kind vocabulary (reference.requirement_kind; not a badge table, rendered as a
@@ -55,6 +57,14 @@ export function IntakeDetail() {
   const [tab, setTab] = useState('requirements')
   const [visited, setVisited] = useState<Set<string>>(new Set(['requirements'])) // assessment tab-gate
   const [submitError, setSubmitError] = useState('')
+  // Change proposals (US3)
+  const [proposals, setProposals] = useState<ChangeProposalView[]>([])
+  const [linkedAssets, setLinkedAssets] = useState<IntakeAssetLink[]>([])
+  const [showCpForm, setShowCpForm] = useState(false)
+  const [cpKind, setCpKind] = useState<'risk_reclassification' | 'business_change'>('risk_reclassification')
+  const [cpAssets, setCpAssets] = useState<Set<string>>(new Set())
+  const [cpBusy, setCpBusy] = useState(false)
+  const [cpError, setCpError] = useState('')
 
   function openTab(k: string) {
     setTab(k)
@@ -63,6 +73,11 @@ export function IntakeDetail() {
 
   function loadApproval(intakeId: string) {
     api.get<ApprovalRequest>(`/api/intakes/${intakeId}/approval`).then(setAppr).catch(() => setAppr(null)) // 404 = not submitted
+  }
+
+  function loadProposals(intakeId: string) {
+    api.get<ChangeProposalView[]>(`/api/intakes/${intakeId}/change-proposals`).then(setProposals).catch(() => setProposals([]))
+    api.get<IntakeAssetLink[]>(`/api/intakes/${intakeId}/links`).then(setLinkedAssets).catch(() => setLinkedAssets([]))
   }
 
   // after an assessment save the tier (and possibly the status, on auto-reject) changes — re-pull
@@ -100,6 +115,7 @@ export function IntakeDetail() {
     }).catch((e) => { if (e instanceof ApiException && e.status === 404) setNotFound(true) })
     api.get<Requirement[]>(`/api/intakes/${id}/requirements`).then(setReqs).catch(() => undefined)
     loadApproval(id)
+    loadProposals(id)
   }, [id])
 
   const history = useMemo(() => {
@@ -195,6 +211,38 @@ export function IntakeDetail() {
       setBusy(false)
     }
   }
+
+  async function raiseProposal(e: FormEvent) {
+    e.preventDefault()
+    if (cpBusy) return
+    setCpBusy(true); setCpError('')
+    try {
+      const p = await api.post<ChangeProposalView>(`/api/intakes/${intake!.intake_id}/change-proposals`, {
+        kind_code: cpKind,
+        asset_ids: Array.from(cpAssets),
+      })
+      setProposals((prev) => [p, ...prev])
+      setShowCpForm(false); setCpAssets(new Set())
+    } catch (err) {
+      setCpError(err instanceof ApiException ? err.body.detail : 'Could not raise proposal.')
+    } finally {
+      setCpBusy(false)
+    }
+  }
+
+  function onProposalSignoff(_updated: ApprovalRequest) {
+    // Re-fetch the full proposal list (signoff response is ApprovalRequest, not ChangeProposalView).
+    if (id) loadProposals(id)
+    refreshIntake() // status may have changed (re-resolution updates obligations)
+  }
+
+  const CP_KIND_LABEL: Record<string, string> = {
+    risk_reclassification: 'Risk reclassification',
+    business_change: 'Business change',
+  }
+  const isApproved = intake?.intake_status_code === 'approved'
+  const hasPendingProposal = proposals.some((p) => p.status_code === 'pending')
+  const canPropose = isApproved && !hasPendingProposal && canDo('reclassify_risk')
 
   const editBtn = canEdit && (
     <button className="btn btn--primary btn--md" onClick={() => navigate(`/intakes/${intake.intake_id}/edit`)}>Edit</button>
@@ -317,6 +365,7 @@ export function IntakeDetail() {
               onComputed={refreshIntake}
             />
           </div>
+          {tab === 'obligations' && <RiskObligations intakeId={intake.intake_id} revisable={revisable} />}
         </div>
 
         {/* Right rail — always visible */}
@@ -364,6 +413,90 @@ export function IntakeDetail() {
             {deleteBtn}
           </div>
           {error && <span className="input-error-text">{error}</span>}
+        </section>
+      )}
+
+      {/* Change proposals (US3) — visible on approved intakes */}
+      {isApproved && (
+        <section className="section">
+          <div className="section__head">
+            <span className="eyebrow">Change proposals</span>
+            {canPropose && !showCpForm && (
+              <button className="btn btn--secondary btn--sm" onClick={() => setShowCpForm(true)}>Raise proposal</button>
+            )}
+          </div>
+
+          {/* raise-proposal form */}
+          {showCpForm && (
+            <div className="card">
+              <form className="rail-actions" onSubmit={raiseProposal}>
+                <div className="form-field">
+                  <label className="form-label" htmlFor="cp-kind">Proposal kind</label>
+                  <select className="input" id="cp-kind" value={cpKind}
+                    onChange={(e) => setCpKind(e.target.value as 'risk_reclassification' | 'business_change')}>
+                    <option value="risk_reclassification">Risk reclassification</option>
+                    <option value="business_change">Business change</option>
+                  </select>
+                </div>
+                {linkedAssets.length > 0 && (
+                  <div className="form-field">
+                    <label className="form-label">Impacted assets <span className="input-hint">(optional)</span></label>
+                    {linkedAssets.map((a) => (
+                      <label key={a.executable_id} className="l-cluster" style={{ marginBottom: 4 }}>
+                        <input type="checkbox" checked={cpAssets.has(a.executable_id)}
+                          onChange={(e) => {
+                            const next = new Set(cpAssets)
+                            e.target.checked ? next.add(a.executable_id) : next.delete(a.executable_id)
+                            setCpAssets(next)
+                          }} />
+                        <span>{a.name}</span>
+                        {a.top_stage && <Badge table="lifecycle_state" code={a.top_stage} size="sm" quiet />}
+                      </label>
+                    ))}
+                  </div>
+                )}
+                {cpError && <span className="input-error-text">{cpError}</span>}
+                <div className="l-cluster">
+                  <button type="submit" className="btn btn--primary btn--md" disabled={cpBusy}>{cpBusy ? 'Raising…' : 'Raise proposal'}</button>
+                  <button type="button" className="btn btn--ghost btn--md" disabled={cpBusy} onClick={() => { setShowCpForm(false); setCpError('') }}>Cancel</button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {hasPendingProposal && (
+            <p className="input-hint">A change proposal is open. Raise another after it resolves.</p>
+          )}
+
+          {/* proposal history */}
+          {proposals.length === 0 && !showCpForm && (
+            <p className="input-hint">{canPropose ? 'No proposals yet.' : 'No change proposals have been raised for this intake.'}</p>
+          )}
+          {proposals.map((p) => (
+            <div className="card" key={p.approval_request_id} style={{ marginTop: 8 }}>
+              <div className="rail-panel__title l-cluster">
+                {CP_KIND_LABEL[p.request_kind_code] ?? p.request_kind_code}
+                <Badge table="approval_request_status" code={p.status_code} size="sm" quiet />
+              </div>
+              {p.assets.length > 0 && (
+                <div className="u-text-tertiary" style={{ marginBottom: 8 }}>
+                  Impacted: {p.assets.map((a) => a.name).join(', ')}
+                </div>
+              )}
+              {p.status_code === 'pending' ? (
+                <SignOffGate
+                  approval={p}
+                  onChange={onProposalSignoff}
+                />
+              ) : (
+                <p className="input-hint">
+                  {p.status_code === 'approved'
+                    ? 'Approved — impacted assets have been forked to a new draft.'
+                    : `Status: ${p.status_code}`}
+                </p>
+              )}
+            </div>
+          ))}
         </section>
       )}
 

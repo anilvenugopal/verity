@@ -17,6 +17,7 @@ export interface NavNode {
   action?: string // kind:'action' — the action code (also its mode intent)
   mode?: string // optional landing mode; capabilities are resolved on the destination
   scope?: 'global' | 'application'
+  ownedPaths?: string[] // additional URL prefixes owned by this app (active detection only — not shown in nav)
   requires?: string // affordance gate: an action code or role; omitted = visible to all
   section?: string // sidebar group label (eyebrow); ungrouped if omitted
   badge?: string | number // sidebar static badge (presentation)
@@ -32,6 +33,7 @@ export const NAV: NavNode[] = [
   { key: 'home', kind: 'app', label: 'Home', desc: 'Landing & getting started', icon: 'i-app-home', to: '/' },
   {
     key: 'intake', kind: 'app', label: 'Intake', desc: 'Onboard applications', icon: 'i-app-intake', to: '/applications',
+    ownedPaths: ['/intakes'],
     children: [
       // Primary object links — ungrouped (no eyebrow) so they sit directly under the panel header
       // (the header already reads "Intake"; a second "INTAKE" label was redundant).
@@ -44,10 +46,20 @@ export const NAV: NavNode[] = [
     ],
   },
   { key: 'studio', kind: 'app', label: 'Studio', desc: 'Author agents & tasks', icon: 'i-app-studio' },
-  { key: 'registry', kind: 'app', label: 'Registry', desc: 'Entities & versions', icon: 'i-app-registry' },
+  {
+    key: 'registry', kind: 'app', label: 'Registry', desc: 'Entities & versions', icon: 'i-app-registry', to: '/registry',
+    children: [
+      { key: 'reg-assets', kind: 'page', label: 'Assets', icon: 'i-app-registry', to: '/registry', section: 'Registry' },
+    ],
+  },
   { key: 'observability', kind: 'app', label: 'Observability', desc: 'Runs & traces', icon: 'i-app-observability' },
   { key: 'governance', kind: 'app', label: 'Governance', desc: 'Lifecycle & approvals', icon: 'i-app-governance' },
-  { key: 'compliance', kind: 'app', label: 'Compliance', desc: 'Audit & evidence', icon: 'i-app-compliance' },
+  {
+    key: 'compliance', kind: 'app', label: 'Compliance', desc: 'Audit & evidence', icon: 'i-app-compliance', to: '/compliance',
+    children: [
+      { key: 'comp-model', kind: 'page', label: 'Compliance model', icon: 'i-app-compliance', to: '/compliance/model', section: 'Compliance' },
+    ],
+  },
   { key: 'harness', kind: 'app', label: 'Harness', desc: 'Runtime cluster', icon: 'i-app-harness' },
 ]
 

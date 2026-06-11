@@ -215,6 +215,137 @@ export interface RevisionMeta {
   created_by_actor_id: string
 }
 
+// ── Registry assets + promotion gate (003 US2) — mirrors hub/src/verity/hub/registry/models.py ──
+export interface Executable {
+  executable_id: string
+  kind_code: string
+  name: string
+  version_count: number
+}
+export interface ExecutableVersion {
+  executable_version_id: string
+  executable_id: string
+  semver: string | null
+  lifecycle_stage: string | null
+}
+export interface IntakeAssetLink {
+  intake_entity_link_id: string
+  executable_id: string
+  name: string
+  kind_code: string
+  top_stage: string | null
+}
+
+// ── Intake obligations (003 US1) — mirrors hub/src/verity/hub/obligation/models.py ──
+export interface ObligationControl {
+  control_code: string
+  title: string
+  control_phase_code: string
+  enforcement_action_code: string
+  evidence_artifact_type_code: string | null
+  evidenced: boolean
+}
+export interface Obligation {
+  intake_obligation_id: string
+  requirement_code: string
+  title: string
+  governance_domain_code: string
+  target_tier: number
+  status: string // outstanding | satisfied | excepted
+  controls: ObligationControl[]
+}
+export interface ObligationRollup {
+  total: number
+  satisfied: number
+  excepted: number
+  outstanding: number
+  all_resolved: boolean
+}
+export interface ObligationSet {
+  intake_id: string
+  obligations: Obligation[]
+  rollup: ObligationRollup
+}
+export interface ExceptionListItem {
+  compliance_exception_id: string
+  requirement_code: string
+  waived_tier_level: number
+  exception_status_code: string
+  expires_at: string
+  opened_by_actor_id: string
+  approver_actor_id: string | null
+  rationale: string
+  compensating_controls: string
+}
+
+// ── Compliance Model browser (003 FR-023) — mirrors hub/src/verity/hub/compliance/models.py ──
+export interface ComplianceFramework {
+  framework_code: string
+  name: string
+  authority: string | null
+  provision_count: number
+  requirement_count: number
+}
+export interface RequirementSummary {
+  requirement_code: string
+  governance_domain_code: string
+  title: string
+  frameworks: string[]
+  max_tier: number | null
+  control_count: number
+}
+export interface ProvisionView {
+  framework_code: string
+  citation: string
+  jurisdiction: string | null
+  min_tier_level: number
+}
+export interface EvidenceSpec {
+  evidence_artifact_type_code: string
+  citable_as: string | null
+}
+export interface ControlView {
+  control_code: string
+  title: string
+  control_phase_code: string
+  control_type_code: string
+  enforcement_action_code: string
+  evidence: EvidenceSpec[]
+}
+export interface TierView {
+  tier_level: number
+  title: string
+  criteria: string
+  controls: ControlView[]
+}
+export interface RequirementDetail {
+  requirement_code: string
+  governance_domain_code: string
+  title: string
+  text: string
+  provisions: ProvisionView[]
+  tiers: TierView[]
+}
+
+// ── Change proposals (003 US3) — mirrors hub/src/verity/hub/change_proposal/models.py ──
+export interface ProposalAsset {
+  executable_id: string
+  name: string
+  kind_code: string
+}
+export interface ChangeProposalView {
+  approval_request_id: string
+  request_kind_code: string // risk_reclassification | business_change
+  status_code: string       // pending | approved | rejected | cancelled
+  target_intake_id: string | null
+  target_application_id: string | null
+  opened_by_actor_id: string
+  required_roles: string[]
+  signoffs: { approver_actor_id: string; signed_as_role_code: string; decision_code: string; comment: string | null; created_at: string | null }[]
+  assets: ProposalAsset[]
+  created_at: string
+}
+
 export type AuthState =
   | 'loading'
   | 'authenticated'

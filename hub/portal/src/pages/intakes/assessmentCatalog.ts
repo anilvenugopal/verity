@@ -77,6 +77,11 @@ export const FIELDS: Record<string, FieldDef> = {
   },
 
   // ── Data item ──
+  classification: {
+    label: 'Data classification',
+    help: 'The sensitivity tier of this data asset — drives the intake\'s overall classification ceiling.',
+    why: 'The most sensitive asset sets the intake\'s classification floor. Special-category PII requires at least tier3_confidential (FR-IN-018).',
+  },
   direction: {
     label: 'Direction',
     help: 'Is this a data input the model consumes, or an output it produces?',

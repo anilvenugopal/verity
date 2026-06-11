@@ -2,8 +2,10 @@
 
 Generic surface over the approval primitive; both routes **dispatch by `request_kind_code`** to the
 owning slice's resolution policy: `application_onboarding` → `verity.hub.application.service`,
-`intake` → `verity.hub.intake_approval.service`. Sign-off is gated `signoff` (an approval-capable
-role); the finer 'required approver for THIS request' check lives in each slice's resolution (403).
+`intake` → `verity.hub.intake_approval.service`,
+`risk_reclassification`/`business_change` → `verity.hub.change_proposal.service`.
+Sign-off is gated `signoff` (an approval-capable role); the finer 'required approver for THIS
+request' check lives in each slice's resolution (403).
 """
 from __future__ import annotations
 
@@ -18,12 +20,15 @@ from verity.hub.approval import service as approval_service
 from verity.hub.approval.models import ApprovalRequest, AwaitingApproval, Signoff
 from verity.hub.auth.dependencies import require_action
 from verity.hub.auth.models import AuthContext
+from verity.hub.change_proposal import service as change_proposal
 from verity.hub.intake_approval import service as intake_approval
 
 router = APIRouter(tags=["approval"])
 
+_CHANGE_KINDS = frozenset({"risk_reclassification", "business_change"})
+
 # Per-kind conflict exceptions to map to 409.
-_CONFLICTS = (onboarding.OnboardingConflict, intake_approval.IntakeApprovalConflict)
+_CONFLICTS = (onboarding.OnboardingConflict, intake_approval.IntakeApprovalConflict, change_proposal.ChangeProposalConflict)
 
 
 async def get_conn(request: Request):
@@ -55,8 +60,12 @@ async def get_approval(
     kind = await _kind(conn, approval_request_id)
     if kind is None:
         raise HTTPException(404, "approval request not found")
-    resolver = intake_approval if kind == "intake" else onboarding
-    view = await resolver.get_request_view(conn, approval_request_id)
+    if kind in _CHANGE_KINDS:
+        view = await change_proposal.get_request_view(conn, approval_request_id)
+    elif kind == "intake":
+        view = await intake_approval.get_request_view(conn, approval_request_id)
+    else:
+        view = await onboarding.get_request_view(conn, approval_request_id)
     if view is None:
         raise HTTPException(404, "approval request not found")
     return view
@@ -72,9 +81,13 @@ async def sign_off(
     kind = await _kind(conn, approval_request_id)
     if kind is None:
         raise HTTPException(404, "approval request not found")
-    resolver = intake_approval if kind == "intake" else onboarding
     try:
-        view = await resolver.sign_off(conn, approval_request_id, ctx, body.decision_code, body.comment)
+        if kind in _CHANGE_KINDS:
+            view = await change_proposal.sign_off(conn, approval_request_id, ctx, body.decision_code, body.comment)
+        elif kind == "intake":
+            view = await intake_approval.sign_off(conn, approval_request_id, ctx, body.decision_code, body.comment)
+        else:
+            view = await onboarding.sign_off(conn, approval_request_id, ctx, body.decision_code, body.comment)
     except _CONFLICTS as exc:
         raise HTTPException(409, str(exc)) from exc
     except ForeignKeyViolation as exc:
