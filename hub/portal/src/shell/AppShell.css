@@ -11,6 +11,19 @@
                  font-size: var(--fs-caption); color: var(--text-tertiary); }
 .statusbar-row .badge__dot { background: var(--color-positive); }
 
+/* Help panel — push column inside app__body */
+.help-panel {
+  width: 0;
+  flex-shrink: 0;
+  overflow: hidden;
+  transition: width 0.22s ease;
+  background: var(--surface-panel);
+  border-left: 0.5px solid var(--border-default);
+  position: relative;
+}
+
+.help-panel.is-resizing { transition: none; cursor: col-resize; }
+
 /* App launcher (no canonical modal exists → page-local, per the wireframe) */
 .overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-start;
            justify-content: center; padding-top: 12vh; background: rgba(17, 24, 39, 0.45); }

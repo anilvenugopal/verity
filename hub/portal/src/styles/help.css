@@ -6,9 +6,9 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-text-tertiary);
+  border: 1px solid var(--border-default);
+  background: var(--surface-panel);
+  color: var(--text-tertiary);
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
@@ -25,12 +25,12 @@
 
 .help-popover__panel {
   padding: var(--space-3);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--surface-panel);
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
-  box-shadow: 0 4px 16px rgba(0,0,0,.14);
+  box-shadow: var(--shadow-md);
   max-width: 280px;
-  font-size: var(--text-sm);
+  font-size: var(--fs-label);
 }
 
 .help-popover__panel::backdrop {
@@ -41,11 +41,11 @@
   display: block;
   font-weight: 600;
   margin-bottom: var(--space-1);
-  color: var(--color-text);
+  color: var(--text-primary);
 }
 
 .help-popover__body {
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   margin: 0 0 var(--space-2);
   line-height: 1.5;
 }
@@ -55,74 +55,215 @@
   border: none;
   padding: 0;
   color: var(--color-brand);
-  font-size: var(--text-sm);
+  font-size: var(--fs-label);
   cursor: pointer;
   text-decoration: underline;
 }
 
-/* Help drawer shell */
-.help-drawer {
-  position: fixed;
-  inset: 0;
-  margin: 0 0 0 auto;
-  width: min(480px, 100vw);
+/* Help panel inner layout (push column — .help-panel shell is in AppShell.css) */
+.help-panel__wrap {
+  display: flex;
+  flex-direction: column;
   height: 100%;
-  max-height: 100%;
-  border: none;
-  background: var(--color-surface);
-  box-shadow: -4px 0 24px rgba(0,0,0,.18);
-  padding: 0;
+  width: 100%;
   overflow: hidden;
 }
 
-.help-drawer::backdrop {
-  background: rgba(0,0,0,.35);
+/* Resize handle — 8px hit target on the left border; 2px visual stripe on hover/drag.
+   Mirrors .sidebar__resize-handle (components.css) but positioned on the left edge. */
+.help-panel__resize-handle {
+  position: absolute; top: 0; left: -4px; width: 8px; height: 100%;
+  cursor: col-resize; z-index: 10;
+}
+.help-panel__resize-handle::after {
+  content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 2px; height: 100%; background: transparent; transition: background var(--dur-fast);
+}
+.help-panel__resize-handle:hover::after,
+.help-panel.is-resizing .help-panel__resize-handle::after { background: var(--color-brand); }
+
+.help-panel__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  border-bottom: 0.5px solid var(--border-default);
+  flex-shrink: 0;
 }
 
-.help-drawer__inner {
-  height: 100%;
+.help-panel__title {
+  flex: 1;
+  font-size: var(--fs-label);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.help-panel__back {
+  flex-shrink: 0;
+}
+
+.help-panel__search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 0.5px solid var(--border-default);
+  flex-shrink: 0;
+}
+
+.help-panel__search-icon {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.help-panel__search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: var(--fs-label);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.help-panel__search-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.help-panel__body {
+  flex: 1;
   overflow-y: auto;
-  padding: var(--space-6);
-  padding-top: var(--space-4);
-  position: relative;
+  padding: var(--space-3);
 }
 
-.help-drawer__close {
-  position: absolute;
-  top: var(--space-3);
-  right: var(--space-3);
+.help-panel__empty {
+  color: var(--text-tertiary);
+  font-size: var(--fs-label);
+  text-align: center;
+  padding: var(--space-6) var(--space-4);
+}
+
+/* Help TOC — home view */
+.help-home {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.help-home__group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.help-home__group-label {
+  font-size: var(--fs-eyebrow);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: var(--text-tertiary);
+  padding: 0 var(--space-1) var(--space-1);
+}
+
+.help-home__item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
   background: none;
   border: none;
+  width: 100%;
   cursor: pointer;
-  color: var(--color-text-tertiary);
-  padding: var(--space-1);
-  line-height: 1;
+  text-align: left;
+  font: inherit;
+  transition: background var(--dur-fast);
 }
 
-.help-drawer__close:hover {
-  color: var(--color-text);
+.help-home__item:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+.help-home__item:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.help-home__item.is-active {
+  background: var(--color-brand-faint);
+  border-left: 2px solid var(--color-brand);
+  padding-left: calc(var(--space-3) - 2px);
+}
+
+.help-home__item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.help-home__item-title {
+  font-size: var(--fs-label);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.help-home__item-sub {
+  font-size: var(--fs-caption);
+  color: var(--text-tertiary);
+}
+
+.help-home__group-chip {
+  flex-shrink: 0;
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  color: var(--text-tertiary);
+  background: var(--surface-recessed);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.help-highlight {
+  background: var(--color-warning-bg);
+  color: inherit;
+  border-radius: var(--radius-xs);
+  font-style: normal;
+}
+
+.help-home__stub-badge {
+  font-size: var(--fs-caption);
+  background: var(--surface-recessed);
+  color: var(--text-tertiary);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+}
+
+/* Help page content wrapper inside the panel */
+.help-page-wrap {
+  padding: var(--space-2);
 }
 
 /* Help page content */
 .help-page {
-  font-size: var(--text-sm);
+  font-size: var(--fs-label);
   line-height: 1.6;
 }
 
 .help-page__header {
   margin-bottom: var(--space-5);
   padding-bottom: var(--space-4);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--border-default);
 }
 
 .help-page__header h1 {
-  font-size: var(--text-lg);
+  font-size: var(--fs-h3);
   font-weight: 600;
   margin: 0 0 var(--space-1);
 }
 
 .help-page__subtitle {
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -131,17 +272,17 @@
 }
 
 .help-page__section h2 {
-  font-size: var(--text-sm);
+  font-size: var(--fs-label);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: .04em;
-  color: var(--color-text-tertiary);
+  letter-spacing: var(--tracking-eyebrow);
+  color: var(--text-tertiary);
   margin: 0 0 var(--space-2);
 }
 
 .help-page__section p,
 .help-page__section li {
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   margin: 0 0 var(--space-2);
 }
 
@@ -157,11 +298,11 @@
 
 .help-page__fields dt {
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--text-primary);
   margin-top: var(--space-3);
 }
 
 .help-page__fields dd {
   margin: var(--space-1) 0 0 0;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
 }

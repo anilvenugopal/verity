@@ -359,6 +359,13 @@ A Vitest test (`hub/portal/src/help/__tests__/manifest.test.ts`) verifies at bui
 6. The `?` affordance on assessment form fields opens a popover resolved from the help corpus; "Learn more" opens `HelpDrawer` with the full page.
 7. An error toast with a `helpId` renders a "Learn more →" link that opens `HelpDrawer` at the correct page.
 
+### Help panel UX (A4)
+8. Pressing `Ctrl+Shift+?` (or `⌘+Shift+?` on Mac) opens the help panel to home; pressing again closes it.
+9. The TOC highlights the last-visited help page with an active visual state when the user navigates back to home.
+10. Navigating back to home (or to a previously visited page) restores the previous scroll position.
+11. Search results show the group name of each result (e.g. "How-To") and highlight the matched substring in the title and subtitle.
+12. Arrow-key navigation moves focus through search results; `Escape` clears the query and returns focus to the search input.
+
 ### Help corpus (C1–C8)
 1. `hub/portal/src/help/_manifest.ts` compiles without errors; every `?raw` import resolves to an existing file.
 2. `useHelp('forms.assessment.fields.decision_type')` returns the `FieldDef` entry from `assessmentCatalog.ts`.

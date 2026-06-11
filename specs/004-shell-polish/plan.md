@@ -108,6 +108,22 @@ The `api/client.ts` error interceptor calls `toast()` directly for 4xx/5xx and n
 
 **Why 70%**: The hub currently has 67 integration tests and ~10 modules. 70% is achievable without writing unit tests for every internal helper, but high enough to catch obvious gaps. It is a ratchet — rises as tests are added.
 
+### R8 · Help panel UX polish
+
+**Decision**: Enhance `HelpDrawer` with active-item highlighting, per-path scroll-position memory, search result group labels, matched-term highlighting, and keyboard navigation through results. Add `Ctrl+Shift+?` / `⌘Shift+?` as a global keyboard shortcut wired in `AppShell.tsx`.
+
+**Active item**: A `lastPage` state tracks the most recently viewed help page path. When the TOC is shown (home view), the matching button receives `is-active` class — background + accent border — so the user can immediately see where they left off.
+
+**Scroll restore**: A `Map<string, number>` ref stores `scrollTop` per path. On every path change, the current scroll position is saved before navigating away; on mount of the new path the saved position is restored via `requestAnimationFrame` (ensures content has rendered).
+
+**Search result group labels**: Each search result renders a small `help-home__group-chip` tag showing its group (e.g. "How-To"), giving context without returning to the TOC.
+
+**Term highlight**: A `Highlight` component wraps the matched substring in `<mark class="help-highlight">`. Case-insensitive match; first occurrence only. Styled with a low-contrast background to not compete with content.
+
+**Keyboard navigation**: `ArrowDown` on the search input focuses the first result. `ArrowDown`/`ArrowUp` move between results. `ArrowUp` on the first result returns focus to the search input. `Escape` clears the query and refocuses the search input. Standard listbox pattern — no ARIA role needed for this scale.
+
+**Keyboard shortcut**: `(e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '?'` in `AppShell`'s existing `keydown` listener. Toggles: if `helpOpen` → `helpDrawer.close()`; else → `helpDrawer.open('home')`. The `?` key is `Shift+/` on US keyboards — the same physical key across Mac/Win/Linux.
+
 ### R7 · Help corpus architecture
 
 **Decision**: File-based corpus (`hub/portal/src/help/`) with TypeScript field snippets, static HTML page content (loaded via Vite `?raw` imports), a typed manifest as the metamodel, and `useHelp(path)` / `useHelpPage(path)` hooks for resolution.

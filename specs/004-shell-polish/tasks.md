@@ -144,10 +144,21 @@ No backend changes. No schema changes. All work is `hub/portal/` + `tools/dev.py
 ## Phase 8: Polish & cross-cutting
 
 - [X] T031 [P] Write `hub/docs/dev-setup.md`: covers (a) Python — always `uv run` from `hub/`; never `pip install`; never `python -m pytest` from root; (b) Node — `nvm use` from `hub/portal/`; (c) VSCode — open workspace from repo root, Testing tab will auto-discover both suites; (d) `./dev test` and `./dev test:portal`; (e) the `noUncheckedIndexedAccess` rule and why reverting it is forbidden
-- [ ] T032 Verify VSCode Testing tab end-to-end: open repo in VSCode, confirm Python Testing shows 67 pytest tests and Vitest shows 3+ tests; run all → all pass; record any setup steps needed in `dev-setup.md`
+- [X] T032 Verify VSCode Testing tab end-to-end: open repo in VSCode, confirm Python Testing shows 67 pytest tests and Vitest shows 3+ tests; run all → all pass; record any setup steps needed in `dev-setup.md`
 - [X] T033 [P] Run `tsc --noEmit` and `vite build` from `hub/portal/` — confirm clean
 - [X] T034 [P] Run `python tools/dev.py test --cov` — confirm ≥70% coverage threshold passes
 - [X] T035 Mark completed tasks `[X]`; update `CLAUDE.md` shipped status for 004
+
+---
+
+## Phase 9: US7 — Help panel UX polish
+
+**Goal**: Active-item state, scroll restore, search improvements, and a global keyboard shortcut make the help panel production-grade.
+
+- [X] T048 [P] [US7] Active item + scroll restore in `hub/portal/src/shell/HelpDrawer.tsx`: track `lastPage` state (set when `showPage` is true); pass to `HelpTOC` for `.is-active` class on matching button; add `scrollPositions` ref (`Map<string,number>`), save on navigate-away, restore via `requestAnimationFrame` on path change; add `bodyRef` to `.help-panel__body`
+- [X] T049 [P] [US7] Search improvements in `hub/portal/src/shell/HelpDrawer.tsx`: add `Highlight` component (wraps first match in `<mark class="help-highlight">`); pass `query` and `showGroup` to `HelpItem` in search results; render `help-home__group-chip` span; add `help-home__item-main` wrapper div for title+sub
+- [X] T050 [P] [US7] Keyboard navigation in `hub/portal/src/shell/HelpDrawer.tsx`: `resultRefs` array ref; `setRef` callback on each result `HelpItem`; `handleSearchKeyDown` (ArrowDown → focus first result); `handleResultKeyDown(i)` (ArrowDown/ArrowUp between results, ArrowUp on [0] → search input, Escape → clear + refocus); `searchInputRef` on the search `<input>`
+- [X] T051 [US7] Keyboard shortcut + Topbar hint: in `hub/portal/src/shell/AppShell.tsx` import `helpDrawer` + add `(e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '?'` branch (toggle open/close); in `hub/portal/src/shell/Topbar.tsx` add `title="Help (Ctrl+Shift+?)"` to the help button; add `.help-home__item.is-active`, `.help-highlight`, `.help-home__group-chip`, `.help-home__item-main` to `hub/portal/src/styles/help.css`
 
 ---
 

@@ -7,7 +7,7 @@ import { ToastProvider } from './shell/ToastContext'
 import { Toast } from './shell/Toast'
 import { AppErrorBoundary } from './shell/AppErrorBoundary'
 import { ErrorScreen } from './shell/ErrorScreen'
-import { HelpDrawer, helpDrawer } from './shell/HelpDrawer'
+import { helpDrawer } from './shell/HelpDrawer'
 import { ApplicationsList } from './pages/applications/ApplicationsList'
 import { OnboardForm } from './pages/applications/OnboardForm'
 import { ApplicationWorkspace } from './pages/applications/ApplicationWorkspace'
@@ -78,7 +78,6 @@ export function App() {
           </SessionProvider>
         </AppErrorBoundary>
         <Toast />
-        <HelpDrawer />
       </ToastProvider>
     </BrowserRouter>
   )

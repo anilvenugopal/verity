@@ -1,5 +1,6 @@
 import { useSession } from '@/auth/useSession'
 import { AccountMenu } from './AccountMenu'
+import { helpDrawer } from './HelpDrawer'
 
 // Topbar: wordmark · breadcrumb · spacer · utils (search, help, account menu). Reuses canonical
 // topbar__logo / breadcrumb / topbar__utils / btn / search-field; row layout is page-local.
@@ -31,7 +32,7 @@ export function Topbar({ onSearch, onPreferences }: { onSearch: () => void; onPr
             <input readOnly tabIndex={-1} aria-hidden="true" placeholder="Search…" />
             <kbd>⌘J</kbd>
           </div>
-          <button className="btn btn--icon btn--ghost" aria-label="Help">
+          <button className="btn btn--icon btn--ghost" aria-label="Help" title="Help (Ctrl+Shift+?)" onClick={() => helpDrawer.open('home')}>
             <svg className="icon" aria-hidden="true"><use href="#i-help" /></svg>
           </button>
           {principal && <AccountMenu principal={principal} onPreferences={onPreferences} />}
