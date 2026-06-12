@@ -1,0 +1,27 @@
+<article class="help-page">
+  <header class="help-page__header">
+    <h1>Composing an Agent Version</h1>
+    <p class="help-page__subtitle">Assign prompts, tools, and MCP servers to an agent version.</p>
+  </header>
+
+  <section class="help-page__section">
+    <h2>Prompt assignments</h2>
+    <p>Open the agent version detail page and expand <strong>Prompt assignments</strong>. Click <strong>+ Assign prompt</strong>, paste the prompt version ID, choose the API role (system, user, or assistant_prefill), and submit. An agent version must have at least one prompt assignment before it can be promoted to champion.</p>
+    <p>To remove an assignment, click <strong>Remove</strong> on the row. Removed assignments do not affect other versions that reference the same prompt version.</p>
+  </section>
+
+  <section class="help-page__section">
+    <h2>Tool assignments (agent-only)</h2>
+    <p>Tools can only be assigned to <strong>agent</strong> versions, not tasks. Click <strong>+ Assign tool</strong>, select the tool version, and submit. Attempting to assign a tool to a task version returns a 409 error.</p>
+  </section>
+
+  <section class="help-page__section">
+    <h2>Source and target bindings</h2>
+    <p>Bindings describe data sources (documents, structured inputs) and targets (write destinations) the agent reads from or writes to. Storage-object bindings require a data connector version. Add them via the API or YAML import.</p>
+  </section>
+
+  <section class="help-page__section">
+    <h2>YAML bundle export / import</h2>
+    <p>Use <strong>GET /api/registry/versions/{id}/export</strong> to download a version's full composition as a YAML bundle. Use <strong>POST /api/registry/import/dry-run</strong> with the YAML body to verify it is already registered (all entries show <em>no_op</em>). The import endpoint is idempotent by natural key.</p>
+  </section>
+</article>

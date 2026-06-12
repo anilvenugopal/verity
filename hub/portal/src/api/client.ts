@@ -37,7 +37,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
       body: body === undefined ? undefined : JSON.stringify(body),
     })
   } catch {
-    emitToast('Network error — check your connection', 'error', false)
+    emitToast('Network error — check your connection', 'error', true, undefined, 10_000)
     throw new ApiException(0, { code: 'network_error', detail: 'Network error', request_id: '' })
   }
 
@@ -52,7 +52,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   }
   if (!res.ok) {
     const err = await parseError(res)
-    emitToast(err.detail || 'Request failed', 'error', false)
+    emitToast(err.detail || 'Request failed', 'error', true, undefined, 10_000)
     throw new ApiException(res.status, err)
   }
   // PATCH is only used for actor-scoped writes (preferences) that don't affect shared views.

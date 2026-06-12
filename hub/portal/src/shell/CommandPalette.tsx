@@ -2,7 +2,7 @@ import { type KeyboardEvent as ReactKeyboardEvent, useEffect, useMemo, useState 
 import { useNavigate } from 'react-router-dom'
 import { useSession } from '@/auth/useSession'
 import { api } from '@/api/client'
-import type { Application, IntakeListItem } from '@/api/types'
+import type { Application, Executable, IntakeListItem, PromptSummary, ToolSummary } from '@/api/types'
 import { NAV, type NavKind, type NavNode, resolveNav } from './nav'
 import './CommandPalette.css'
 
@@ -71,6 +71,66 @@ const OBJECT_SOURCES: ObjectSource[] = [
     async fetch() {
       const items = await api.get<IntakeListItem[]>('/api/intakes')
       return items.map((i) => ({ key: `intake:${i.intake_id}`, label: i.title, hint: i.application_name, to: `/intakes/${i.intake_id}` }))
+    },
+  },
+  {
+    group: 'Agents',
+    icon: 'i-entity-agent',
+    async fetch() {
+      const items = await api.get<Executable[]>('/api/executables?kind=agent')
+      return items.map((r) => ({
+        key: `agent:${r.executable_id}`,
+        label: r.display_name ?? r.name,
+        hint: r.application_code ?? r.champion_semver ?? undefined,
+        to: r.champion_version_id
+          ? `/registry/agents/${r.executable_id}/versions/${r.champion_version_id}`
+          : `/registry/agents/${r.executable_id}`,
+      }))
+    },
+  },
+  {
+    group: 'Tasks',
+    icon: 'i-entity-task',
+    async fetch() {
+      const items = await api.get<Executable[]>('/api/executables?kind=task')
+      return items.map((r) => ({
+        key: `task:${r.executable_id}`,
+        label: r.display_name ?? r.name,
+        hint: r.application_code ?? r.champion_semver ?? undefined,
+        to: r.champion_version_id
+          ? `/registry/tasks/${r.executable_id}/versions/${r.champion_version_id}`
+          : `/registry/tasks/${r.executable_id}`,
+      }))
+    },
+  },
+  {
+    group: 'Prompts',
+    icon: 'i-entity-prompt',
+    async fetch() {
+      const items = await api.get<PromptSummary[]>('/api/prompts')
+      return items.map((r) => ({
+        key: `prompt:${r.prompt_id}`,
+        label: r.display_name ?? r.name,
+        hint: r.application_code ?? undefined,
+        to: r.latest_version_id
+          ? `/registry/prompts/${r.prompt_id}/versions/${r.latest_version_id}`
+          : `/registry/prompts/${r.prompt_id}`,
+      }))
+    },
+  },
+  {
+    group: 'Tools',
+    icon: 'i-lib-tools',
+    async fetch() {
+      const items = await api.get<ToolSummary[]>('/api/tools')
+      return items.map((r) => ({
+        key: `tool:${r.tool_id}`,
+        label: r.display_name ?? r.name,
+        hint: r.application_code ?? r.transport_code,
+        to: r.latest_version_id
+          ? `/registry/tools/${r.tool_id}/versions/${r.latest_version_id}`
+          : `/registry/tools/${r.tool_id}`,
+      }))
     },
   },
 ]

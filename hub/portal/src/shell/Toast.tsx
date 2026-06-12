@@ -14,9 +14,9 @@ const AUTO_DISMISS_MS = 4000
 function ToastEntry({ item }: { item: ToastItem }) {
   useEffect(() => {
     if (!item.autoDismiss) return
-    const t = setTimeout(() => removeToast(item.id), AUTO_DISMISS_MS)
+    const t = setTimeout(() => removeToast(item.id), item.dismissMs ?? AUTO_DISMISS_MS)
     return () => clearTimeout(t)
-  }, [item.id, item.autoDismiss])
+  }, [item.id, item.autoDismiss, item.dismissMs])
 
   return (
     <div className={`toast toast--${item.tone}`} role="alert" aria-live="polite">

@@ -1,0 +1,123 @@
+/* RegistryDetail.css — shared styles for registry entity detail screens */
+
+.code-block {
+  background: var(--surface-recessed);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--fs-mono);
+  line-height: 1.6;
+  overflow: auto;
+  max-height: 400px;
+  white-space: pre;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+/* Delegation tracking mode chips */
+.chip--track  { background: var(--color-brand-faint);  color: var(--color-brand);   border: 1px solid var(--color-brand-border); }
+.chip--pinned { background: var(--surface-panel);       color: var(--text-secondary); border: 1px solid var(--border-default); }
+
+/* Version history grid for detail pages */
+.version-grid     { display: grid; grid-template-columns: 90px 120px 120px 120px 1fr; gap: 0; align-items: center; padding: 11px 16px; }
+/* Prompt / tool version history (semver + one metadata column) */
+.asset-ver-grid   { display: grid; grid-template-columns: 90px 1fr; gap: 0; align-items: center; padding: 11px 16px; }
+
+/* Prompt version card in PromptDetail */
+.prompt-ver-card {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: var(--space-4);
+}
+.prompt-ver-card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-panel);
+  border-bottom: 1px solid var(--border-default);
+  cursor: pointer;
+  user-select: none;
+}
+.prompt-ver-card__head:hover { background: var(--surface-hover); }
+.prompt-ver-card__body { padding: var(--space-3) var(--space-4); }
+.prompt-ver-card__meta { font-size: var(--fs-caption); color: var(--text-tertiary); }
+
+/* Write-op indicator */
+.chip--write { background: var(--color-warning-bg); color: var(--color-warning); border: 1px solid var(--color-warning-border); border-radius: var(--radius-pill); padding: 1px 8px; font-size: var(--fs-caption); font-weight: var(--fw-semibold); }
+
+/* Primary cell text in detail sub-table rows — matches .reg-entity-name size/weight */
+.reg-row-primary { font-size: var(--fs-label); font-weight: var(--fw-medium); }
+
+/* Flex badge row below a page title — used wherever page-head__sub holds chips/badges */
+.page-head__badges {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+/* Shared detail-table grid mixin — all grids use the same padding as list-page grids */
+.used-by-grid      { display: grid; grid-template-columns: 1fr 80px 100px;              gap: 0; align-items: center; padding: 11px 16px; }
+.pa-grid           { display: grid; grid-template-columns: 40px 90px 1fr 80px auto;     gap: 0; align-items: center; padding: 11px 16px; }
+.ta-grid           { display: grid; grid-template-columns: 1fr 100px auto;              gap: 0; align-items: center; padding: 11px 16px; }
+.mcp-srv-grid      { display: grid; grid-template-columns: 1fr 100px;                  gap: 0; align-items: center; padding: 11px 16px; }
+.price-grid        { display: grid; grid-template-columns: 120px 120px 80px 120px 120px; gap: 0; align-items: center; padding: 11px 16px; }
+.model-binding-grid { display: grid; grid-template-columns: 160px 1fr auto;            gap: 0; align-items: center; padding: 11px 16px; }
+
+/* Inline bindings grids */
+.binding-grid-src { display: grid; grid-template-columns: 1fr 130px 120px 60px; gap: 0; align-items: center; padding: 11px 16px; }
+.binding-grid-tgt { display: grid; grid-template-columns: 1fr 130px 100px; gap: 0; align-items: center; padding: 11px 16px; }
+
+/* Delegation grid */
+.delegation-grid { display: grid; grid-template-columns: 1fr 100px 1fr; gap: 0; align-items: center; padding: 11px 16px; }
+
+/* Model ref chain grid inside inference config */
+.model-ref-grid { display: grid; grid-template-columns: 60px 180px 1fr; gap: 0; align-items: center; padding: 11px 16px; }
+
+/* ── Version Switcher ─────────────────────────────────────────────────────── */
+.version-switcher { position: relative; display: inline-flex; }
+.version-switcher__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: none;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 2px 8px 2px 10px;
+  cursor: pointer;
+  font-size: var(--fs-label);
+  font-weight: var(--fw-medium);
+  color: var(--text-primary);
+  white-space: nowrap;
+  line-height: 1.6;
+}
+.version-switcher__btn:hover { background: var(--surface-hover); border-color: var(--border-strong); }
+.version-switcher__panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 200;
+  min-width: 260px;
+  background: var(--surface-panel);
+  border: 0.5px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+.version-switcher__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 9px 14px;
+  cursor: pointer;
+  border-bottom: 0.5px solid var(--border-default);
+}
+.version-switcher__row:last-child { border-bottom: none; }
+.version-switcher__row:hover { background: var(--surface-hover); }
+.version-switcher__row--current { background: var(--surface-recessed); }
+.version-switcher__row--current:hover { background: var(--surface-recessed); }
+.version-switcher__semver { font-size: var(--fs-label); font-weight: var(--fw-medium); flex: 1; }
+.version-switcher__hint { font-size: var(--fs-caption); color: var(--text-tertiary); font-family: var(--font-mono); }

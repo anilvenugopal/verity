@@ -46,6 +46,520 @@ def _executable_id(code: str) -> str:
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, f"verity.demo.executable.{code}"))
 
 
+def _prompt_id(code: str) -> str:
+    return str(uuid.uuid5(uuid.NAMESPACE_DNS, f"verity.demo.prompt.{code}"))
+
+
+def _prompt_version_id(code: str) -> str:
+    return str(uuid.uuid5(uuid.NAMESPACE_DNS, f"verity.demo.prompt_version.{code}.1.0.0"))
+
+
+def _tool_id(code: str) -> str:
+    return str(uuid.uuid5(uuid.NAMESPACE_DNS, f"verity.demo.tool.{code}"))
+
+
+def _tool_version_id(code: str) -> str:
+    return str(uuid.uuid5(uuid.NAMESPACE_DNS, f"verity.demo.tool_version.{code}.1.0.0"))
+
+
+def _exe_version_id(code: str) -> str:
+    return str(uuid.uuid5(uuid.NAMESPACE_DNS, f"verity.demo.exe_version.{code}.1.0.0"))
+
+
+# ── Demo registry entities (prompts, tools, agents, tasks) ───────────────────
+# Modelled after the verity_legacy uw_demo/app/setup/register_all.py entities.
+# All use 'ai_governance' role + seed actor; no approval gate (direct champion promotion).
+
+_SEED_ACTOR = "00000000-0000-0000-0000-000000000001"  # Verity Seed actor from core_seed.sql
+
+_DEMO_PROMPTS = [
+    {
+        "code": "triage-system",
+        "name": "triage-system",
+        "display_name": "Triage System Prompt",
+        "description": "System prompt for the underwriting triage agent. Sets role, constraints, output format (JSON), and escalation rules.",
+        "blocks": [{"type": "prose", "text": (
+            "You are an underwriting triage assistant for a commercial insurance carrier. "
+            "Your role is to analyse the submitted application and produce a structured triage result.\n\n"
+            "Output a JSON object with exactly these keys:\n"
+            "- risk_tier: one of 'standard', 'non-standard', 'referral', 'decline'\n"
+            "- confidence: float 0.0–1.0\n"
+            "- rationale: string (max 200 words)\n"
+            "- missing_fields: list of field names absent or incomplete\n"
+            "- flags: list of concern codes (see guidelines)\n\n"
+            "Do not guess missing data. Escalate to referral if material information is absent. "
+            "Never output outside JSON."
+        )}],
+        "role": "system",
+    },
+    {
+        "code": "triage-context",
+        "name": "triage-context",
+        "display_name": "Triage Context Injection",
+        "description": "Context injection prompt: formats submission metadata and account context for the triage agent.",
+        "blocks": [{"type": "prose", "text": (
+            "## Submission Context\n\n"
+            "Account: {{account_name}} | LOB: {{lob}} | Revenue: {{annual_revenue}} | "
+            "SIC: {{sic_code}} ({{sic_description}})\n"
+            "Limits requested: {{limits_requested}} | Retention: {{retention_requested}}\n"
+            "Prior carrier: {{prior_carrier}} | Prior premium: {{prior_premium}}\n\n"
+            "## Loss History (3 years)\n{{loss_history_table}}\n\n"
+            "## Guidelines excerpt\n{{guidelines_excerpt}}\n\n"
+            "Analyse the above and return the triage JSON."
+        )}],
+        "role": "user",
+    },
+    {
+        "code": "appetite-system",
+        "name": "appetite-system",
+        "display_name": "Appetite Assessment System Prompt",
+        "description": "System prompt for the appetite assessment agent. Evaluates a submission against LOB appetite rules and returns a structured decision.",
+        "blocks": [{"type": "prose", "text": (
+            "You are an appetite assessment specialist for a commercial lines insurance carrier. "
+            "Your task is to evaluate whether a submission falls within or outside the published appetite "
+            "for the indicated line of business.\n\n"
+            "Return JSON with:\n"
+            "- appetite_decision: 'within' | 'borderline' | 'outside'\n"
+            "- decision_rationale: string\n"
+            "- violated_rules: list of rule codes from the guidelines\n"
+            "- recommended_action: 'quote' | 'refer_to_underwriter' | 'decline'\n\n"
+            "Cite the specific guideline section for every violated rule. "
+            "A 'borderline' decision always requires a human underwriter review."
+        )}],
+        "role": "system",
+    },
+    {
+        "code": "doc-classifier-instruction",
+        "name": "doc-classifier-instruction",
+        "display_name": "Document Classifier Instructions",
+        "description": "Instructions for classifying submission documents by type and routing them to the correct extraction pipeline.",
+        "blocks": [{"type": "prose", "text": (
+            "You are a document classification specialist for an insurance underwriting workflow.\n\n"
+            "Classify the provided document into exactly one of these types:\n"
+            "- acord_125: ACORD 125 Commercial Insurance Application\n"
+            "- acord_126: ACORD 126 Commercial General Liability Section\n"
+            "- acord_130: ACORD 130 Workers Compensation Application\n"
+            "- loss_runs: Historical claims / loss run statement\n"
+            "- financials: Financial statements (P&L, balance sheet, audit)\n"
+            "- supplemental: Supplemental questionnaire\n"
+            "- correspondence: Broker / underwriter correspondence\n"
+            "- other: Unrecognised document type\n\n"
+            "Return JSON: {\"doc_type\": \"<code>\", \"confidence\": <float>, "
+            "\"page_count\": <int>, \"extraction_pipeline\": \"<code>\"}"
+        )}],
+        "role": "system",
+    },
+    {
+        "code": "field-extractor-instruction",
+        "name": "field-extractor-instruction",
+        "display_name": "Field Extractor Instructions",
+        "description": "Extraction instructions for ACORD form field extraction. Maps document text to structured JSON fields.",
+        "blocks": [{"type": "prose", "text": (
+            "Extract all available fields from the provided ACORD form text and return them as JSON.\n\n"
+            "For each field, include:\n"
+            "- value: extracted value (null if not present)\n"
+            "- confidence: float 0.0–1.0\n"
+            "- source_text: verbatim text from the document\n\n"
+            "Required fields (return null with confidence=0 if absent):\n"
+            "named_insured, fein, entity_type, state_of_incorporation, annual_revenue, "
+            "employee_count, effective_date, expiration_date, limits_requested, "
+            "retention_requested, prior_carrier, prior_premium, lob\n\n"
+            "Do not infer or hallucinate values. Only extract text explicitly present in the document."
+        )}],
+        "role": "user",
+    },
+    {
+        "code": "loss-run-analysis",
+        "name": "loss-run-analysis",
+        "display_name": "Loss Run Analysis Prompt",
+        "description": "Loss run analysis user turn prompt. Structures and classifies historical claims data for the underwriting file.",
+        "blocks": [{"type": "prose", "text": (
+            "Analyse the following loss run data and produce a structured summary.\n\n"
+            "{{loss_run_text}}\n\n"
+            "Return JSON with:\n"
+            "- years_analysed: int\n"
+            "- total_incurred: float\n"
+            "- total_paid: float\n"
+            "- open_reserves: float\n"
+            "- claim_frequency: float (claims per year)\n"
+            "- severity_trend: 'improving' | 'stable' | 'deteriorating'\n"
+            "- catastrophic_losses: list of {year, amount, description}\n"
+            "- summary_narrative: string (max 150 words)"
+        )}],
+        "role": "user",
+    },
+]
+
+_DEMO_TOOLS = [
+    {
+        "code": "get-submission-context",
+        "name": "get-submission-context",
+        "display_name": "Get Submission Context",
+        "description": "Retrieves account context and submission metadata for a given submission ID. Returns named insured, LOB, SIC, revenue, and prior carrier details.",
+        "transport": "python_inprocess",
+        "data_classification": "tier3_confidential",
+        "input_schema": {"type": "object", "properties": {"submission_id": {"type": "string", "format": "uuid"}}, "required": ["submission_id"]},
+    },
+    {
+        "code": "get-underwriting-guidelines",
+        "name": "get-underwriting-guidelines",
+        "display_name": "Get Underwriting Guidelines",
+        "description": "Returns the current underwriting guidelines and appetite rules for a specified line of business. Includes eligibility criteria, prohibited classes, and pricing benchmarks.",
+        "transport": "python_inprocess",
+        "data_classification": "tier2_internal",
+        "input_schema": {"type": "object", "properties": {"lob": {"type": "string", "enum": ["DO", "GL", "WC", "BOP", "Cyber"]}}, "required": ["lob"]},
+    },
+    {
+        "code": "get-documents-for-submission",
+        "name": "get-documents-for-submission",
+        "display_name": "Get Documents for Submission",
+        "description": "Lists all documents available in the vault for a given submission, with their types, page counts, and upload timestamps.",
+        "transport": "python_inprocess",
+        "data_classification": "tier3_confidential",
+        "input_schema": {"type": "object", "properties": {"submission_id": {"type": "string", "format": "uuid"}}, "required": ["submission_id"]},
+    },
+    {
+        "code": "get-loss-history",
+        "name": "get-loss-history",
+        "display_name": "Get Loss History",
+        "description": "Returns historical claims data for a named insured. Includes claim counts, incurred/paid amounts, open reserves, and catastrophic loss flags by year.",
+        "transport": "python_inprocess",
+        "data_classification": "tier3_confidential",
+        "input_schema": {"type": "object", "properties": {"named_insured": {"type": "string"}, "years": {"type": "integer", "default": 5}}, "required": ["named_insured"]},
+    },
+    {
+        "code": "store-extraction-result",
+        "name": "store-extraction-result",
+        "display_name": "Store Extraction Result",
+        "description": "Persists a structured extraction result to the EDMS against a submission record. Returns a storage receipt with version ID.",
+        "transport": "python_inprocess",
+        "data_classification": "tier3_confidential",
+        "input_schema": {"type": "object", "properties": {"submission_id": {"type": "string"}, "doc_type": {"type": "string"}, "extracted_fields": {"type": "object"}}, "required": ["submission_id", "doc_type", "extracted_fields"]},
+    },
+]
+
+_DEMO_AGENTS = [
+    {
+        "code": "triage-agent",
+        "name": "triage-agent",
+        "display_name": "Underwriting Triage Agent",
+        "description": "Underwriting Triage Agent — classifies commercial submissions by risk tier, identifies information gaps, and produces a structured triage recommendation for the underwriter.",
+        "governance_tier": "contextual",
+        "capability_type": "classification",
+        "trust_level": "trusted",
+        "data_classification": "tier3_confidential",
+        "prompts": [("triage-system", "system", 1), ("triage-context", "user", 2)],
+        "tools": ["get-submission-context", "get-underwriting-guidelines"],
+    },
+    {
+        "code": "appetite-agent",
+        "name": "appetite-agent",
+        "display_name": "Appetite Assessment Agent",
+        "description": "Appetite Assessment Agent — evaluates commercial submissions against published LOB appetite rules and returns a within/borderline/outside decision with cited rule violations.",
+        "governance_tier": "contextual",
+        "capability_type": "classification",
+        "trust_level": "trusted",
+        "data_classification": "tier3_confidential",
+        "prompts": [("appetite-system", "system", 1)],
+        "tools": ["get-underwriting-guidelines", "get-loss-history"],
+    },
+    {
+        "code": "doc-classifier",
+        "name": "doc-classifier",
+        "display_name": "Document Classifier",
+        "description": "Document Classifier Agent — classifies submitted insurance documents by type (ACORD forms, loss runs, financials, supplementals) and routes them to the appropriate extraction pipeline.",
+        "governance_tier": "formatting",
+        "capability_type": "classification",
+        "trust_level": "trusted",
+        "data_classification": "tier2_internal",
+        "prompts": [("doc-classifier-instruction", "system", 1)],
+        "tools": ["get-documents-for-submission"],
+    },
+]
+
+_DEMO_TASKS = [
+    {
+        "code": "field-extractor",
+        "name": "field-extractor",
+        "display_name": "ACORD Field Extractor",
+        "description": "ACORD Field Extraction Task — extracts structured data fields from ACORD 125/126/130 forms, mapping document text to the canonical underwriting data model.",
+        "governance_tier": "formatting",
+        "capability_type": "extraction",
+        "trust_level": "trusted",
+        "data_classification": "tier3_confidential",
+        "prompts": [("field-extractor-instruction", "user", 1)],
+    },
+    {
+        "code": "loss-run-classifier",
+        "name": "loss-run-classifier",
+        "display_name": "Loss Run Classifier",
+        "description": "Loss Run Classification Task — structures and classifies historical claims data, computes frequency/severity trends, and flags catastrophic losses for underwriter review.",
+        "governance_tier": "contextual",
+        "capability_type": "extraction",
+        "trust_level": "trusted",
+        "data_classification": "tier3_confidential",
+        "prompts": [("loss-run-analysis", "user", 1)],
+    },
+    {
+        "code": "completeness-checker",
+        "name": "completeness-checker",
+        "display_name": "Submission Completeness Checker",
+        "description": "Submission Completeness Checker — validates that all required ACORD fields and supporting documents are present before routing the submission to an underwriter.",
+        "governance_tier": "formatting",
+        "capability_type": "validation",
+        "trust_level": "trusted",
+        "data_classification": "tier2_internal",
+        "prompts": [("triage-context", "user", 1)],
+    },
+]
+
+
+def _seed_registry(conn, actor_id: str, app_id: str | None = None) -> list[str]:
+    """Seed demo registry entities: prompts, tools, agents, tasks — all as champions.
+    Idempotent — skips rows that already exist. Returns summary lines."""
+    lines: list[str] = []
+
+    # ── Prompts ──────────────────────────────────────────────────────────────
+    for p in _DEMO_PROMPTS:
+        pid = _prompt_id(p["code"])
+        pvid = _prompt_version_id(p["code"])
+        content_hash = f"demo-{p['code']}-v1"
+        exists = conn.execute("SELECT 1 FROM core.prompt WHERE prompt_id = %s", (pid,)).fetchone()
+        if exists:
+            conn.execute(
+                "UPDATE core.prompt SET display_name = %s, application_id = %s WHERE prompt_id = %s",
+                (p.get("display_name", p["name"]), app_id, pid),
+            )
+            lines.append(f"  prompt '{p['name']}' — updated display_name")
+            continue
+        conn.execute(
+            "INSERT INTO core.prompt (prompt_id, name, display_name, description, application_id, created_by_actor_id, created_role_code) "
+            "VALUES (%s, %s, %s, %s, %s, %s, 'ai_governance')",
+            (pid, p["name"], p.get("display_name", p["name"]), p["description"], app_id, actor_id),
+        )
+        conn.execute(
+            "INSERT INTO core.prompt_version (prompt_version_id, prompt_id, semver, blocks, content_hash, "
+            "created_by_actor_id, created_role_code) VALUES (%s, %s, '1.0.0', %s, %s, %s, 'ai_governance')",
+            (pvid, pid, json.dumps(p["blocks"]), content_hash, actor_id),
+        )
+        lines.append(f"  prompt '{p['name']}' v1.0.0 — created")
+
+    # ── Tools ────────────────────────────────────────────────────────────────
+    for t in _DEMO_TOOLS:
+        tid = _tool_id(t["code"])
+        tvid = _tool_version_id(t["code"])
+        exists = conn.execute("SELECT 1 FROM core.tool WHERE tool_id = %s", (tid,)).fetchone()
+        if exists:
+            conn.execute(
+                "UPDATE core.tool SET display_name = %s, application_id = %s WHERE tool_id = %s",
+                (t.get("display_name", t["name"]), app_id, tid),
+            )
+            lines.append(f"  tool '{t['name']}' — updated display_name")
+            continue
+        conn.execute(
+            "INSERT INTO core.tool (tool_id, name, display_name, description, transport_code, application_id, "
+            "created_by_actor_id, created_role_code) VALUES (%s, %s, %s, %s, %s, %s, %s, 'ai_governance')",
+            (tid, t["name"], t.get("display_name", t["name"]), t["description"], t["transport"], app_id, actor_id),
+        )
+        conn.execute(
+            "INSERT INTO core.tool_version (tool_version_id, tool_id, semver, input_schema, config, "
+            "created_by_actor_id, created_role_code) "
+            "VALUES (%s, %s, '1.0.0', %s, '{}', %s, 'ai_governance')",
+            (tvid, tid, json.dumps(t["input_schema"]), actor_id),
+        )
+        lines.append(f"  tool '{t['name']}' v1.0.0 — created")
+
+    # ── Agents ───────────────────────────────────────────────────────────────
+    for a in _DEMO_AGENTS:
+        eid = _executable_id(a["code"])
+        evid = _exe_version_id(a["code"])
+        exists = conn.execute("SELECT 1 FROM core.executable WHERE executable_id = %s", (eid,)).fetchone()
+        if exists:
+            conn.execute(
+                "UPDATE core.executable SET display_name = %s, application_id = %s WHERE executable_id = %s",
+                (a.get("display_name", a["name"]), app_id, eid),
+            )
+            lines.append(f"  agent '{a['name']}' — updated display_name")
+            continue
+        conn.execute(
+            "INSERT INTO core.executable (executable_id, kind_code, name, display_name, description, application_id, "
+            "created_by_actor_id, created_role_code) VALUES (%s, 'agent', %s, %s, %s, %s, %s, 'ai_governance')",
+            (eid, a["name"], a.get("display_name", a["name"]), a["description"], app_id, actor_id),
+        )
+        conn.execute(
+            "INSERT INTO core.executable_version (executable_version_id, executable_id, kind_code, semver, "
+            "governance_tier_code, capability_type_code, trust_level_code, data_classification_code, "
+            "created_by_actor_id, created_role_code) "
+            "VALUES (%s, %s, 'agent', '1.0.0', %s, %s, %s, %s, %s, 'ai_governance')",
+            (evid, eid, a["governance_tier"], a["capability_type"], a["trust_level"], a["data_classification"], actor_id),
+        )
+        for (prompt_code, role, ordinal) in a["prompts"]:
+            pvid = _prompt_version_id(prompt_code)
+            conn.execute(
+                "INSERT INTO core.executable_prompt_assignment (executable_version_id, prompt_version_id, api_role_code, ordinal) "
+                "VALUES (%s, %s, %s, %s) ON CONFLICT DO NOTHING",
+                (evid, pvid, role, ordinal),
+            )
+        for tool_code in a["tools"]:
+            tvid = _tool_version_id(tool_code)
+            conn.execute(
+                "INSERT INTO core.executable_tool_assignment (executable_version_id, tool_version_id, executable_kind_code) "
+                "VALUES (%s, %s, 'agent') ON CONFLICT DO NOTHING",
+                (evid, tvid),
+            )
+        le_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"verity.demo.lifecycle.{a['code']}.1.0.0"))
+        ca_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"verity.demo.champion.{a['code']}.1.0.0"))
+        conn.execute(
+            "INSERT INTO core.lifecycle_event (lifecycle_event_id, executable_version_id, from_state_code, "
+            "to_state_code, rationale, actor_id, acting_role_code) VALUES (%s, %s, 'draft', 'champion', "
+            "'Demo seed champion promotion', %s, 'ai_governance')",
+            (le_id, evid, actor_id),
+        )
+        conn.execute(
+            "INSERT INTO core.champion_assignment (champion_assignment_id, executable_version_id, "
+            "lifecycle_event_id, is_revocation, reason, actor_id, acting_role_code) "
+            "VALUES (%s, %s, %s, false, 'Demo seed', %s, 'ai_governance')",
+            (ca_id, evid, le_id, actor_id),
+        )
+        lines.append(f"  agent '{a['name']}' v1.0.0 (champion) — created")
+
+    # ── Tasks ────────────────────────────────────────────────────────────────
+    for t in _DEMO_TASKS:
+        eid = _executable_id(t["code"])
+        evid = _exe_version_id(t["code"])
+        exists = conn.execute("SELECT 1 FROM core.executable WHERE executable_id = %s", (eid,)).fetchone()
+        if exists:
+            conn.execute(
+                "UPDATE core.executable SET display_name = %s, application_id = %s WHERE executable_id = %s",
+                (t.get("display_name", t["name"]), app_id, eid),
+            )
+            lines.append(f"  task '{t['name']}' — updated display_name")
+            continue
+        conn.execute(
+            "INSERT INTO core.executable (executable_id, kind_code, name, display_name, description, application_id, "
+            "created_by_actor_id, created_role_code) VALUES (%s, 'task', %s, %s, %s, %s, %s, 'ai_governance')",
+            (eid, t["name"], t.get("display_name", t["name"]), t["description"], app_id, actor_id),
+        )
+        conn.execute(
+            "INSERT INTO core.executable_version (executable_version_id, executable_id, kind_code, semver, "
+            "governance_tier_code, capability_type_code, trust_level_code, data_classification_code, "
+            "created_by_actor_id, created_role_code) "
+            "VALUES (%s, %s, 'task', '1.0.0', %s, %s, %s, %s, %s, 'ai_governance')",
+            (evid, eid, t["governance_tier"], t["capability_type"], t["trust_level"], t["data_classification"], actor_id),
+        )
+        for (prompt_code, role, ordinal) in t["prompts"]:
+            pvid = _prompt_version_id(prompt_code)
+            conn.execute(
+                "INSERT INTO core.executable_prompt_assignment (executable_version_id, prompt_version_id, api_role_code, ordinal) "
+                "VALUES (%s, %s, %s, %s) ON CONFLICT DO NOTHING",
+                (evid, pvid, role, ordinal),
+            )
+        le_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"verity.demo.lifecycle.{t['code']}.1.0.0"))
+        ca_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"verity.demo.champion.{t['code']}.1.0.0"))
+        conn.execute(
+            "INSERT INTO core.lifecycle_event (lifecycle_event_id, executable_version_id, from_state_code, "
+            "to_state_code, rationale, actor_id, acting_role_code) VALUES (%s, %s, 'draft', 'champion', "
+            "'Demo seed champion promotion', %s, 'ai_governance')",
+            (le_id, evid, actor_id),
+        )
+        conn.execute(
+            "INSERT INTO core.champion_assignment (champion_assignment_id, executable_version_id, "
+            "lifecycle_event_id, is_revocation, reason, actor_id, acting_role_code) "
+            "VALUES (%s, %s, %s, false, 'Demo seed', %s, 'ai_governance')",
+            (ca_id, evid, le_id, actor_id),
+        )
+        lines.append(f"  task '{t['name']}' v1.0.0 (champion) — created")
+
+    # ── Inference configs ─────────────────────────────────────────────────────
+    ref_rows = conn.execute(
+        "SELECT reference_code, model_reference_id FROM core.model_reference"
+    ).fetchall()
+    refs = {code: str(mid) for code, mid in ref_rows}
+
+    _inference_configs = [
+        {"code": "triage-balanced", "temperature": "0.300", "max_tokens": 4096,
+         "refs": [("classification-primary", 1)]},
+        {"code": "classification-strict", "temperature": "0.000", "max_tokens": 2048,
+         "refs": [("classification-primary", 1)]},
+        {"code": "extraction-deterministic", "temperature": "0.000", "max_tokens": 8192,
+         "refs": [("extraction-primary", 1), ("extraction-fallback", 2)]},
+    ]
+    _exe_inference_map = {
+        "triage-agent": "triage-balanced",
+        "appetite-agent": "classification-strict",
+        "doc-classifier": "classification-strict",
+        "field-extractor": "extraction-deterministic",
+        "loss-run-classifier": "extraction-deterministic",
+        "completeness-checker": "classification-strict",
+    }
+
+    icfg_ids: dict[str, str] = {}
+    for ic in _inference_configs:
+        icid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"verity.demo.inference_config.{ic['code']}"))
+        icfg_ids[ic["code"]] = icid
+        exists = conn.execute("SELECT 1 FROM core.inference_config WHERE inference_config_id = %s", (icid,)).fetchone()
+        if exists:
+            lines.append(f"  inference_config '{ic['code']}' — exists, skipped")
+            continue
+        conn.execute(
+            "INSERT INTO core.inference_config (inference_config_id, temperature, max_tokens) VALUES (%s, %s, %s)",
+            (icid, ic["temperature"], ic["max_tokens"]),
+        )
+        for ref_code, priority in ic["refs"]:
+            if ref_code not in refs:
+                lines.append(f"  WARN: model reference '{ref_code}' not found — skipping")
+                continue
+            conn.execute(
+                "INSERT INTO core.inference_config_model (inference_config_id, model_reference_id, priority) "
+                "VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
+                (icid, refs[ref_code], priority),
+            )
+        lines.append(f"  inference_config '{ic['code']}' — created")
+
+    for exe_code, ic_code in _exe_inference_map.items():
+        evid = _exe_version_id(exe_code)
+        icid = icfg_ids[ic_code]
+        conn.execute(
+            "UPDATE core.executable_version SET inference_config_id = %s "
+            "WHERE executable_version_id = %s AND inference_config_id IS NULL",
+            (icid, evid),
+        )
+    lines.append("  inference configs wired to executable versions")
+
+    # ── Delegation ───────────────────────────────────────────────────────────
+    parent_evid = _exe_version_id("triage-agent")
+    child_eid = _executable_id("appetite-agent")
+    del_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, "verity.demo.delegation.triage-to-appetite"))
+    exists = conn.execute(
+        "SELECT 1 FROM core.executable_version_delegation WHERE delegation_id = %s", (del_id,)
+    ).fetchone()
+    if exists:
+        lines.append("  delegation triage→appetite — exists, skipped")
+    else:
+        conn.execute(
+            "INSERT INTO core.executable_version_delegation "
+            "(delegation_id, parent_version_id, child_executable_id, scope, rationale) "
+            "VALUES (%s, %s, %s, %s, %s)",
+            (del_id, parent_evid, child_eid,
+             json.dumps({"action": "appetite_check", "required": True}),
+             "Triage agent delegates appetite assessment to the appetite-agent champion."),
+        )
+        lines.append("  delegation triage→appetite — created")
+
+    # ── Model / tool metadata patches ────────────────────────────────────────
+    conn.execute(
+        "UPDATE core.model SET context_window = 200000 WHERE context_window IS NULL "
+        "AND model_code IN ('claude-opus-4-8', 'claude-sonnet-4-6', 'claude-haiku-4-5')"
+    )
+    conn.execute(
+        "UPDATE core.tool SET is_write_operation = true "
+        "WHERE name = 'store-extraction-result' AND is_write_operation = false"
+    )
+    lines.append("  model/tool metadata patched")
+
+    return lines
+
+
 async def _seed_003_loop_async(db_url: str, intake_id: str, you_id: str, team_id: str) -> list[str]:
     """Seed the 003 governance depth loop on a given approved intake using the service layer:
     obligation resolution → record evidence (1st obligation satisfied) → approve exception (2nd
@@ -272,16 +786,37 @@ def teardown(conn) -> int:
                          "(SELECT approval_request_id FROM core.approval_request WHERE target_intake_id = ANY(%s))", (intake_ids,))
             conn.execute("DELETE FROM core.approval_request WHERE target_intake_id = ANY(%s)", (intake_ids,))
             conn.execute("DELETE FROM core.intake WHERE intake_id = ANY(%s)", (intake_ids,))
-        # demo registry assets (created by _seed_003_loop).
-        demo_exe_ids = [_executable_id("ZUW-fraud-scorer")]
+        # demo registry assets: agents, tasks, prompts, tools
+        all_exe_codes = (
+            ["ZUW-fraud-scorer"]
+            + [a["code"] for a in _DEMO_AGENTS]
+            + [t["code"] for t in _DEMO_TASKS]
+        )
+        demo_exe_ids = [_executable_id(c) for c in all_exe_codes]
         for eid in demo_exe_ids:
             if conn.execute("SELECT 1 FROM core.executable WHERE executable_id = %s", (eid,)).fetchone():
                 conn.execute("DELETE FROM core.champion_assignment WHERE executable_version_id IN "
                              "(SELECT executable_version_id FROM core.executable_version WHERE executable_id = %s)", (eid,))
                 conn.execute("DELETE FROM core.lifecycle_event WHERE executable_version_id IN "
                              "(SELECT executable_version_id FROM core.executable_version WHERE executable_id = %s)", (eid,))
+                conn.execute("DELETE FROM core.executable_prompt_assignment WHERE executable_version_id IN "
+                             "(SELECT executable_version_id FROM core.executable_version WHERE executable_id = %s)", (eid,))
+                conn.execute("DELETE FROM core.executable_tool_assignment WHERE executable_version_id IN "
+                             "(SELECT executable_version_id FROM core.executable_version WHERE executable_id = %s)", (eid,))
                 conn.execute("DELETE FROM core.executable_version WHERE executable_id = %s", (eid,))
                 conn.execute("DELETE FROM core.executable WHERE executable_id = %s", (eid,))
+        # prompts seeded by _seed_registry
+        for p in _DEMO_PROMPTS:
+            pid = _prompt_id(p["code"])
+            if conn.execute("SELECT 1 FROM core.prompt WHERE prompt_id = %s", (pid,)).fetchone():
+                conn.execute("DELETE FROM core.prompt_version WHERE prompt_id = %s", (pid,))
+                conn.execute("DELETE FROM core.prompt WHERE prompt_id = %s", (pid,))
+        # tools seeded by _seed_registry
+        for t in _DEMO_TOOLS:
+            tid = _tool_id(t["code"])
+            if conn.execute("SELECT 1 FROM core.tool WHERE tool_id = %s", (tid,)).fetchone():
+                conn.execute("DELETE FROM core.tool_version WHERE tool_id = %s", (tid,))
+                conn.execute("DELETE FROM core.tool WHERE tool_id = %s", (tid,))
         conn.execute("DELETE FROM core.approval_signoff WHERE approval_request_id IN "
                      "(SELECT approval_request_id FROM core.approval_request WHERE target_application_id = ANY(%s))", (ids,))
         conn.execute("DELETE FROM core.approval_request WHERE target_application_id = ANY(%s)", (ids,))
@@ -561,6 +1096,11 @@ def run(db_url: str, mode: str) -> list[str]:
             out.append(f"    use case '{ispec['title']}' ({ispec['status']}) — created")
             if ispec.get("seed_loop"):
                 loop_intakes.append(iid)
+
+        # Registry demo entities (prompts, tools, agents, tasks) — idempotent, part of same txn
+        out.append("registry entities:")
+        reg_lines = _seed_registry(conn, you_id, app_id=zuw_id)
+        out.extend(reg_lines)
 
         conn.commit()
         out.append(f"done: {created} created, {len(existing)} skipped")

@@ -1,0 +1,31 @@
+<article class="help-page">
+  <header class="help-page__header">
+    <h1>Registry Entity Types</h1>
+    <p class="help-page__subtitle">Agents, tasks, prompts, tools, and models — what they are and how they relate.</p>
+  </header>
+
+  <section class="help-page__section">
+    <h2>Agents</h2>
+    <p>An <strong>agent</strong> is an autonomous AI executable — it has a prompt composition, optional tool and MCP server assignments, and an inference configuration. Agents are the primary governed asset; they go through the full lifecycle (draft → champion) and are subject to intake approval before reaching production stages.</p>
+  </section>
+
+  <section class="help-page__section">
+    <h2>Tasks</h2>
+    <p>A <strong>task</strong> is a structured subtask executed by or on behalf of an agent. Tasks share the lifecycle and prompt-assignment machinery but do not have tool or MCP assignments (those are agent-only).</p>
+  </section>
+
+  <section class="help-page__section">
+    <h2>Prompts</h2>
+    <p>A <strong>prompt</strong> is a versioned, content-hashed template assigned to agent or task versions via a role slot (system, user, or assistant_prefill). Multiple prompt versions can coexist; each assignment pins a specific version.</p>
+  </section>
+
+  <section class="help-page__section">
+    <h2>Tools</h2>
+    <p>A <strong>tool</strong> is a versioned external capability (function call, API endpoint). Tools carry a transport code and an optional data classification. Only agents can have tool assignments — tasks cannot.</p>
+  </section>
+
+  <section class="help-page__section">
+    <h2>Models</h2>
+    <p>A <strong>model</strong> is an LLM entry in the catalog (e.g. claude-3-haiku). Models have SCD-2 pricing history and are referenced indirectly via <strong>model references</strong> — symbolic aliases (e.g. "primary-llm") that can be rebound to a different model without changing the agent configuration.</p>
+  </section>
+</article>

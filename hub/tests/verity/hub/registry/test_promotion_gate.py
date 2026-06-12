@@ -64,7 +64,7 @@ def test_gate_exempt_block_and_pass(pg_url):
     app = _app(pg_url, oid=ENG_OID, roles="engineer,ai_governance,business_owner")
     application_id = _seed_app(pg_url, "GAT", domains=["fairness"], frameworks=["nydfs"])
     with TestClient(app) as c:
-        ex = c.post("/executables", json={"name": "scorer", "kind_code": "task"}).json()["executable_id"]
+        ex = c.post("/executables", json={"name": "scorer", "display_name": "Scorer", "kind_code": "task"}).json()["executable_id"]
         v = c.post(f"/executables/{ex}/versions").json()["executable_version_id"]
         assert c.post(f"/versions/{v}/lifecycle", json={"to_stage": "candidate"}).json()["lifecycle_stage"] == "candidate"  # exempt
         assert c.post(f"/versions/{v}/lifecycle", json={"to_stage": "champion"}).status_code == 409  # not linked
@@ -84,7 +84,7 @@ def test_gate_blocks_on_outstanding_obligation(pg_url):
     app = _app(pg_url, oid=ENG_OID, roles="engineer,ai_governance,business_owner")
     application_id = _seed_app(pg_url, "GAB", domains=["fairness"], frameworks=["nydfs"])
     with TestClient(app) as c:
-        ex = c.post("/executables", json={"name": "scorer2", "kind_code": "task"}).json()["executable_id"]
+        ex = c.post("/executables", json={"name": "scorer2", "display_name": "Scorer 2", "kind_code": "task"}).json()["executable_id"]
         v = c.post(f"/executables/{ex}/versions").json()["executable_version_id"]
         iid = c.post(f"/applications/{application_id}/intakes", json={"title": "block"}).json()["intake_id"]
         c.put(f"/intakes/{iid}/assessment", json=HIGH_BODY)  # resolves outstanding obligations

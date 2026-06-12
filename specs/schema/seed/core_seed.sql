@@ -79,3 +79,18 @@ FROM (VALUES
 JOIN core.model_reference mr ON mr.reference_code = seed.ref_code
 JOIN core.model            m  ON m.model_code      = seed.model_code
 ON CONFLICT DO NOTHING;
+
+-- Initial model prices (open SCD-2 window). Input/output per 1k tokens, USD.
+-- These are June 2025 list prices; operators update via POST /api/registry/models/:id/prices.
+INSERT INTO core.model_price (model_id, input_price_per_1k, output_price_per_1k, currency_code)
+SELECT m.model_id, seed.input_p, seed.output_p, 'usd'
+FROM (VALUES
+    ('claude-opus-4-8',   15.00,  75.00),
+    ('claude-sonnet-4-6',  3.00,  15.00),
+    ('claude-haiku-4-5',   0.80,   4.00)
+) AS seed(model_code, input_p, output_p)
+JOIN core.model m ON m.model_code = seed.model_code
+WHERE NOT EXISTS (
+    SELECT 1 FROM core.model_price p
+    WHERE p.model_id = m.model_id AND p.valid_to = '2099-12-31 00:00:00+00'
+);

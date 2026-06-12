@@ -7,6 +7,7 @@ export interface ToastItem {
   message: string
   tone: ToastTone
   autoDismiss: boolean
+  dismissMs?: number  // overrides the default AUTO_DISMISS_MS when set
   helpId?: string  // optional corpus path — renders "Learn more →" link in the toast
 }
 
@@ -28,8 +29,8 @@ let _dispatch: React.Dispatch<Action> | null = null
 let _counter = 0
 
 /** Module-level fire — usable outside React (e.g. api/client.ts). */
-export function emitToast(message: string, tone: ToastTone = 'info', autoDismiss = true, helpId?: string) {
-  _dispatch?.({ type: 'ADD', toast: { id: ++_counter, message, tone, autoDismiss, helpId } })
+export function emitToast(message: string, tone: ToastTone = 'info', autoDismiss = true, helpId?: string, dismissMs?: number) {
+  _dispatch?.({ type: 'ADD', toast: { id: ++_counter, message, tone, autoDismiss, dismissMs, helpId } })
 }
 
 export function removeToast(id: number) {

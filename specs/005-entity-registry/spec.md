@@ -76,9 +76,9 @@ An AI developer defines how data flows into and out of an agent or task version 
 
 **Acceptance Scenarios**:
 
-1. **Given** an executable version, **When** the developer creates a source binding with expression `input.application_id` and delivery mode `inject`, **Then** the binding is stored and returned in the version's binding manifest.
-2. **Given** the same version, **When** the developer creates a source binding with expression `fetch:claims-connector/getLatestFiling(input.policy_number)`, **Then** the system validates the expression syntax and stores it.
-3. **Given** a source binding expression that does not match the allowed grammar (e.g., arbitrary code), **When** the developer attempts to save it, **Then** the system rejects it with a syntax error identifying the invalid part.
+1. **Given** an executable version, **When** the developer creates a source binding with `source_kind_code = 'structured'` and a `locator` describing the input field path, **Then** the binding is stored and returned in the version's binding manifest.
+2. **Given** the same version, **When** the developer creates a source binding with `source_kind_code = 'storage_object'` and a valid `data_connector_version_id`, **Then** the binding is stored with the connector reference and returned in the manifest.
+3. **Given** a source binding with `source_kind_code = 'storage_object'` submitted without a `data_connector_version_id`, **When** the developer attempts to save it, **Then** the system rejects it with a 422 error identifying the missing field.
 4. **Given** an executable version with both source and target bindings, **When** the developer requests the binding manifest, **Then** all source and target bindings are returned, ordered by creation.
 5. **Given** a target binding with write mode `replace` on field `output.underwriting_decision`, **When** the developer deletes it, **Then** it no longer appears in the binding manifest.
 
@@ -163,7 +163,7 @@ An AI developer manages the composition of an agent or task version directly fro
 - What happens when the only prompt version assigned to a version is removed, and then promotion is attempted? → Promotion is rejected; a version must have at least one prompt assignment before it can be promoted.
 - What happens when a YAML import bundle references a prompt version by content hash and that hash exists but under a different name? → Import treats it as a hash match and skips re-creation; the name discrepancy is surfaced as a warning.
 - What happens when a developer requests the champion version of an agent that has never been promoted? → Returns a clear "no champion" response, not a 404.
-- What happens when the binding grammar `fetch:` expression references a connector that does not exist in the registry? → The system stores the binding but flags it as unresolvable; validation is a separate check, not a write-time hard block.
+- What happens when a `storage_object` source binding references a `data_connector_version_id` that is later decommissioned? → The binding is stored; liveness of the referenced connector is a deployment-time check, not a write-time hard block. The binding remains in the manifest but will fail at harness resolution time.
 
 ---
 
@@ -191,13 +191,13 @@ An AI developer manages the composition of an agent or task version directly fro
 - **FR-RG-010**: The system MUST allow an authorised reviewer to promote a draft executable version to `champion` status.
 - **FR-RG-011**: When a version is promoted to champion, the system MUST atomically close the previous champion's validity window and open the new one — with no gap and no overlap.
 - **FR-RG-012**: The system MUST allow resolving the current champion of an executable by name; and resolving the champion as-of a historical timestamp.
-- **FR-RG-013**: The system MUST prevent deletion of any version that is currently the champion.
+- **FR-RG-013**: The system MUST prevent deletion of any version that is currently the champion. *(Implementation note: satisfied by design — the API exposes no `DELETE /versions/:id` endpoint; the DB FK from `champion_assignment → executable_version` also blocks deletion at the database level.)*
 
 **Source/Target Bindings**
 
-- **FR-RG-014**: The system MUST allow an authorised developer to create a source binding on an executable version using a DSL expression from the allowed grammar (`input.<path>`, `const:<literal>`, `fetch:<connector>/<method>(input.<field>)`).
-- **FR-RG-015**: The system MUST allow an authorised developer to create a target binding on an executable version specifying the output field path and write mode.
-- **FR-RG-016**: The system MUST validate source binding expressions against the allowed grammar at write time and reject syntactically invalid expressions.
+- **FR-RG-014**: The system MUST allow an authorised developer to create a source binding on an executable version by specifying a `source_kind_code` (one of `structured`, `storage_object`, `task_output`, `inline_content`), a `delivery_mode_code`, and a `locator` (jsonb describing the field path, query, or content reference).
+- **FR-RG-015**: The system MUST allow an authorised developer to create a target binding on an executable version specifying `target_kind_code`, output field path, write mode, and optional `data_connector_version_id`.
+- **FR-RG-016**: The system MUST validate source and target bindings at write time: a `storage_object` kind MUST include a `data_connector_version_id`; a `storage_object` target binding MUST also include a `write_mode_code`. Invalid combinations MUST be rejected with a 422 error.
 - **FR-RG-017**: The system MUST allow retrieval of all source and target bindings for a given executable version.
 
 **Data Classification**
@@ -282,8 +282,9 @@ An AI developer manages the composition of an agent or task version directly fro
 - The application (`application_id`) that owns a registry entity already exists; feature 001 (application onboarding) is a prerequisite and is shipped.
 - The schema tables for executables, prompts, tools, data connectors, MCP servers, inference configs, models, model references, source bindings, and target bindings are already defined in `specs/schema/verity_schema.sql`; this feature delivers the API and business logic layer on top of the existing schema.
 - Lifecycle promotion (draft → champion) uses the existing `reference.lifecycle_state` reference data; no new state machine rows are required.
-- The binding DSL grammar is fixed at the three source kinds documented in the PCR (`input.<path>`, `const:<literal>`, `fetch:<connector>/<method>(input.<field>)`) and the one target form (`output.<path>`); grammar extension is out of scope for this feature.
+- Source and target bindings use structured fields (`source_kind_code`, `locator` jsonb, `delivery_mode_code`) rather than a free-text DSL expression string. The v2 schema encodes binding intent as typed, validated fields; the PCR §1 DSL grammar notation is superseded by the hardened schema design (ADR-0005).
 - YAML portability covers the entity model only (executables, components, bindings, inference configs, model references); deployment artifacts (`.vtx`/`.vax` packaging) are out of scope and belong to feature 007.
 - Authentication and authorization use the existing actor/role model from feature 001; this feature does not introduce new roles, only applies the existing `app_team_developer` and `governance_reviewer` role checks to new endpoints.
 - Multi-application import isolation: during YAML import, entity names are scoped to the target application; cross-application name collisions are not checked.
 - Registry portal pages (browse, compose write actions, champion promotion, and inference config editing) are in scope for this feature. YAML import/export UI wizard and multi-environment deploy tooling remain deferred.
+- Historical cost computation (FR-VM-003) requires the SCD-2 price-window data delivered by this feature, but the query that computes cost-per-run from `audit.model_invocation_log` belongs to the analytics/decision-log feature. This feature delivers the data foundation; the computation is deferred.
