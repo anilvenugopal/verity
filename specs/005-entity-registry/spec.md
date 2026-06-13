@@ -212,7 +212,7 @@ An AI developer manages the composition of an agent or task version directly fro
 
 - **FR-VM-001**: The system MUST allow an authorised operator to register a provider model with a unique model code and provider name.
 - **FR-VM-002**: The system MUST allow an authorised operator to record a price window (input/output per 1k tokens, currency) for a registered model; recording a new price MUST close the prior window atomically.
-- **FR-VM-003**: Historical cost computations MUST use the price window that was open at the time of the run, not the current price.
+- **FR-VM-003**: Historical cost computations MUST use the price window that was open at the time of the run, not the current price. _(Deferred — this feature delivers the SCD-2 price-window data foundation; the query-time cost computation against `audit.model_invocation_log` is scoped to the analytics/decision-log feature; see Assumptions §4.)_
 - **FR-VM-004**: The system MUST allow an authorised reviewer to register a named model reference (a stable logical alias) and bind it to a concrete model with a validity window.
 - **FR-VM-005**: The system MUST allow an authorised reviewer to rebind a model reference to a different concrete model; the rebinding MUST close the prior binding atomically so all inference configs using the reference resolve to the new model from that point forward.
 

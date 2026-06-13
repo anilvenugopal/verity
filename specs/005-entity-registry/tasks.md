@@ -123,7 +123,7 @@
 
 - [X] T026 Create `hub/tests/test_registry_005.py` with pytest cases covering: (1) register executable + duplicate name rejection; (2) create prompt version + content hash present; (3) create agent version with governance fields; (4) assign tool to agent version succeeds; (5) assign tool to task version returns 409; (6) promote v1 to champion; (7) promote v2 to champion atomically — verify `entity_champion_current` shows v2 only; (8) `GET champion?as_of=<before v2 promote>` returns v1; (9) create storage_object source binding without connector_version_id returns 422; (10) register model + set price + rebind model reference; (11) YAML round-trip: export → dry-run import → all entries are no_op; (12) where-used returns correct executable_version entries after assignment
 - [X] T027 Run `./dev test` and verify all tests pass (67+ existing + new T026 tests); run `./dev migrate` to confirm 0006 applies cleanly. **Performance gate (SC-002, SC-005)**: against the running dev instance with ≥10 seeded versions, time `GET /api/registry/executables?kind=agent` (must be <500ms) and `GET /api/registry/prompt-versions/{id}/used-by` (must be <200ms) using `curl -s -o /dev/null -w "%{time_total}"` or browser DevTools; record results in the `specs/005-entity-registry/quickstart.md` Deviations table.
-- [ ] T028 Run quickstart.md flows 1–6 end-to-end against a running dev instance; record any deviations in the Deviations table in `specs/005-entity-registry/quickstart.md`
+- [X] T028 Run quickstart.md flows 1–6 end-to-end against a running dev instance; record any deviations in the Deviations table in `specs/005-entity-registry/quickstart.md`
 
 ---
 
@@ -330,7 +330,7 @@ existing models so detail screens have everything they need.
   (a) UPDATE `core.model SET context_window = 200000 WHERE model_code IN (...)` for the three seeded models.
   (b) UPDATE `core.tool SET is_write_operation = true WHERE name = 'store-extraction-result'`.
 
-- [ ] T059 Enrich `tools/demo_seed.py` — richer prompt content:
+- [ ] T059 _(Deferred — no FR requires production-grade demo text; seed produces valid structured blocks; revisit when a demo/showcase milestone is scoped)_ Enrich `tools/demo_seed.py` — richer prompt content:
   Replace the current minimal single-sentence prompt text with production-grade blocks modelled after legacy.
   Each prompt should have a detailed system block (200–400 words) that reflects real underwriting / insurance governance intent:
   - `triage-system`: classify submission, identify risk tier, flag edge cases
