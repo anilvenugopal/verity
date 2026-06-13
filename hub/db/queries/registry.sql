@@ -36,13 +36,14 @@ VALUES (%(version_id)s, %(lifecycle_event_id)s, %(reason)s, %(actor_id)s, %(acti
 -- name: list_executables
 SELECT e.executable_id, e.kind_code, e.name, e.display_name,
        e.application_id, a.code AS application_code, a.name AS application_name,
+       e.updated_at,
        (SELECT count(*) FROM core.executable_version v WHERE v.executable_id = e.executable_id) AS version_count
 FROM core.executable e
 LEFT JOIN core.application a ON a.application_id = e.application_id
 ORDER BY e.created_at DESC;
 
 -- name: list_executable_versions
-SELECT v.executable_version_id, v.semver, lc.lifecycle_state_code
+SELECT v.executable_version_id, v.semver, lc.lifecycle_state_code, v.created_at
 FROM core.executable_version v
 LEFT JOIN core.entity_lifecycle_current lc ON lc.executable_version_id = v.executable_version_id
 WHERE v.executable_id = %(executable_id)s ORDER BY v.created_at;
@@ -170,6 +171,7 @@ WHERE e.executable_id = %(executable_id)s;
 -- fields, and application_id via subqueries.
 SELECT e.executable_id, e.kind_code, e.name, e.display_name, e.description,
        e.application_id, a.code AS application_code, a.name AS application_name,
+       e.updated_at,
        (SELECT count(*) FROM core.executable_version v WHERE v.executable_id = e.executable_id) AS version_count,
        (SELECT ecc.executable_version_id FROM core.entity_champion_current ecc
           WHERE ecc.executable_id = e.executable_id) AS champion_version_id,

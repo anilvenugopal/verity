@@ -20,6 +20,7 @@ WHERE p.prompt_id = %(prompt_id)s;
 -- name: list_prompts
 SELECT p.prompt_id, p.name, p.display_name, p.description,
        p.application_id, a.code AS application_code, a.name AS application_name,
+       p.updated_at,
        (SELECT count(*) FROM core.prompt_version v WHERE v.prompt_id = p.prompt_id) AS version_count,
        (SELECT pv.prompt_version_id FROM core.prompt_version pv
           WHERE pv.prompt_id = p.prompt_id ORDER BY pv.created_at DESC LIMIT 1) AS latest_version_id
@@ -38,7 +39,7 @@ SELECT prompt_version_id, prompt_id, semver, content_hash, blocks
 FROM core.prompt_version WHERE prompt_version_id = %(prompt_version_id)s;
 
 -- name: list_prompt_versions
-SELECT prompt_version_id, prompt_id, semver, content_hash
+SELECT prompt_version_id, prompt_id, semver, content_hash, created_at
 FROM core.prompt_version WHERE prompt_id = %(prompt_id)s ORDER BY created_at;
 
 -- ── Tools ─────────────────────────────────────────────────────────────────────
@@ -58,6 +59,7 @@ WHERE t.tool_id = %(tool_id)s;
 -- name: list_tools
 SELECT t.tool_id, t.name, t.display_name, t.transport_code, t.description, t.is_write_operation,
        t.application_id, a.code AS application_code, a.name AS application_name,
+       t.updated_at,
        (SELECT tv.tool_version_id FROM core.tool_version tv
           WHERE tv.tool_id = t.tool_id ORDER BY tv.created_at DESC LIMIT 1) AS latest_version_id
 FROM core.tool t
@@ -71,7 +73,7 @@ VALUES (%(tool_id)s, %(semver)s, %(input_schema)s, %(config)s, %(data_classifica
 RETURNING tool_version_id, tool_id, semver, data_classification_code;
 
 -- name: list_tool_versions
-SELECT tool_version_id, tool_id, semver, data_classification_code
+SELECT tool_version_id, tool_id, semver, data_classification_code, created_at
 FROM core.tool_version WHERE tool_id = %(tool_id)s ORDER BY created_at;
 
 -- name: get_tool_version_detail^
@@ -152,8 +154,9 @@ ON CONFLICT DO NOTHING
 RETURNING executable_version_id, prompt_version_id, api_role_code, ordinal;
 
 -- name: list_prompt_assignments
-SELECT a.executable_version_id, a.prompt_version_id, p.name AS prompt_name,
-       pv.semver AS prompt_semver, a.api_role_code, a.ordinal
+SELECT a.executable_version_id, a.prompt_version_id, p.prompt_id,
+       p.name AS prompt_name, pv.semver AS prompt_semver, a.api_role_code, a.ordinal,
+       pv.created_at
 FROM core.executable_prompt_assignment a
 JOIN core.prompt_version pv ON pv.prompt_version_id = a.prompt_version_id
 JOIN core.prompt p ON p.prompt_id = pv.prompt_id
@@ -180,7 +183,9 @@ ON CONFLICT DO NOTHING
 RETURNING executable_version_id, tool_version_id;
 
 -- name: list_tool_assignments
-SELECT a.executable_version_id, a.tool_version_id, t.name AS tool_name, tv.semver AS tool_semver
+SELECT a.executable_version_id, a.tool_version_id, t.tool_id,
+       t.name AS tool_name, tv.semver AS tool_semver,
+       tv.created_at
 FROM core.executable_tool_assignment a
 JOIN core.tool_version tv ON tv.tool_version_id = a.tool_version_id
 JOIN core.tool t ON t.tool_id = tv.tool_id

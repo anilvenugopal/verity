@@ -1,6 +1,7 @@
 import { type FormEvent, useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api, ApiException } from '@/api/client'
+import { fmtTs } from '@/api/format'
 import { useSession } from '@/auth/useSession'
 import { useToast } from '@/shell/useToast'
 import type {
@@ -10,9 +11,11 @@ import type {
   IntakeLink,
   McpAssignment,
   PromptAssignment,
+  PromptVersionDetail,
   SourceBinding,
   TargetBinding,
   ToolAssignment,
+  ToolVersionDetail,
 } from '@/api/types'
 import { VersionSwitcher, type VersionEntry } from '@/components/VersionSwitcher'
 import '../RegistryDetail.css'
@@ -45,6 +48,8 @@ export function AgentVersionDetail() {
   const [targets, setTargets] = useState<TargetBinding[]>([])
   const [delegations, setDelegations] = useState<DelegationSummary[]>([])
   const [inferenceConfig, setInferenceConfig] = useState<InferenceConfigDetail | null>(null)
+  const [promptDetails, setPromptDetails] = useState<Record<string, PromptVersionDetail>>({})
+  const [toolDetails, setToolDetails] = useState<Record<string, ToolVersionDetail>>({})
   const [promoting, setPromoting] = useState(false)
 
   // Assign-prompt form state
@@ -79,6 +84,30 @@ export function AgentVersionDetail() {
     loadVersion()
     loadComposition()
   }, [loadVersion, loadComposition])
+
+  useEffect(() => {
+    if (prompts.length === 0) return
+    const map: Record<string, PromptVersionDetail> = {}
+    Promise.all(
+      prompts.map((pa) =>
+        api.get<PromptVersionDetail>(`/api/prompt-versions/${pa.prompt_version_id}`)
+          .then((d) => { map[pa.prompt_version_id] = d })
+          .catch(() => {})
+      )
+    ).then(() => setPromptDetails({ ...map }))
+  }, [prompts])
+
+  useEffect(() => {
+    if (tools.length === 0) return
+    const map: Record<string, ToolVersionDetail> = {}
+    Promise.all(
+      tools.map((ta) =>
+        api.get<ToolVersionDetail>(`/api/tool-versions/${ta.tool_version_id}`)
+          .then((d) => { map[ta.tool_version_id] = d })
+          .catch(() => {})
+      )
+    ).then(() => setToolDetails({ ...map }))
+  }, [tools])
 
   useEffect(() => {
     if (version?.inference_config_id) {
@@ -305,27 +334,38 @@ export function AgentVersionDetail() {
                 <span className="eyebrow">Role</span>
                 <span className="eyebrow">Prompt</span>
                 <span className="eyebrow">Version</span>
+                <span className="eyebrow">Created</span>
                 {canAuthor && <span />}
               </div>
-              {prompts.map((pa) => (
-                <div key={`${pa.prompt_version_id}:${pa.api_role_code}`}
-                     className="log-row pa-grid">
-                  <span className="reg-count">{pa.ordinal}</span>
-                  <span className="chip chip--static">{pa.api_role_code}</span>
-                  <span>
-                    <Link to={`/registry/prompts/${pa.prompt_version_id.split(':')[0]}`} className="reg-row-primary">
-                      {pa.prompt_name}
-                    </Link>
-                  </span>
-                  <span className="reg-entity-desc">{pa.prompt_semver}</span>
-                  {canAuthor && (
-                    <button className="btn btn--ghost btn--sm"
-                            onClick={() => handleRemovePrompt(pa.prompt_version_id, pa.api_role_code)}>
-                      Remove
-                    </button>
-                  )}
-                </div>
-              ))}
+              {prompts.map((pa) => {
+                const compiled = promptDetails[pa.prompt_version_id]?.compiled
+                return (
+                  <div key={`${pa.prompt_version_id}:${pa.api_role_code}`}>
+                    <div className="log-row pa-grid">
+                      <span className="reg-count">{pa.ordinal}</span>
+                      <span className="chip chip--static">{pa.api_role_code}</span>
+                      <span>
+                        <Link to={`/registry/prompts/${pa.prompt_id}/versions/${pa.prompt_version_id}`} className="reg-row-primary">
+                          {pa.prompt_name}
+                        </Link>
+                      </span>
+                      <span className="reg-entity-desc">{pa.prompt_semver}</span>
+                      <span className="reg-entity-desc">{fmtTs(pa.created_at)}</span>
+                      {canAuthor && (
+                        <button className="btn btn--ghost btn--sm"
+                                onClick={() => handleRemovePrompt(pa.prompt_version_id, pa.api_role_code)}>
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    {compiled && (
+                      <div className="log-row-expanded">
+                        <pre className="code-block">{compiled}</pre>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </>
           )}
         </div>
@@ -342,24 +382,36 @@ export function AgentVersionDetail() {
               <div className="log-table__header ta-grid">
                 <span className="eyebrow">Tool</span>
                 <span className="eyebrow">Version</span>
+                <span className="eyebrow">Created</span>
                 {canAuthor && <span />}
               </div>
-              {tools.map((ta) => (
-                <div key={ta.tool_version_id}
-                     className="log-row ta-grid">
-                  <Link to={`/registry/tools/${ta.tool_version_id.split(':')[0]}`}
-                        className="reg-row-primary">
-                    {ta.tool_name}
-                  </Link>
-                  <span className="reg-entity-desc">{ta.tool_semver}</span>
-                  {canAuthor && (
-                    <button className="btn btn--ghost btn--sm"
-                            onClick={() => handleRemoveTool(ta.tool_version_id)}>
-                      Remove
-                    </button>
-                  )}
-                </div>
-              ))}
+              {tools.map((ta) => {
+                const td = toolDetails[ta.tool_version_id]
+                return (
+                  <div key={ta.tool_version_id}>
+                    <div className="log-row ta-grid">
+                      <Link to={`/registry/tools/${ta.tool_id}/versions/${ta.tool_version_id}`}
+                            className="reg-row-primary">
+                        {ta.tool_name}
+                      </Link>
+                      <span className="reg-entity-desc">{ta.tool_semver}</span>
+                      <span className="reg-entity-desc">{fmtTs(ta.created_at)}</span>
+                      {canAuthor && (
+                        <button className="btn btn--ghost btn--sm"
+                                onClick={() => handleRemoveTool(ta.tool_version_id)}>
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    {td?.input_schema && (
+                      <div className="log-row-expanded">
+                        <div className="log-row-expanded__label">Input schema</div>
+                        <pre className="code-block">{JSON.stringify(td.input_schema, null, 2)}</pre>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </>
           )}
         </div>

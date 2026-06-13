@@ -17,6 +17,7 @@ import psycopg.errors
 from fastapi import HTTPException
 from psycopg import AsyncConnection
 from psycopg.types.json import Json
+from pydantic import TypeAdapter
 
 from verity.hub.auth.models import AuthContext
 from verity.hub.db import queries
@@ -42,9 +43,11 @@ from verity.hub.registry.models import (
     ModelReferenceSummary,
     ModelSummary,
     PromptAssignment,
+    PromptBlock,
     PromptSummary,
     PromptVersionDetail,
     PromptVersionSummary,
+    compile_blocks,
     SourceBinding,
     TargetBinding,
     ToolAssignment,
@@ -55,6 +58,7 @@ from verity.hub.registry.models import (
 )
 
 _GATED = {"challenger", "champion"}
+_block_list_adapter: TypeAdapter[list[PromptBlock]] = TypeAdapter(list[PromptBlock])
 _EARLY = {None, "draft", "candidate"}
 
 
@@ -323,15 +327,16 @@ async def get_prompt(conn: AsyncConnection, prompt_id: UUID) -> PromptSummary | 
 
 
 async def create_prompt_version(conn: AsyncConnection, prompt_id: UUID, semver: str,
-                                 blocks: list, ctx: AuthContext) -> PromptVersionSummary | None:
+                                 blocks: list[PromptBlock], ctx: AuthContext) -> PromptVersionSummary | None:
     if await queries.get_prompt(conn, prompt_id=prompt_id) is None:
         return None
+    blocks_data = [b.model_dump() for b in blocks]
     content_hash = hashlib.sha256(
-        json.dumps(blocks, sort_keys=True).encode()
+        json.dumps(blocks_data, sort_keys=True).encode()
     ).hexdigest()
     row = await queries.create_prompt_version(
         conn, prompt_id=prompt_id, semver=semver,
-        blocks=Json(blocks), content_hash=content_hash,
+        blocks=Json(blocks_data), content_hash=content_hash,
         created_by_actor_id=ctx.principal.actor_id, created_role_code=ctx.acting_role,
     )
     return PromptVersionSummary(
@@ -536,7 +541,7 @@ async def add_prompt_assignment(conn: AsyncConnection, version_id: UUID, prompt_
     p = await queries.get_prompt(conn, prompt_id=pv["prompt_id"])
     return PromptAssignment(
         executable_version_id=version_id, prompt_version_id=prompt_version_id,
-        prompt_name=p["name"], prompt_semver=pv["semver"],
+        prompt_id=pv["prompt_id"], prompt_name=p["name"], prompt_semver=pv["semver"],
         api_role_code=api_role_code, ordinal=ordinal,
     )
 
@@ -806,12 +811,15 @@ async def get_prompt_version_detail(conn: AsyncConnection, prompt_version_id: UU
     row = await queries.get_prompt_version(conn, prompt_version_id=prompt_version_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Prompt version not found")
+    raw_blocks = row["blocks"] if row["blocks"] is not None else []
+    typed_blocks = _block_list_adapter.validate_python(raw_blocks)
     return PromptVersionDetail(
         prompt_version_id=row["prompt_version_id"],
         prompt_id=row["prompt_id"],
         semver=row["semver"],
         content_hash=row["content_hash"],
-        blocks=row["blocks"] if row["blocks"] is not None else [],
+        blocks=typed_blocks,
+        compiled=compile_blocks(typed_blocks),
     )
 
 

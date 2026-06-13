@@ -1,6 +1,7 @@
 import { type KeyboardEvent, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '@/api/client'
+import { fmtTs } from '@/api/format'
 import type { PromptSummary } from '@/api/types'
 import { useRegistryScope } from '../RegistryContext'
 import '../RegistryLists.css'
@@ -80,6 +81,7 @@ export function PromptList() {
             <div className="log-table__header prompt-grid">
               <span className="eyebrow">Prompt</span>
               <span className="eyebrow">Versions</span>
+              <span className="eyebrow">Updated</span>
             </div>
             {shown.map((p) => (
               <div
@@ -99,6 +101,7 @@ export function PromptList() {
                   {p.description && <span className="reg-entity-desc">{p.description}</span>}
                 </div>
                 <span className="reg-count">{p.version_count}</span>
+                <span className="reg-entity-desc">{fmtTs(p.updated_at)}</span>
               </div>
             ))}
           </div>

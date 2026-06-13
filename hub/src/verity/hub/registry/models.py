@@ -1,10 +1,91 @@
 """Pydantic boundary models for the full entity registry (005)."""
 from __future__ import annotations
 
-from typing import Any, Literal
+from datetime import datetime
+from typing import Annotated, Any, Literal, Union
 from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
+
+
+# ── Prompt block schema (mirrors specs/ui/prompt-editor-architecture.md) ─────
+
+class ProseBlock(BaseModel):
+    id: str
+    kind: Literal["prose"]
+    text: str
+
+    def render(self) -> str:
+        return self.text
+
+
+class VarBlock(BaseModel):
+    id: str
+    kind: Literal["var"]
+    name: str
+    type: Literal["string", "number", "code", "enum", "boolean"]
+    desc: str
+    eg: str | None = None
+    opts: list[str] | None = None
+    req: bool = True
+
+    def render(self) -> str:
+        return f"{{{self.name}}}"
+
+
+class ListBlock(BaseModel):
+    id: str
+    kind: Literal["list"]
+    items: list[str]
+
+    def render(self) -> str:
+        return "\n".join(f"{i + 1}. {item}" for i, item in enumerate(self.items))
+
+
+class TableBlock(BaseModel):
+    id: str
+    kind: Literal["table"]
+    headers: list[str]
+    rows: list[list[str]]
+    caption: str | None = None
+
+    def render(self) -> str:
+        sep = "| " + " | ".join("---" for _ in self.headers) + " |"
+        header = "| " + " | ".join(self.headers) + " |"
+        body = "\n".join("| " + " | ".join(row) + " |" for row in self.rows)
+        parts = [header, sep, body]
+        if self.caption:
+            parts.append(f"*{self.caption}*")
+        return "\n".join(parts)
+
+
+class CodeBlock(BaseModel):
+    id: str
+    kind: Literal["code"]
+    lang: str
+    code: str
+    caption: str | None = None
+
+    def render(self) -> str:
+        lines = [f"```{self.lang}", self.code, "```"]
+        if self.caption:
+            lines.append(f"*{self.caption}*")
+        return "\n".join(lines)
+
+
+PromptBlock = Annotated[
+    Union[ProseBlock, VarBlock, ListBlock, TableBlock, CodeBlock],
+    Field(discriminator="kind"),
+]
+
+
+def compile_blocks(blocks: list[PromptBlock]) -> str:
+    """Compile a block list to a template string with {var} placeholders.
+
+    Pure function — same blocks always produce the same string.
+    Harness uses: compile_blocks(blocks).format(**run_context)
+    """
+    return "\n\n".join(b.render() for b in blocks)
 
 
 # ── Executables ───────────────────────────────────────────────────────────────
@@ -31,6 +112,7 @@ class ExecutableSummary(BaseModel):
     application_id: UUID | None = None
     application_code: str | None = None
     application_name: str | None = None
+    updated_at: datetime | None = None
 
 
 class Executable(BaseModel):
@@ -52,6 +134,7 @@ class ExecutableVersionSummary(BaseModel):
     lifecycle_stage: str | None = None
     governance_tier_code: str | None = None
     capability_type_code: str | None = None
+    created_at: datetime | None = None
 
 
 class ExecutableVersionDetail(BaseModel):
@@ -142,11 +225,12 @@ class PromptSummary(BaseModel):
     application_id: UUID | None = None
     application_code: str | None = None
     application_name: str | None = None
+    updated_at: datetime | None = None
 
 
 class CreatePromptVersion(BaseModel):
     semver: str
-    blocks: list[dict[str, Any]]
+    blocks: list[PromptBlock]
 
 
 class PromptVersionSummary(BaseModel):
@@ -154,6 +238,7 @@ class PromptVersionSummary(BaseModel):
     prompt_id: UUID
     semver: str
     content_hash: str
+    created_at: datetime | None = None
 
 
 # ── Tools ─────────────────────────────────────────────────────────────────────
@@ -177,6 +262,7 @@ class ToolSummary(BaseModel):
     application_id: UUID | None = None
     application_code: str | None = None
     application_name: str | None = None
+    updated_at: datetime | None = None
 
 
 class CreateToolVersion(BaseModel):
@@ -191,6 +277,7 @@ class ToolVersionSummary(BaseModel):
     tool_id: UUID
     semver: str
     data_classification_code: str | None = None
+    created_at: datetime | None = None
 
 
 # ── MCP Servers ───────────────────────────────────────────────────────────────
@@ -272,10 +359,12 @@ class CreatePromptAssignment(BaseModel):
 class PromptAssignment(BaseModel):
     executable_version_id: UUID
     prompt_version_id: UUID
+    prompt_id: UUID
     prompt_name: str
     prompt_semver: str
     api_role_code: str
     ordinal: int
+    created_at: datetime | None = None
 
 
 class CreateToolAssignment(BaseModel):
@@ -285,8 +374,10 @@ class CreateToolAssignment(BaseModel):
 class ToolAssignment(BaseModel):
     executable_version_id: UUID
     tool_version_id: UUID
+    tool_id: UUID
     tool_name: str
     tool_semver: str
+    created_at: datetime | None = None
 
 
 class CreateMcpAssignment(BaseModel):
@@ -419,7 +510,8 @@ class PromptVersionDetail(BaseModel):
     prompt_id: UUID
     semver: str
     content_hash: str
-    blocks: list[dict[str, Any]]
+    blocks: list[PromptBlock]
+    compiled: str = Field(description="Pre-compiled template string with {var} placeholders. Computed in the service layer; never stored in the database.")
 
 
 class ToolVersionDetail(BaseModel):

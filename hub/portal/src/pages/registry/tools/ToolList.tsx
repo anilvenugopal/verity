@@ -1,6 +1,7 @@
 import { type KeyboardEvent, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '@/api/client'
+import { fmtTs } from '@/api/format'
 import type { ToolSummary } from '@/api/types'
 import { useRegistryScope } from '../RegistryContext'
 import '../RegistryLists.css'
@@ -83,6 +84,7 @@ export function ToolList() {
               <span className="eyebrow">Tool</span>
               <span className="eyebrow">Transport</span>
               <span className="eyebrow">Write</span>
+              <span className="eyebrow">Updated</span>
             </div>
             {shown.map((t) => (
               <div
@@ -107,6 +109,7 @@ export function ToolList() {
                     ? <span className="chip chip--warn">Write</span>
                     : <span className="reg-count">—</span>}
                 </span>
+                <span className="reg-entity-desc">{fmtTs(t.updated_at)}</span>
               </div>
             ))}
           </div>

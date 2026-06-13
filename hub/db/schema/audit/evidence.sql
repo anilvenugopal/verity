@@ -15,7 +15,9 @@ CREATE TABLE audit.evidence (
     produced_by_actor_id   uuid       NOT NULL,                  -- AUTOMATION (auto-captured) or human (attested) — D6
     produced_role_code     text       NOT NULL,
     created_at             timestamptz NOT NULL DEFAULT now(),
-    CONSTRAINT pk_evidence PRIMARY KEY (evidence_id, created_at)
+    intake_id              uuid,                                 -- scope to intake obligation (migration 0004)
+    CONSTRAINT pk_evidence PRIMARY KEY (evidence_id, created_at),
+    CONSTRAINT fk_evidence_intake FOREIGN KEY (intake_id) REFERENCES core.intake (intake_id) ON DELETE CASCADE
 ) PARTITION BY RANGE (created_at);
 COMMENT ON TABLE audit.evidence IS
 'The compliance evidence FACT stream — the actual artifacts produced to satisfy controls, as opposed to evidence_specification (the spec). Each fact is tied to the pinned requirement/tier/phase and to what produced it (entity/run/decision), with a storage_ref to where the artifact lives. Tier-2, partitioned, soft refs to core; produced by an actor — automation for auto-captured, a human for attested (ADR-0008).
@@ -28,6 +30,7 @@ COMMENT ON TABLE audit.evidence IS
 @status reference.evidence_artifact_type
 @adr 0008';
 CREATE INDEX ix_evidence_requirement_time ON audit.evidence (canonical_requirement_id, created_at DESC);
+CREATE INDEX ix_evidence_intake ON audit.evidence (intake_id);
 CREATE INDEX brin_evidence_time ON audit.evidence USING brin (created_at);
 CREATE TABLE audit.evidence_2026_06 PARTITION OF audit.evidence FOR VALUES FROM ('2026-06-01') TO ('2026-07-01');
 CREATE TABLE audit.evidence_2026_07 PARTITION OF audit.evidence FOR VALUES FROM ('2026-07-01') TO ('2026-08-01');
@@ -59,3 +62,5 @@ COMMENT ON COLUMN audit.evidence.produced_role_code IS
 'The capacity it was produced under. @status reference.role';
 COMMENT ON COLUMN audit.evidence.created_at IS
 'When captured; the partition key.';
+COMMENT ON COLUMN audit.evidence.intake_id IS
+'Scopes this evidence fact to a specific intake obligation. Nullable — evidence may be unscoped. @ref core.intake hard';

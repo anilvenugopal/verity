@@ -2,8 +2,10 @@
 
 -- tool (agent-only at assignment time)
 CREATE TABLE core.tool (
-    tool_id uuid NOT NULL DEFAULT uuidv7(), name text NOT NULL, description text,
+    tool_id uuid NOT NULL DEFAULT uuidv7(), name text NOT NULL, display_name text, description text,
     transport_code text NOT NULL,
+    is_write_operation boolean NOT NULL DEFAULT false,
+    application_id uuid,
     created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
     created_by_actor_id uuid NOT NULL, created_role_code text NOT NULL,
     CONSTRAINT pk_tool PRIMARY KEY (tool_id),
@@ -11,6 +13,7 @@ CREATE TABLE core.tool (
     CONSTRAINT fk_tool_created_by FOREIGN KEY (created_by_actor_id) REFERENCES core.actor (actor_id),
     CONSTRAINT fk_tool_created_role FOREIGN KEY (created_role_code) REFERENCES reference.role (code),
     CONSTRAINT uq_tool_name UNIQUE (name));
+CREATE UNIQUE INDEX uq_tool_app_display ON core.tool (application_id, display_name) WHERE application_id IS NOT NULL;
 COMMENT ON TABLE core.tool IS
 'A reusable tool component an agent may call (agent-only at assignment time). Versioned config lives in tool_version; the tool itself has no lifecycle (D5).
 
@@ -22,7 +25,11 @@ COMMENT ON TABLE core.tool IS
 COMMENT ON COLUMN core.tool.tool_id IS
 'Identity of the tool.';
 COMMENT ON COLUMN core.tool.name IS
-'Human name; unique.';
+'Technical name; unique.';
+COMMENT ON COLUMN core.tool.display_name IS
+'Human-readable label shown in the UI.';
+COMMENT ON COLUMN core.tool.is_write_operation IS
+'True when this tool mutates external state; governs trust/audit requirements.';
 COMMENT ON COLUMN core.tool.description IS
 'What the tool does.';
 COMMENT ON COLUMN core.tool.transport_code IS

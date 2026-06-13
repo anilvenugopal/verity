@@ -96,6 +96,7 @@ SET search_path = core, reference, audit, public;
 \i core/account_user.sql
 \i core/automation_actor.sql
 \i core/actor_role_grant.sql
+\i core/actor_preferences.sql
 \i core/current_actor_role.sql
 \i core/executable.sql
 \i core/inference_config.sql
@@ -111,6 +112,7 @@ SET search_path = core, reference, audit, public;
 \i core/executable_prompt_assignment.sql
 \i core/executable_tool_assignment.sql
 \i core/executable_mcp_assignment.sql
+\i core/executable_version_delegation.sql
 \i core/source_binding.sql
 \i core/target_binding.sql
 \i core/lifecycle_event.sql
@@ -119,6 +121,7 @@ SET search_path = core, reference, audit, public;
 \i core/entity_champion_current.sql
 \i core/approval_request.sql
 \i core/approval_signoff.sql
+\i core/change_proposal_asset.sql
 \i core/application.sql
 \i core/intake.sql
 \i core/intake_requirement.sql

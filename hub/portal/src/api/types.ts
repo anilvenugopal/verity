@@ -230,6 +230,7 @@ export interface Executable {
   application_id?: string | null
   application_code?: string | null
   application_name?: string | null
+  updated_at?: string | null
 }
 
 export interface IntakeLink {
@@ -247,6 +248,7 @@ export interface ExecutableVersion {
   trust_level_code?: string | null
   data_classification_code?: string | null
   inference_config_id?: string | null
+  created_at?: string | null
 }
 
 // ── Registry 005 types ─────────────────────────────────────────────────────────
@@ -261,20 +263,24 @@ export interface PromptSummary {
   application_id?: string | null
   application_code?: string | null
   application_name?: string | null
+  updated_at?: string | null
 }
 export interface PromptVersionSummary {
   prompt_version_id: string
   prompt_id: string
   semver: string
   content_hash: string
+  created_at?: string | null
 }
 export interface PromptAssignment {
   executable_version_id: string
   prompt_version_id: string
+  prompt_id: string
   prompt_name: string
   prompt_semver: string
   api_role_code: string
   ordinal: number
+  created_at?: string | null
 }
 export interface ToolSummary {
   tool_id: string
@@ -287,18 +293,22 @@ export interface ToolSummary {
   application_id?: string | null
   application_code?: string | null
   application_name?: string | null
+  updated_at?: string | null
 }
 export interface ToolVersionSummary {
   tool_version_id: string
   tool_id: string
   semver: string
   data_classification_code?: string | null
+  created_at?: string | null
 }
 export interface ToolAssignment {
   executable_version_id: string
   tool_version_id: string
+  tool_id: string
   tool_name: string
   tool_semver: string
+  created_at?: string | null
 }
 export interface McpAssignment {
   executable_version_id: string
@@ -375,12 +385,22 @@ export interface IntakeAssetLink {
   kind_code: string
   top_stage: string | null
 }
+export type PromptBlockKind = 'prose' | 'var' | 'list' | 'table' | 'code'
+export interface PromptBlockBase { id: string; kind: PromptBlockKind }
+export interface ProseBlock extends PromptBlockBase { kind: 'prose'; text: string }
+export interface VarBlock   extends PromptBlockBase { kind: 'var';   name: string; type: string; desc: string; eg?: string | null; opts?: string[] | null; req: boolean }
+export interface ListBlock  extends PromptBlockBase { kind: 'list';  items: string[] }
+export interface TableBlock extends PromptBlockBase { kind: 'table'; headers: string[]; rows: string[][]; caption?: string | null }
+export interface CodeBlock  extends PromptBlockBase { kind: 'code';  lang: string; code: string; caption?: string | null }
+export type PromptBlock = ProseBlock | VarBlock | ListBlock | TableBlock | CodeBlock
+
 export interface PromptVersionDetail {
   prompt_version_id: string
   prompt_id: string
   semver: string
   content_hash: string
-  blocks: Array<{ type: string; text?: string; [key: string]: unknown }>
+  blocks: PromptBlock[]
+  compiled: string  // pre-compiled template string with {var} placeholders
 }
 export interface ToolVersionDetail {
   tool_version_id: string

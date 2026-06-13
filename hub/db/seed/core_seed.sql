@@ -1,18 +1,115 @@
--- 0003_compliance_metamodel.sql — the governed compliance metamodel seed (feature 003, T003).
--- The source of truth for obligation resolution (Principle VIII): provisions → canonical requirements
--- (cumulative tier ladders) → controls (4 phases) → evidence specs. 28 canonical requirements across
--- all 9 governance domains. Reviewed content: specs/003-intake-depth-loop/metamodel-seed-draft.md.
--- Citations validated (SR 26-2 governing; EU Art 50; CO §10-3-1104.9). Idempotent via WHERE NOT EXISTS.
--- All controls are SMART (actor + measurable threshold + phase + cadence + enforcement + typed evidence).
+-- =====================================================================
+-- seed/core_seed.sql — Verity v2 core data-driven config (seed)
+-- Apply AFTER verity_schema.sql + reference_seed.sql. Idempotent. ADR-0011/0006.
+-- =====================================================================
+
+INSERT INTO core.lifecycle_deployment_rule (lifecycle_state_code, environment_kind_code, allowed_run_modes, output_suppressed) VALUES
+    ('staging',   'non_prod',  ARRAY['live'],            false),
+    ('challenger','prod',      ARRAY['shadow','ab'],     false),
+    ('challenger','ephemeral', ARRAY['shadow','ab'],     false),
+    ('champion',  'prod',      ARRAY['live'],            false),
+    ('champion',  'non_prod',  ARRAY['live'],            false),
+    ('champion',  'ephemeral', ARRAY['live','shadow'],   false),
+    ('deprecated','prod',      ARRAY['locked'],          true),
+    ('deprecated','ephemeral', ARRAY['locked','shadow'], true)
+    ON CONFLICT (lifecycle_state_code, environment_kind_code) DO NOTHING;
+
+-- Regulatory frameworks an application may declare in scope (FR-IN-017). Starter set; extensible.
+-- 'internal_only' / 'nist_ai_rmf' serve as the explicit "no external regime" sentinels (D-ONB).
+INSERT INTO core.regulatory_framework (framework_code, name, authority) VALUES
+    ('nist_ai_rmf','NIST AI Risk Management Framework','NIST'),
+    ('naic_model_bulletin_ai','NAIC Model Bulletin on the Use of AI Systems by Insurers','NAIC'),
+    ('colorado_sb21_169','Colorado SB21-169 (Insurance Anti-Discrimination)','Colorado DOI'),
+    ('eu_ai_act','EU AI Act','European Union'),
+    ('nydfs','NYDFS guidance','NY Dept of Financial Services'),
+    ('iso_42001','ISO/IEC 42001 (AI Management System)','ISO/IEC'),
+    ('internal_only','Internal governance only (no external regime)','Internal')
+    ON CONFLICT (framework_code) DO NOTHING;
+
+-- -------------------------------------------------------------------------
+-- Model catalog seed (ADR-0019 / design decision D10)
+-- Standard Anthropic models, stable logical references, and initial bindings.
+-- Apply AFTER reference_seed.sql (reference.model_status, reference.role,
+-- reference.actor_type must exist).
+-- -------------------------------------------------------------------------
+
+-- Bootstrap automation actor for seed-time operations (NULL created_by_actor_id
+-- is the only valid nil; see core.actor schema comment).
+INSERT INTO core.actor (actor_id, actor_type_code, display_name, primary_role_code, created_by_actor_id) VALUES
+    ('00000000-0000-0000-0000-000000000001'::uuid, 'automation', 'Verity Seed', 'ai_governance', NULL)
+    ON CONFLICT (actor_id) DO NOTHING;
+
+-- Provider models (current Anthropic Claude 4 family)
+INSERT INTO core.model (model_code, provider, modality, model_status_code) VALUES
+    ('claude-opus-4-8',   'anthropic', 'chat', 'active'),
+    ('claude-sonnet-4-6', 'anthropic', 'chat', 'active'),
+    ('claude-haiku-4-5',  'anthropic', 'chat', 'active')
+    ON CONFLICT (model_code) DO NOTHING;
+
+-- Standard logical model references (stable aliases; executables point at these,
+-- not at concrete model strings — see ADR-0019 and design decision D10).
+INSERT INTO core.model_reference (reference_code, name, description) VALUES
+    ('reasoning-primary',     'Reasoning Primary',      'Default for agentic / assessment tasks'),
+    ('reasoning-fallback',    'Reasoning Fallback',     'Fallback for reasoning tasks'),
+    ('extraction-primary',    'Extraction Primary',     'Lighter tasks, higher throughput'),
+    ('extraction-fallback',   'Extraction Fallback',    'Fallback for extraction tasks'),
+    ('classification-primary','Classification Primary', 'Classification, low-latency')
+    ON CONFLICT (reference_code) DO NOTHING;
+
+-- Initial model_reference_binding rows — one open SCD-2 window per reference.
+-- Operators close and re-open these via POST /api/registry/model-references/:id/bind
+-- without requiring re-promotion of any executable.
+INSERT INTO core.model_reference_binding
+    (model_reference_id, model_id, valid_from, valid_to, reason, bound_by_actor_id, bound_role_code)
+SELECT
+    mr.model_reference_id,
+    m.model_id,
+    now(),
+    '2099-12-31 00:00:00+00'::timestamptz,
+    'initial seed',
+    '00000000-0000-0000-0000-000000000001'::uuid,
+    'ai_governance'
+FROM (VALUES
+    ('reasoning-primary',     'claude-opus-4-8'),
+    ('reasoning-fallback',    'claude-sonnet-4-6'),
+    ('extraction-primary',    'claude-sonnet-4-6'),
+    ('extraction-fallback',   'claude-haiku-4-5'),
+    ('classification-primary','claude-haiku-4-5')
+) AS seed(ref_code, model_code)
+JOIN core.model_reference mr ON mr.reference_code = seed.ref_code
+JOIN core.model            m  ON m.model_code      = seed.model_code
+ON CONFLICT DO NOTHING;
+
+-- Initial model prices (open SCD-2 window). Input/output per 1k tokens, USD.
+-- These are June 2025 list prices; operators update via POST /api/registry/models/:id/prices.
+INSERT INTO core.model_price (model_id, input_price_per_1k, output_price_per_1k, currency_code)
+SELECT m.model_id, seed.input_p, seed.output_p, 'usd'
+FROM (VALUES
+    ('claude-opus-4-8',   15.00,  75.00),
+    ('claude-sonnet-4-6',  3.00,  15.00),
+    ('claude-haiku-4-5',   0.80,   4.00)
+) AS seed(model_code, input_p, output_p)
+JOIN core.model m ON m.model_code = seed.model_code
+WHERE NOT EXISTS (
+    SELECT 1 FROM core.model_price p
+    WHERE p.model_id = m.model_id AND p.valid_to = '2099-12-31 00:00:00+00'
+);
+
+-- =========================================================================
+-- Compliance metamodel (feature 003, T003) — governed source of truth.
+-- Provisions → canonical requirements → tier ladders → controls → evidence.
+-- 28 canonical requirements across all governance domains. Idempotent.
+-- Citations validated (SR 26-2 governing; EU Art 50; CO §10-3-1104.9).
+-- =========================================================================
 SET search_path TO core, reference, public;
 
--- ── Frameworks missing from core_seed (gdpr, sr_26_2) ─────────────────────────────────────────────
+-- Extra frameworks not in the starter set above
 INSERT INTO core.regulatory_framework (framework_code, name, authority) VALUES
   ('gdpr',   'General Data Protection Regulation (EU) 2016/679', 'European Union'),
   ('sr_26_2','Revised Guidance on Model Risk Management (SR 26-2; basis SR 11-7)', 'Federal Reserve / OCC / FDIC')
 ON CONFLICT (framework_code) DO NOTHING;
 
--- ── Regulatory provisions (citable sources) ───────────────────────────────────────────────────────
+-- Regulatory provisions (citable sources)
 INSERT INTO core.regulatory_provision (provision_code, framework_code, citation, jurisdiction, text)
 SELECT v.code, v.fw, v.cite, v.juris, v.txt FROM (VALUES
   ('sr262-validation','sr_26_2','SR 26-2 (basis SR 11-7) — Model Validation','US','Three core elements: conceptual soundness, ongoing monitoring, outcomes analysis/back-testing.'),
@@ -53,7 +150,7 @@ SELECT v.code, v.fw, v.cite, v.juris, v.txt FROM (VALUES
 ) AS v(code,fw,cite,juris,txt)
 WHERE NOT EXISTS (SELECT 1 FROM core.regulatory_provision p WHERE p.provision_code = v.code AND p.valid_to = '2099-12-31 00:00:00+00');
 
--- ── Canonical requirements (the de-duplicated center; one governance domain each) ─────────────────
+-- Canonical requirements (one governance domain each)
 INSERT INTO core.canonical_requirement (requirement_code, governance_domain_code, title, text)
 SELECT v.code, v.dom, v.title, v.txt FROM (VALUES
   ('mr-model-risk-rating','model_risk','Per-model risk rating','A per-model risk rating (materiality × complexity × breadth) selects the applicable control tier.'),
@@ -87,7 +184,7 @@ SELECT v.code, v.dom, v.title, v.txt FROM (VALUES
 ) AS v(code,dom,title,txt)
 WHERE NOT EXISTS (SELECT 1 FROM core.canonical_requirement c WHERE c.requirement_code = v.code AND c.valid_to = '2099-12-31 00:00:00+00');
 
--- ── Requirement tier ladders (cumulative: tier N ⇒ 1..N) ─────────────────────────────────────────
+-- Requirement tier ladders (cumulative: tier N ⇒ 1..N)
 INSERT INTO core.requirement_tier (requirement_id, tier_level, title, criteria)
 SELECT cr.requirement_id, v.lvl, v.title, v.criteria FROM (VALUES
   ('mr-model-risk-rating',1,'Risk rating assigned','Per-model risk rating recorded at design-time; selects the tier.'),
@@ -137,7 +234,7 @@ SELECT cr.requirement_id, v.lvl, v.title, v.criteria FROM (VALUES
 JOIN core.canonical_requirement cr ON cr.requirement_code = v.rcode AND cr.valid_to = '2099-12-31 00:00:00+00'
 WHERE NOT EXISTS (SELECT 1 FROM core.requirement_tier rt WHERE rt.requirement_id = cr.requirement_id AND rt.tier_level = v.lvl AND rt.valid_to = '2099-12-31 00:00:00+00');
 
--- ── Controls (one per requirement-tier; SMART; phase/type/enforcement) ────────────────────────────
+-- Controls (one per requirement-tier; SMART; phase/type/enforcement)
 INSERT INTO core.control (control_code, title, control_phase_code, control_type_code, enforcement_action_code, description)
 SELECT v.code, v.title, v.phase, v.ctype, v.enforce, v.descr FROM (VALUES
   ('ctl-mr-rating','Assign per-model risk rating','design_time','directive','block','Owner assigns materiality×complexity rating; selects control tier.'),
@@ -186,7 +283,7 @@ SELECT v.code, v.title, v.phase, v.ctype, v.enforce, v.descr FROM (VALUES
 ) AS v(code,title,phase,ctype,enforce,descr)
 WHERE NOT EXISTS (SELECT 1 FROM core.control c WHERE c.control_code = v.code AND c.valid_to = '2099-12-31 00:00:00+00');
 
--- ── requirement_control: bind each tier to its control ────────────────────────────────────────────
+-- requirement_control: bind each tier to its control
 INSERT INTO core.requirement_control (requirement_tier_id, control_id)
 SELECT rt.requirement_tier_id, c.control_id FROM (VALUES
   ('mr-model-risk-rating',1,'ctl-mr-rating'),
@@ -223,7 +320,7 @@ JOIN core.requirement_tier rt ON rt.requirement_id = cr.requirement_id AND rt.ti
 JOIN core.control c ON c.control_code = v.ccode AND c.valid_to = '2099-12-31 00:00:00+00'
 WHERE NOT EXISTS (SELECT 1 FROM core.requirement_control rc WHERE rc.requirement_tier_id = rt.requirement_tier_id AND rc.control_id = c.control_id AND rc.valid_to = '2099-12-31 00:00:00+00');
 
--- ── evidence_specification: the artifact that proves each control ─────────────────────────────────
+-- evidence_specification: the artifact that proves each control
 INSERT INTO core.evidence_specification (control_id, evidence_artifact_type_code, produced_by, citable_as)
 SELECT c.control_id, v.atype, v.producedby, v.citable FROM (VALUES
   ('ctl-mr-rating','config_snapshot','model owner','Model risk rating'),
@@ -273,7 +370,7 @@ SELECT c.control_id, v.atype, v.producedby, v.citable FROM (VALUES
 JOIN core.control c ON c.control_code = v.ccode AND c.valid_to = '2099-12-31 00:00:00+00'
 WHERE NOT EXISTS (SELECT 1 FROM core.evidence_specification es WHERE es.control_id = c.control_id AND es.evidence_artifact_type_code = v.atype AND es.valid_to = '2099-12-31 00:00:00+00');
 
--- ── provision_requirement: map provisions → canonical requirements (by minimum tier) ──────────────
+-- provision_requirement: map provisions → canonical requirements (by minimum tier)
 INSERT INTO core.provision_requirement (provision_id, requirement_id, min_tier_level)
 SELECT p.provision_id, cr.requirement_id, v.mintier FROM (VALUES
   ('sr262-rating','mr-model-risk-rating',1),('naic-governance','mr-model-risk-rating',1),

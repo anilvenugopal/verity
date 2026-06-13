@@ -36,8 +36,6 @@ export function PromptVersionDetail() {
     hint: v.content_hash.slice(0, 8),
   }))
 
-  const textBlocks = detail?.blocks?.filter((b) => b.text != null) ?? []
-
   return (
     <div className="canvas-pad">
       <div className="page-head">
@@ -60,17 +58,13 @@ export function PromptVersionDetail() {
       </div>
 
       <section className="section">
-        <div className="section__head"><span className="eyebrow">Content</span></div>
+        <div className="section__head"><span className="eyebrow">Compiled template</span></div>
         {!detail ? (
           <p className="input-hint">Loading…</p>
-        ) : textBlocks.length === 0 ? (
-          <p className="input-hint">No text blocks.</p>
+        ) : !detail.compiled ? (
+          <p className="input-hint">No content.</p>
         ) : (
-          textBlocks.map((b, i) => (
-            <pre key={i} className="code-block" style={{ marginBottom: i < textBlocks.length - 1 ? 'var(--space-2)' : 0 }}>
-              {String(b.text ?? '')}
-            </pre>
-          ))
+          <pre className="code-block">{detail.compiled}</pre>
         )}
       </section>
 

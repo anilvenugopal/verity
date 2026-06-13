@@ -76,7 +76,7 @@ def test_register_executable_and_duplicate(client):
 def test_create_prompt_version_content_hash(client):
     p = client.post("/prompts", json={"name": "uw-system-prompt-005", "display_name": "UW System Prompt 005"}).json()
     assert "prompt_id" in p
-    blocks = [{"type": "text", "content": "You are an underwriting assistant."}]
+    blocks = [{"id": "s1", "kind": "prose", "text": "You are an underwriting assistant."}]
     pv = client.post(f"/prompts/{p['prompt_id']}/versions",
                       json={"semver": "1.0.0", "blocks": blocks}).json()
     assert pv["content_hash"] != ""
@@ -135,7 +135,7 @@ def test_promote_v1_to_champion(client):
                       json={"semver": "1.0.0"}).json()
     p = client.post("/prompts", json={"name": "champ-prompt-005", "display_name": "Champ Prompt 005"}).json()
     pv = client.post(f"/prompts/{p['prompt_id']}/versions",
-                      json={"semver": "1.0.0", "blocks": [{"type": "text", "content": "hello"}]}).json()
+                      json={"semver": "1.0.0", "blocks": [{"id": "s1", "kind": "prose", "text": "hello"}]}).json()
     client.post(f"/versions/{v1['executable_version_id']}/prompt-assignments",
                  json={"prompt_version_id": pv["prompt_version_id"], "api_role_code": "system"})
     r = client.post(f"/versions/{v1['executable_version_id']}/promote")
@@ -152,7 +152,7 @@ def test_promote_v2_replaces_v1(client):
                       json={"semver": "1.0.0"}).json()
     p = client.post("/prompts", json={"name": "champ2-prompt-005", "display_name": "Champ2 Prompt 005"}).json()
     pv = client.post(f"/prompts/{p['prompt_id']}/versions",
-                      json={"semver": "1.0.0", "blocks": [{"type": "text", "content": "hi"}]}).json()
+                      json={"semver": "1.0.0", "blocks": [{"id": "s1", "kind": "prose", "text": "hi"}]}).json()
     client.post(f"/versions/{v1['executable_version_id']}/prompt-assignments",
                  json={"prompt_version_id": pv["prompt_version_id"], "api_role_code": "system"})
     before_v2 = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
@@ -176,7 +176,7 @@ def test_champion_as_of(client):
                       json={"semver": "1.0.0"}).json()
     p = client.post("/prompts", json={"name": "asof-prompt-005", "display_name": "Asof Prompt 005"}).json()
     pv = client.post(f"/prompts/{p['prompt_id']}/versions",
-                      json={"semver": "1.0.0", "blocks": [{"type": "text", "content": "x"}]}).json()
+                      json={"semver": "1.0.0", "blocks": [{"id": "s1", "kind": "prose", "text": "x"}]}).json()
     client.post(f"/versions/{v1['executable_version_id']}/prompt-assignments",
                  json={"prompt_version_id": pv["prompt_version_id"], "api_role_code": "system"})
     client.post(f"/versions/{v1['executable_version_id']}/promote")
@@ -253,7 +253,7 @@ def test_yaml_round_trip(client, app_id):
 
     p = client.post("/prompts", json={"name": "yaml-prompt-005", "display_name": "YAML Prompt 005", "application_id": app_id}).json()
     pv = client.post(f"/prompts/{p['prompt_id']}/versions",
-                      json={"semver": "1.0.0", "blocks": [{"type": "text", "content": "export test"}]}).json()
+                      json={"semver": "1.0.0", "blocks": [{"id": "s1", "kind": "prose", "text": "export test"}]}).json()
     client.post(f"/versions/{vid}/prompt-assignments",
                  json={"prompt_version_id": pv["prompt_version_id"], "api_role_code": "system"})
 
@@ -277,7 +277,7 @@ def test_yaml_round_trip(client, app_id):
 def test_where_used_prompt_version(client):
     p = client.post("/prompts", json={"name": "used-prompt-005", "display_name": "Used Prompt 005"}).json()
     pv = client.post(f"/prompts/{p['prompt_id']}/versions",
-                      json={"semver": "1.0.0", "blocks": [{"type": "text", "content": "used"}]}).json()
+                      json={"semver": "1.0.0", "blocks": [{"id": "s1", "kind": "prose", "text": "used"}]}).json()
 
     ex = client.post("/executables", json={"name": "user-agent-005", "display_name": "User Agent 005", "kind_code": "agent"}).json()
     v = client.post(f"/executables/{ex['executable_id']}/versions",

@@ -39,7 +39,9 @@ CREATE TABLE core.executable (
     executable_id       uuid        NOT NULL DEFAULT uuidv7(),
     kind_code           text        NOT NULL,                 -- agent | task | (future) -> reference.executable_kind
     name                text        NOT NULL,
+    display_name        text,
     description         text,
+    application_id      uuid,
     created_at          timestamptz  NOT NULL DEFAULT now(),
     updated_at          timestamptz  NOT NULL DEFAULT now(),
     created_by_actor_id uuid        NOT NULL,
@@ -56,6 +58,7 @@ CREATE TABLE core.executable (
     CONSTRAINT uq_executable_id_kind UNIQUE (executable_id, kind_code),
     CONSTRAINT ck_executable_name_not_blank CHECK (length(btrim(name)) > 0)
 );
+CREATE UNIQUE INDEX uq_executable_app_kind_display ON core.executable (application_id, kind_code, display_name) WHERE application_id IS NOT NULL;
 COMMENT ON TABLE core.executable IS
 'The supertype for everything the harness governs and runs: the versioned, promotable unit. Today two kinds — agent (multi-step, may use tools/MCP) and task (single LLM step) — but the kind is data (reference.executable_kind), so a new kind is added by inserting a reference row, not by changing lifecycle, champion, or deploy. Prompts, tools, connectors and MCP servers are NOT executables; they are reusable components used inside a version (D5).
 
@@ -69,7 +72,11 @@ COMMENT ON COLUMN core.executable.executable_id IS
 COMMENT ON COLUMN core.executable.kind_code IS
 'agent or task (or a future kind) — the discriminator, kept as data so new kinds need no structural change. @status reference.executable_kind';
 COMMENT ON COLUMN core.executable.name IS
-'Human name; unique within a kind.';
+'Technical name; unique within a kind.';
+COMMENT ON COLUMN core.executable.display_name IS
+'Human-readable label shown in the UI.';
+COMMENT ON COLUMN core.executable.application_id IS
+'Owning application. @ref core.application hard';
 COMMENT ON COLUMN core.executable.description IS
 'Free-text description of the executable.';
 COMMENT ON COLUMN core.executable.created_at IS

@@ -27,3 +27,12 @@ ALTER TABLE core.intake_cost_envelope
     ADD CONSTRAINT fk_intake_cost_currency FOREIGN KEY (currency_code) REFERENCES reference.currency (code);
 ALTER TABLE core.execution_run
     ADD CONSTRAINT fk_execution_run_run_mode FOREIGN KEY (deployment_run_mode_code) REFERENCES reference.deployment_run_mode (code);
+ALTER TABLE core.executable
+    ADD CONSTRAINT fk_executable_application
+    FOREIGN KEY (application_id) REFERENCES core.application (application_id) ON DELETE RESTRICT;
+ALTER TABLE core.prompt
+    ADD CONSTRAINT fk_prompt_application
+    FOREIGN KEY (application_id) REFERENCES core.application (application_id) ON DELETE RESTRICT;
+ALTER TABLE core.tool
+    ADD CONSTRAINT fk_tool_application
+    FOREIGN KEY (application_id) REFERENCES core.application (application_id) ON DELETE RESTRICT;

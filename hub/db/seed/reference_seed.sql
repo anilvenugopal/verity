@@ -355,6 +355,12 @@ INSERT INTO reference.source_kind (code, label, sort_order) VALUES
     ('inline_content','Inline Content',4)
     ON CONFLICT (code) DO NOTHING;
 
+INSERT INTO reference.target_kind (code, label, sort_order) VALUES
+    ('storage_object','Storage Object',1),
+    ('task_output','Task Output',2),
+    ('structured','Structured',3)
+    ON CONFLICT (code) DO NOTHING;
+
 INSERT INTO reference.tolerance_unit (code,label,sort_order) VALUES ('percent','Percent',1),('absolute','Absolute',2)
     ON CONFLICT (code) DO NOTHING;
 

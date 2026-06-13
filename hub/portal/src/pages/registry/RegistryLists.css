@@ -1,28 +1,28 @@
 /* Registry list pages — page-local composition following ApplicationsList.css / UseCasesList.css.
    Reuses canonical .log-table/.log-row/.search-field/.eyebrow/.chip/.badge + shared page.css. */
 
-/* Executables (agents + tasks): Name+desc | Champion | Tier | Capability | Count */
+/* Executables (agents + tasks): Name+desc | Champion | Tier | Capability | Count | Updated */
 .exe-grid {
   display: grid;
-  grid-template-columns: 1fr 130px 120px 120px 60px;
+  grid-template-columns: 1fr 130px 120px 120px 60px 150px;
   gap: var(--space-4);
   align-items: center;
   padding: 11px 16px;
 }
 
-/* Prompts: Name+desc | Versions */
+/* Prompts: Name+desc | Versions | Updated */
 .prompt-grid {
   display: grid;
-  grid-template-columns: 1fr 70px;
+  grid-template-columns: 1fr 70px 150px;
   gap: var(--space-4);
   align-items: center;
   padding: 11px 16px;
 }
 
-/* Tools: Name+desc | Transport | Write-op */
+/* Tools: Name+desc | Transport | Write-op | Updated */
 .tool-grid {
   display: grid;
-  grid-template-columns: 1fr 150px 60px;
+  grid-template-columns: 1fr 150px 60px 150px;
   gap: var(--space-4);
   align-items: center;
   padding: 11px 16px;

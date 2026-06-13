@@ -1,6 +1,7 @@
 import { type KeyboardEvent, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '@/api/client'
+import { fmtTs } from '@/api/format'
 import type { Executable } from '@/api/types'
 import { useRegistryScope } from '../RegistryContext'
 import '../RegistryLists.css'
@@ -85,6 +86,7 @@ export function AgentList() {
               <span className="eyebrow">Tier</span>
               <span className="eyebrow">Capability</span>
               <span className="eyebrow">Ver</span>
+              <span className="eyebrow">Updated</span>
             </div>
             {shown.map((a) => (
               <div
@@ -111,6 +113,7 @@ export function AgentList() {
                 <span className="reg-entity-desc">{a.champion_governance_tier_code ?? '—'}</span>
                 <span className="reg-entity-desc">{a.champion_capability_type_code ?? '—'}</span>
                 <span className="reg-count">{a.version_count}</span>
+                <span className="reg-entity-desc">{fmtTs(a.updated_at)}</span>
               </div>
             ))}
           </div>

@@ -6,6 +6,7 @@ CREATE TABLE core.model (
     provider            text        NOT NULL,
     modality            text        NOT NULL DEFAULT 'chat',
     model_status_code   text        NOT NULL DEFAULT 'active',
+    context_window      integer,
     created_at          timestamptz  NOT NULL DEFAULT now(),
     updated_at          timestamptz  NOT NULL DEFAULT now(),
     CONSTRAINT pk_model PRIMARY KEY (model_id),
@@ -28,6 +29,8 @@ COMMENT ON COLUMN core.model.modality IS
 'Model modality, e.g. chat.';
 COMMENT ON COLUMN core.model.model_status_code IS
 'Lifecycle status of the model in the registry. @status reference.model_status';
+COMMENT ON COLUMN core.model.context_window IS
+'Maximum context window in tokens for this model. Nullable — unknown for legacy rows.';
 COMMENT ON COLUMN core.model.created_at IS
 'When registered.';
 COMMENT ON COLUMN core.model.updated_at IS
