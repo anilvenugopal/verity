@@ -49,7 +49,11 @@ export const NAV: NavNode[] = [
   {
     key: 'registry', kind: 'app', label: 'Registry', desc: 'Entities & versions', icon: 'i-app-registry', to: '/registry',
     children: [
-      { key: 'reg-assets', kind: 'page', label: 'Assets', icon: 'i-app-registry', to: '/registry', section: 'Registry' },
+      { key: 'reg-agents',  kind: 'page', label: 'Agents',  icon: 'i-entity-agent',  to: '/registry/agents',  count: { provider: 'reg-agents',  cap: 99 } },
+      { key: 'reg-tasks',   kind: 'page', label: 'Tasks',   icon: 'i-entity-task',   to: '/registry/tasks',   count: { provider: 'reg-tasks',   cap: 99 } },
+      { key: 'reg-prompts', kind: 'page', label: 'Prompts', icon: 'i-entity-prompt', to: '/registry/prompts', count: { provider: 'reg-prompts', cap: 99 } },
+      { key: 'reg-tools',   kind: 'page', label: 'Tools',   icon: 'i-lib-tools',     to: '/registry/tools',   count: { provider: 'reg-tools',   cap: 99 } },
+      { key: 'reg-models',  kind: 'page', label: 'Models',  icon: 'i-lib-inference', to: '/registry/models',  count: { provider: 'reg-models',  cap: 99 } },
     ],
   },
   { key: 'observability', kind: 'app', label: 'Observability', desc: 'Runs & traces', icon: 'i-app-observability' },

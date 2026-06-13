@@ -27,6 +27,11 @@ export const HELP_PAGES: HelpPageEntry[] = [
   { path: 'how-to.resolve-obligations',    title: 'Resolve Obligations',        subtitle: 'Record evidence and raise exceptions', group: 'How-To' },
   { path: 'how-to.advance-registry-asset', title: 'Advance a Registry Asset',  subtitle: 'From draft to champion via the lifecycle', group: 'How-To' },
   { path: 'how-to.raise-change-proposal',  title: 'Raise a Change Proposal',   subtitle: 'Risk reclassification and business changes', group: 'How-To' },
+  // Registry 005
+  { path: 'how-to.registry-entity-types',   title: 'Registry Entity Types',   subtitle: 'Agents, tasks, prompts, tools, and models — what they are', group: 'Reference' },
+  { path: 'how-to.registry-compose',        title: 'Composing an Agent',       subtitle: 'Assign prompts, tools, and MCP servers to a version', group: 'Forms' },
+  { path: 'how-to.registry-full-lifecycle', title: 'Full Registry Lifecycle',  subtitle: 'Draft → candidate → challenger → champion', group: 'Workflows' },
+  { path: 'how-to.registry-navigate',       title: 'Navigating the Registry',  subtitle: 'Find agents, tasks, prompts, tools, and models', group: 'How-To' },
   // Roles
   { path: 'roles.overview',    title: 'Roles Overview',     subtitle: 'All roles and separation of duty', group: 'Roles' },
   { path: 'roles.underwriter', title: 'Underwriter',        subtitle: 'Assess use cases; submit and sign off on approvals', group: 'Roles' },

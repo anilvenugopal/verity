@@ -1,5 +1,6 @@
 import { type FormEvent, Fragment, useCallback, useEffect, useState } from 'react'
 import { api } from '@/api/client'
+import { fmtDate } from '@/api/format'
 import { useSession } from '@/auth/useSession'
 import { useToast } from '@/shell/useToast'
 import type { Executable, ExceptionListItem, IntakeAssetLink, ObligationSet } from '@/api/types'
@@ -126,7 +127,7 @@ export function RiskObligations({ intakeId, revisable }: { intakeId: string; rev
               <Fragment key={x.compliance_exception_id}>
                 <span className="kv__k">{x.requirement_code}<div className="u-text-tertiary">tier {x.waived_tier_level}</div></span>
                 <span className="kv__v">
-                  <span className="chip chip--static">{x.exception_status_code}</span> <span className="u-text-tertiary">expires {new Date(x.expires_at).toLocaleDateString()}</span>
+                  <span className="chip chip--static">{x.exception_status_code}</span> <span className="u-text-tertiary">expires {fmtDate(x.expires_at)}</span>
                   <div className="u-text-tertiary">{x.rationale}</div>
                   {x.exception_status_code === 'requested' && canApprove && principal?.actor_id !== x.opened_by_actor_id && (
                     <div className="l-cluster">

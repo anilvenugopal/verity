@@ -2,9 +2,11 @@ import { type KeyboardEvent, useCallback, useEffect, useRef, useState } from 're
 import { useLocation, useNavigate } from 'react-router-dom'
 import { api } from '@/api/client'
 import { onDataChanged } from '@/api/events'
-import type { Application, AwaitingApproval, IntakeListItem } from '@/api/types'
+import type { Application, AwaitingApproval, Executable, IntakeListItem, ModelSummary, PromptSummary, ToolSummary } from '@/api/types'
 import { useSession } from '@/auth/useSession'
 import { ReviewBadge } from '@/components/ReviewBadge'
+import { useRegistryScope } from '@/pages/registry/RegistryContext'
+import { AppScopePicker } from './AppScopePicker'
 import { NAV, type NavNode, resolveNav } from './nav'
 
 // Per-app sidebar (contextual): renders the active app's children — pages/objects grouped by section
@@ -21,9 +23,11 @@ export function Sidebar({ collapsed, onCollapse }: { collapsed: boolean; onColla
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const { canDo, hasRole, principal } = useSession()
+  const { appId: regScopeId, appName: regScopeName, appCode: regScopeCode, setScope } = useRegistryScope()
   const [apps, setApps] = useState<Application[]>([])
   const [approvals, setApprovals] = useState<AwaitingApproval[]>([])
   const [intakes, setIntakes] = useState<IntakeListItem[]>([])
+  const [regCounts, setRegCounts] = useState<Record<string, number>>({})
   const [width, setWidth] = useState(DEFAULT_W)
   const [resizing, setResizing] = useState(false)
   const widthRef = useRef(DEFAULT_W)
@@ -60,10 +64,31 @@ export function Sidebar({ collapsed, onCollapse }: { collapsed: boolean; onColla
     return onDataChanged(load) // re-fetch after any create/submit/delete/cancel/edit (returns the unsubscribe)
   }, [])
 
+  // Fetch registry entity counts whenever the registry section is active (or scope changes)
+  useEffect(() => {
+    const navApps2 = resolveNav(NAV, (req) => canDo(req) || hasRole(req)).filter((n) => n.kind === 'app')
+    const activeKey = navApps2.find((a) => {
+      if (!a.to || a.to === '/' || !a.children?.length) return false
+      return pathname.startsWith(a.to) || a.children.some((c) => c.to && pathname.startsWith(c.to))
+    })?.key
+    if (activeKey !== 'registry') return
+    const appQ = regScopeId ? `&application_id=${regScopeId}` : ''
+    Promise.all([
+      api.get<Executable[]>(`/api/executables?kind=agent${appQ}`).then((r) => r.length).catch(() => 0),
+      api.get<Executable[]>(`/api/executables?kind=task${appQ}`).then((r) => r.length).catch(() => 0),
+      api.get<PromptSummary[]>(`/api/prompts${appQ ? `?${appQ.slice(1)}` : ''}`).then((r) => r.length).catch(() => 0),
+      api.get<ToolSummary[]>(`/api/tools${appQ ? `?${appQ.slice(1)}` : ''}`).then((r) => r.length).catch(() => 0),
+      api.get<ModelSummary[]>('/api/models').then((r) => r.length).catch(() => 0),
+    ]).then(([agents, tasks, prompts, tools, models]) => {
+      setRegCounts({ 'reg-agents': agents, 'reg-tasks': tasks, 'reg-prompts': prompts, 'reg-tools': tools, 'reg-models': models })
+    }).catch(() => {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, regScopeId])
+
   const myApps = principal ? apps.filter((a) => a.business_owner_actor_id === principal.actor_id) : []
   const myIntakes = principal ? intakes.filter((i) => i.created_by_actor_id === principal.actor_id) : []
   // provider → live count for nav `count` badges (grow as pages gain counts; absent = no badge).
-  const counts: Record<string, number> = { applications: apps.length }
+  const counts: Record<string, number> = { applications: apps.length, ...regCounts }
 
   const gate = (req: string) => canDo(req) || hasRole(req)
   const navApps = resolveNav(NAV, gate).filter((n) => n.kind === 'app')
@@ -162,6 +187,18 @@ export function Sidebar({ collapsed, onCollapse }: { collapsed: boolean; onColla
           <svg className="icon" aria-hidden="true"><use href="#i-prev" /></svg>
         </button>
       </div>
+      {active.key === 'registry' && (
+        <div className="sidebar__section sidebar__section--scope">
+          <div className="sidebar__section-label">Application scope</div>
+          <AppScopePicker
+            apps={apps}
+            selectedId={regScopeId}
+            selectedName={regScopeName}
+            selectedCode={regScopeCode}
+            onSelect={(id, name, code) => setScope(id, name, code)}
+          />
+        </div>
+      )}
       {sections.map((sec) => (
         <div className="sidebar__section" key={sec || 'default'}>
           {sec && <div className="sidebar__section-label">{sec}</div>}

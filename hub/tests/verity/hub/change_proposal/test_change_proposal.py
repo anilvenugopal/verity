@@ -121,7 +121,7 @@ def test_fork_on_approval_champion_unchanged(pg_url):
         # Create an asset and promote it to champion via a linked approved intake.
         iid_gate = c.post(f"/applications/{app_id}/intakes", json={"title": "gate-intake"}).json()["intake_id"]
         _force_approve(pg_url, iid_gate)
-        ex = c.post("/executables", json={"name": "fork-me", "kind_code": "agent"}).json()["executable_id"]
+        ex = c.post("/executables", json={"name": "fork-me", "display_name": "Fork Me", "kind_code": "agent"}).json()["executable_id"]
         v = c.post(f"/executables/{ex}/versions").json()["executable_version_id"]
         c.post(f"/versions/{v}/lifecycle", json={"to_stage": "candidate"})
         c.post(f"/intakes/{iid_gate}/links", json={"executable_id": ex})

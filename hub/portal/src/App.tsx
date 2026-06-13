@@ -17,7 +17,22 @@ import { IntakeDetail } from './pages/intakes/IntakeDetail'
 import { UseCasesList } from './pages/intakes/UseCasesList'
 import { ComplianceModel } from './pages/compliance/ComplianceModel'
 import { ComplianceRequirement } from './pages/compliance/ComplianceRequirement'
-import { RegistryList } from './pages/registry/RegistryList'
+import { RegistryShell } from './pages/registry/RegistryShell'
+import { RegistryProvider } from './pages/registry/RegistryContext'
+import { AgentList } from './pages/registry/agents/AgentList'
+import { AgentDetail } from './pages/registry/agents/AgentDetail'
+import { AgentVersionDetail } from './pages/registry/agents/AgentVersionDetail'
+import { TaskList } from './pages/registry/tasks/TaskList'
+import { TaskDetail } from './pages/registry/tasks/TaskDetail'
+import { TaskVersionDetail } from './pages/registry/tasks/TaskVersionDetail'
+import { PromptList } from './pages/registry/prompts/PromptList'
+import { PromptDetail } from './pages/registry/prompts/PromptDetail'
+import { PromptVersionDetail } from './pages/registry/prompts/PromptVersionDetail'
+import { ToolList } from './pages/registry/tools/ToolList'
+import { ToolDetail } from './pages/registry/tools/ToolDetail'
+import { ToolVersionDetail } from './pages/registry/tools/ToolVersionDetail'
+import { ModelList } from './pages/registry/models/ModelList'
+import { ModelDetail } from './pages/registry/models/ModelDetail'
 import { SignIn } from './pages/SignIn'
 import { AuthCallback } from './pages/AuthCallback'
 import { SessionExpiredPage, ForbiddenPage, DisabledPage } from './pages/AuthStatePage'
@@ -58,7 +73,23 @@ function AppRoutes() {
           <Route path="/compliance" element={<Navigate to="/compliance/model" replace />} />
           <Route path="/compliance/model" element={<ComplianceModel />} />
           <Route path="/compliance/requirements/:code" element={<ComplianceRequirement />} />
-          <Route path="/registry" element={<RegistryList />} />
+          <Route path="/registry" element={<RegistryShell />}>
+            <Route index element={<Navigate to="/registry/agents" replace />} />
+            <Route path="agents" element={<AgentList />} />
+            <Route path="agents/:id" element={<AgentDetail />} />
+            <Route path="agents/:id/versions/:vid" element={<AgentVersionDetail />} />
+            <Route path="tasks" element={<TaskList />} />
+            <Route path="tasks/:id" element={<TaskDetail />} />
+            <Route path="tasks/:id/versions/:vid" element={<TaskVersionDetail />} />
+            <Route path="prompts" element={<PromptList />} />
+            <Route path="prompts/:id" element={<PromptDetail />} />
+            <Route path="prompts/:id/versions/:vid" element={<PromptVersionDetail />} />
+            <Route path="tools" element={<ToolList />} />
+            <Route path="tools/:id" element={<ToolDetail />} />
+            <Route path="tools/:id/versions/:vid" element={<ToolVersionDetail />} />
+            <Route path="models" element={<ModelList />} />
+            <Route path="models/:id" element={<ModelDetail />} />
+          </Route>
           <Route path="/help/*" element={<HelpRoute />} />
         </Route>
       </Route>
@@ -74,7 +105,9 @@ export function App() {
       <ToastProvider>
         <AppErrorBoundary>
           <SessionProvider>
-            <AppRoutes />
+            <RegistryProvider>
+              <AppRoutes />
+            </RegistryProvider>
           </SessionProvider>
         </AppErrorBoundary>
         <Toast />

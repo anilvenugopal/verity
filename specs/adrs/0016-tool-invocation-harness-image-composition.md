@@ -140,7 +140,8 @@ The harness image ([[0011]] §1 — one image, role by config) must contain:
 | Component | Purpose |
 |---|---|
 | **Anthropic SDK** | Claude API calls (model invocation) |
-| **MCP protocol client** | Routes Category A tool calls to registered MCP servers |
+| **Model reference chain resolver** | Walks `inference_config_model` by priority at run time; on exhausted retries against priority-N, tries priority-N+1; see ADR-0019 |
+| **MCP protocol client** | Routes Category A tool calls to registered MCP servers. `stdio` is the v1-ported transport; `sse` and `http` are net-new scope required for cluster-deployed MCP servers per §4 topology — not present in v1 |
 | **Connector framework** | Category B: SQL, REST, object store connectors |
 | **Tool authorization enforcer** | Gate on every tool call against `tool_authorizations` |
 | **Write-target suppressor** | Category C: enforces shadow/challenger Target Binding suppression |

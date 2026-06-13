@@ -1,0 +1,66 @@
+/* Registry list pages — page-local composition following ApplicationsList.css / UseCasesList.css.
+   Reuses canonical .log-table/.log-row/.search-field/.eyebrow/.chip/.badge + shared page.css. */
+
+/* Executables (agents + tasks): Name+desc | Champion | Tier | Capability | Count | Updated */
+.exe-grid {
+  display: grid;
+  grid-template-columns: 1fr 130px 120px 120px 60px 150px;
+  gap: var(--space-4);
+  align-items: center;
+  padding: 11px 16px;
+}
+
+/* Prompts: Name+desc | Versions | Updated */
+.prompt-grid {
+  display: grid;
+  grid-template-columns: 1fr 70px 150px;
+  gap: var(--space-4);
+  align-items: center;
+  padding: 11px 16px;
+}
+
+/* Tools: Name+desc | Transport | Write-op | Updated */
+.tool-grid {
+  display: grid;
+  grid-template-columns: 1fr 150px 60px 150px;
+  gap: var(--space-4);
+  align-items: center;
+  padding: 11px 16px;
+}
+
+/* Models: Model+provider | Status | In/1M | Out/1M | Context */
+.model-grid {
+  display: grid;
+  grid-template-columns: 1fr 100px 90px 90px 80px;
+  gap: var(--space-4);
+  align-items: center;
+  padding: 11px 16px;
+}
+
+/* Two-line name+description cell — used in all five lists */
+.reg-entity-cell {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.reg-entity-name {
+  font-size: var(--fs-label);
+  font-weight: var(--fw-medium);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.reg-entity-desc {
+  font-size: var(--fs-caption);
+  color: var(--text-tertiary);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+.reg-count {
+  font-size: var(--fs-caption);
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}

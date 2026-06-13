@@ -220,13 +220,163 @@ export interface Executable {
   executable_id: string
   kind_code: string
   name: string
+  display_name?: string | null
   version_count: number
+  champion_version_id?: string | null
+  champion_semver?: string | null
+  champion_governance_tier_code?: string | null
+  champion_capability_type_code?: string | null
+  description?: string | null
+  application_id?: string | null
+  application_code?: string | null
+  application_name?: string | null
+  updated_at?: string | null
+}
+
+export interface IntakeLink {
+  intake_id: string
+  intake_title: string
+  intake_status_code: string
 }
 export interface ExecutableVersion {
   executable_version_id: string
   executable_id: string
   semver: string | null
   lifecycle_stage: string | null
+  governance_tier_code?: string | null
+  capability_type_code?: string | null
+  trust_level_code?: string | null
+  data_classification_code?: string | null
+  inference_config_id?: string | null
+  created_at?: string | null
+}
+
+// ── Registry 005 types ─────────────────────────────────────────────────────────
+
+export interface PromptSummary {
+  prompt_id: string
+  name: string
+  display_name?: string | null
+  description?: string | null
+  version_count: number
+  latest_version_id?: string | null
+  application_id?: string | null
+  application_code?: string | null
+  application_name?: string | null
+  updated_at?: string | null
+}
+export interface PromptVersionSummary {
+  prompt_version_id: string
+  prompt_id: string
+  semver: string
+  content_hash: string
+  created_at?: string | null
+}
+export interface PromptAssignment {
+  executable_version_id: string
+  prompt_version_id: string
+  prompt_id: string
+  prompt_name: string
+  prompt_semver: string
+  api_role_code: string
+  ordinal: number
+  created_at?: string | null
+}
+export interface ToolSummary {
+  tool_id: string
+  name: string
+  display_name?: string | null
+  transport_code: string
+  description?: string | null
+  is_write_operation: boolean
+  latest_version_id?: string | null
+  application_id?: string | null
+  application_code?: string | null
+  application_name?: string | null
+  updated_at?: string | null
+}
+export interface ToolVersionSummary {
+  tool_version_id: string
+  tool_id: string
+  semver: string
+  data_classification_code?: string | null
+  created_at?: string | null
+}
+export interface ToolAssignment {
+  executable_version_id: string
+  tool_version_id: string
+  tool_id: string
+  tool_name: string
+  tool_semver: string
+  created_at?: string | null
+}
+export interface McpAssignment {
+  executable_version_id: string
+  mcp_server_version_id: string
+  name: string
+  semver: string
+}
+export interface SourceBinding {
+  source_binding_id: string
+  executable_version_id: string
+  name: string
+  source_kind_code: string
+  delivery_mode_code: string
+  media_type?: string | null
+  nullable: boolean
+  ordinal: number
+}
+export interface TargetBinding {
+  target_binding_id: string
+  executable_version_id: string
+  name: string
+  target_kind_code: string
+  delivery_mode_code: string
+  write_mode_code?: string | null
+  target_payload_field?: string | null
+  ordinal: number
+}
+export interface InferenceConfigChainEntry {
+  priority: number
+  model_reference_id: string
+  reference_code: string
+  resolved_model_code?: string | null
+}
+export interface InferenceConfigDetail {
+  inference_config_id: string
+  max_tokens?: number | null
+  temperature?: number | null
+  params: Record<string, unknown>
+  model_references: InferenceConfigChainEntry[]
+}
+export interface ModelSummary {
+  model_id: string
+  model_code: string
+  provider: string
+  modality: string
+  model_status_code: string
+  context_window?: number | null
+  current_price?: {
+    model_price_id: string
+    input_price_per_1k: number
+    output_price_per_1k: number
+    currency_code: string
+    valid_from: string
+    valid_to: string
+  } | null
+}
+export interface ModelReferenceSummary {
+  model_reference_id: string
+  reference_code: string
+  name: string
+  current_model_code?: string | null
+}
+export interface UsedByEntry {
+  executable_id: string
+  executable_name: string
+  kind_code: string
+  executable_version_id: string
+  semver: string
 }
 export interface IntakeAssetLink {
   intake_entity_link_id: string
@@ -234,6 +384,45 @@ export interface IntakeAssetLink {
   name: string
   kind_code: string
   top_stage: string | null
+}
+export type PromptBlockKind = 'prose' | 'var' | 'list' | 'table' | 'code'
+export interface PromptBlockBase { id: string; kind: PromptBlockKind }
+export interface ProseBlock extends PromptBlockBase { kind: 'prose'; text: string }
+export interface VarBlock   extends PromptBlockBase { kind: 'var';   name: string; type: string; desc: string; eg?: string | null; opts?: string[] | null; req: boolean }
+export interface ListBlock  extends PromptBlockBase { kind: 'list';  items: string[] }
+export interface TableBlock extends PromptBlockBase { kind: 'table'; headers: string[]; rows: string[][]; caption?: string | null }
+export interface CodeBlock  extends PromptBlockBase { kind: 'code';  lang: string; code: string; caption?: string | null }
+export type PromptBlock = ProseBlock | VarBlock | ListBlock | TableBlock | CodeBlock
+
+export interface PromptVersionDetail {
+  prompt_version_id: string
+  prompt_id: string
+  semver: string
+  content_hash: string
+  blocks: PromptBlock[]
+  compiled: string  // pre-compiled template string with {var} placeholders
+}
+export interface ToolVersionDetail {
+  tool_version_id: string
+  tool_id: string
+  tool_name: string
+  transport_code: string
+  description?: string | null
+  semver: string
+  input_schema?: Record<string, unknown> | null
+  data_classification_code?: string | null
+}
+export interface DelegationSummary {
+  delegation_id: string
+  parent_version_id: string
+  child_executable_id?: string | null
+  child_name?: string | null
+  child_kind?: string | null
+  child_version_id?: string | null
+  scope: Record<string, unknown>
+  rationale?: string | null
+  notes?: string | null
+  created_at: string
 }
 
 // ── Intake obligations (003 US1) — mirrors hub/src/verity/hub/obligation/models.py ──

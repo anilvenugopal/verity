@@ -143,24 +143,57 @@ def down() -> None:
     _stop("hub")
 
 
-def test() -> None:
-    """Run pytest against the hub (append --cov to also report coverage)."""
+_PYTEST_CHOICES = [
+    {"name": "--cov         coverage report (term-missing)", "value": ["--cov=verity.hub", "--cov-report=term-missing"]},
+    {"name": "-v            verbose output", "value": ["-v"]},
+    {"name": "-x            stop on first failure", "value": ["-x"]},
+    {"name": "-s            show print output (no capture)", "value": ["-s"]},
+]
+
+_VITEST_CHOICES = [
+    {"name": "--reporter=verbose   verbose output", "value": ["--reporter=verbose"]},
+    {"name": "--coverage           generate coverage", "value": ["--coverage"]},
+    {"name": "--run                run once, no watch", "value": ["--run"]},
+]
+
+_RUN_OR_BACK = [
+    {"name": "run", "value": "run"},
+    {"name": "← back to menu", "value": "back"},
+]
+
+
+def pytest_action() -> None:
+    """Run pytest against the hub with selectable options."""
     if not HUB_PY.exists():
         console.print("[red]hub/.venv not found — run `cd hub && uv sync --extra dev` first[/]")
         return
+    selected = inquirer.checkbox(
+        message="pytest — toggle options (space), enter to confirm",
+        choices=_PYTEST_CHOICES,
+    ).execute()
+    action = inquirer.select(message="", choices=_RUN_OR_BACK).execute()
+    if action == "back":
+        return
     py_ver = subprocess.check_output([str(HUB_PY), "--version"], text=True).strip()
     console.print(f"[dim]Using: {HUB_PY} ({py_ver})[/]")
-    cmd = ["uv", "run", "pytest", "--tb=short"]
-    if "--cov" in sys.argv:
-        cmd += ["--cov=verity.hub", "--cov-report=term-missing"]
-    subprocess.run(cmd, cwd=HUB, env=_hub_env())
+    extra = [flag for flags in selected for flag in flags]
+    subprocess.run(["uv", "run", "pytest", "--tb=short"] + extra, cwd=HUB, env=_hub_env())
 
 
-def test_portal() -> None:
-    """Run Vitest unit tests in hub/portal/."""
+def vitest_action() -> None:
+    """Run Vitest unit tests in hub/portal/ with selectable options."""
+    selected = inquirer.checkbox(
+        message="vitest — toggle options (space), enter to confirm",
+        choices=_VITEST_CHOICES,
+    ).execute()
+    action = inquirer.select(message="", choices=_RUN_OR_BACK).execute()
+    if action == "back":
+        return
     node_ver = subprocess.check_output(["node", "--version"], text=True).strip()
     console.print(f"[dim]Using: node {node_ver}[/]")
-    subprocess.run(["npm", "run", "test"], cwd=PORTAL)
+    extra = [flag for flags in selected for flag in flags]
+    cmd = ["npm", "run", "test"] + (["--"] + extra if extra else [])
+    subprocess.run(cmd, cwd=PORTAL)
 
 
 def demo() -> None:
@@ -190,8 +223,8 @@ ACTIONS = [
     Action("up", "Start the hub + portal", up),
     Action("down", "Stop the hub + portal", down),
     Action("demo", "Seed demo / test data (idempotent / refresh)", demo),
-    Action("test", "Run pytest (append --cov for coverage)", test),
-    Action("test:portal", "Run Vitest tests in hub/portal/", test_portal),
+    Action("pytest", "Run pytest against the hub", pytest_action),
+    Action("vitest", "Run Vitest tests in hub/portal/", vitest_action),
 ]
 BY_NAME = {a.name: a for a in ACTIONS}
 

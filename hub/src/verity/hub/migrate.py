@@ -16,7 +16,8 @@ import psycopg
 from verity.hub.config import get_settings
 from verity.hub.paths import component_root, repo_root
 
-SCHEMA_DIR = repo_root() / "specs" / "schema"                  # canonical schema (hub owns the runner)
+SCHEMA_DIR = component_root() / "db" / "schema"                 # canonical schema DDL
+SEED_DIR   = component_root() / "db" / "seed"                   # reference + core seed data
 MIGRATIONS_DIR = component_root() / "db" / "migrations"
 
 
@@ -56,8 +57,8 @@ def run() -> None:
 
         if "0001_baseline" not in done:
             conn.execute(expand_loader(SCHEMA_DIR / "verity_schema.sql"))
-            conn.execute((SCHEMA_DIR / "seed" / "reference_seed.sql").read_text())
-            conn.execute((SCHEMA_DIR / "seed" / "core_seed.sql").read_text())
+            conn.execute((SEED_DIR / "reference_seed.sql").read_text())
+            conn.execute((SEED_DIR / "core_seed.sql").read_text())
             _record(conn, "0001_baseline")
             conn.commit()
             print("applied 0001_baseline (canonical schema + seeds)")

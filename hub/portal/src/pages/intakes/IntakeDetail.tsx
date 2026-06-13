@@ -35,8 +35,8 @@ const roleLabel = (c: string) => ROLE_LABEL[c] ?? c.replace(/_/g, ' ').replace(/
 const DECISION_LABEL: Record<string, string> = {
   approved: 'Approved', rejected: 'Rejected', requested_changes: 'Requested changes', abstained: 'Abstained',
 }
-const fmt = (iso?: string | null) =>
-  iso ? new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''
+import { fmtTs } from '@/api/format'
+const fmt = fmtTs
 
 // Intake detail — the use-case workspace. Mirrors ApplicationWorkspace's shape (identity band + main +
 // always-visible right rail + an Intake-actions footer) so the experience is familiar. Phase 7 covers

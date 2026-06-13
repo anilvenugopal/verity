@@ -1,0 +1,31 @@
+<article class="help-page">
+  <header class="help-page__header">
+    <h1>Navigating the Registry</h1>
+    <p class="help-page__subtitle">How to find agents, tasks, prompts, tools, and models in the portal.</p>
+  </header>
+
+  <section class="help-page__section">
+    <h2>Registry section</h2>
+    <p>Click <strong>Registry</strong> in the left navigation bar. The registry opens with a secondary nav showing <em>Agents</em>, <em>Tasks</em>, <em>Prompts</em>, <em>Tools</em>, and <em>Models</em>. Select the entity type you need.</p>
+  </section>
+
+  <section class="help-page__section">
+    <h2>Finding a specific item</h2>
+    <p>Press <kbd>Ctrl+J</kbd> (or <kbd>⌘J</kbd> on Mac) to open the command palette. Type the name of an agent, task, prompt, or tool — results appear grouped by type. Press Enter or click to navigate directly to the detail page.</p>
+  </section>
+
+  <section class="help-page__section">
+    <h2>Agent and task detail pages</h2>
+    <p>The entity detail page shows all versions in a table. Click a version row to open the version detail, which shows the full composition manifest (prompts, tools, bindings, inference config) and the lifecycle stage.</p>
+  </section>
+
+  <section class="help-page__section">
+    <h2>Prompt and tool where-used</h2>
+    <p>On a prompt or tool detail page, click <strong>Where used</strong> next to any version to see which agent or task versions reference it. This is useful for understanding blast radius before updating a shared component.</p>
+  </section>
+
+  <section class="help-page__section">
+    <h2>Champion badge</h2>
+    <p>The <strong>champion</strong> badge on a version row indicates the currently live version for that executable. Only one version per executable can be champion at a time; promoting a new champion atomically revokes the previous one.</p>
+  </section>
+</article>

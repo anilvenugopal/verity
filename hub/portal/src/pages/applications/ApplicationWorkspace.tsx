@@ -32,8 +32,8 @@ const SENSITIVITY_TONE: Record<string, string> = {
 }
 const labelOf = (codes: Code[] | undefined, code: string | null) =>
   (code && codes?.find((c) => c.code === code)?.label) || code || '—'
-const fmt = (iso?: string | null) =>
-  iso ? new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''
+import { fmtTs, fmtDate } from '@/api/format'
+const fmt = fmtTs
 
 const TABS = [
   { key: 'compliance', label: 'Compliance' },
@@ -105,7 +105,7 @@ export function ApplicationWorkspace() {
 
   const yn = (v: boolean) => <span className={`yn yn--${v ? 'y' : 'n'}`}>{v ? 'Yes' : 'No'}</span>
   const owned = principal && app.business_owner_actor_id === principal.actor_id
-  const onboarded = new Date(app.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+  const onboarded = fmtDate(app.created_at)
 
   // sign-off eligibility: the gate is tab-gated (must have opened every review tab first). The gate
   // component (SignOffGate) owns the per-role rows + decision actions + separation of duty.

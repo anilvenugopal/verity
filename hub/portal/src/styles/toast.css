@@ -1,7 +1,7 @@
 /* Toast notification stack — 004. Not part of the kit layers; portal-local. */
 .toast-stack {
   position: fixed;
-  top: 1rem;
+  top: calc(var(--topbar-h) + 0.75rem);
   right: 1rem;
   z-index: 1000;
   display: flex;

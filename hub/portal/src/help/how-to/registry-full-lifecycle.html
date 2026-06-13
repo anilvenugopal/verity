@@ -1,0 +1,32 @@
+<article class="help-page">
+  <header class="help-page__header">
+    <h1>Full Registry Lifecycle</h1>
+    <p class="help-page__subtitle">From first draft to champion — the complete promotion path for an agent or task.</p>
+  </header>
+
+  <section class="help-page__section">
+    <h2>Stage 1 — Draft</h2>
+    <p>Every new version starts in <em>draft</em>. Add prompt assignments, tools, and bindings. No governance gate applies at this stage.</p>
+  </section>
+
+  <section class="help-page__section">
+    <h2>Stage 2 — Candidate → Staging</h2>
+    <p>Advance through <em>candidate</em> and <em>staging</em> via the lifecycle endpoint or the Advance button. No gate check yet — these are internal preparation stages.</p>
+  </section>
+
+  <section class="help-page__section">
+    <h2>Stage 3 — Challenger (gated)</h2>
+    <p>Advancing to <em>challenger</em> requires the executable to be linked to an intake that is <strong>approved</strong> with all obligations resolved. The promotion gate checks this automatically and returns a 409 with the blocking reason if the condition is not met.</p>
+  </section>
+
+  <section class="help-page__section">
+    <h2>Stage 4 — Champion (atomic swap)</h2>
+    <p>Promoting to <em>champion</em> via <strong>POST /api/registry/versions/{id}/promote</strong> (or the Promote button on the version detail page) is an atomic operation: the previous champion is revoked in the same transaction, and the new version becomes champion. The <code>entity_champion_current</code> view always reflects the latest state.</p>
+    <p>At least one prompt assignment is required before promotion. The same gate (approved intake + resolved obligations) applies when advancing via the lifecycle endpoint with <code>to_stage: champion</code>.</p>
+  </section>
+
+  <section class="help-page__section">
+    <h2>Stage 5 — Deprecated</h2>
+    <p>A champion can be deprecated once a successor is promoted. Deprecated versions remain in history for audit purposes.</p>
+  </section>
+</article>
